@@ -1,0 +1,137 @@
+const User = require("../models/User");
+const Job = require("../models/Job");
+const Application = require("../models/Application");
+
+/* ================= USERS ================= */
+
+exports.getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find().select("-password");
+    res.json(users);
+  } catch (err) {
+    console.error("Admin getAllUsers error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+exports.toggleUserStatus = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user)
+      return res.status(404).json({ message: "User not found" });
+
+    user.isActive = !user.isActive;
+    await user.save();
+
+    res.json(user);
+  } catch (err) {
+    console.error("Admin toggleUserStatus error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+/* ================= JOBS ================= */
+
+exports.getAllJobs = async (req, res) => {
+  try {
+    const jobs = await Job.find().populate("recruiterId", "name email");
+    res.json(jobs);
+  } catch (err) {
+    console.error("Admin getAllJobs error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+exports.deleteJob = async (req, res) => {
+  try {
+    await Job.findByIdAndDelete(req.params.id);
+    await Application.deleteMany({ jobId: req.params.id });
+
+    res.json({ message: "Job deleted" });
+  } catch (err) {
+    console.error("Admin deleteJob error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+/* ================= STATS ================= */
+
+exports.getPlatformStats = async (req, res) => {
+  try {
+    const students = await User.countDocuments({ role: "student" });
+    const recruiters = await User.countDocuments({ role: "recruiter" });
+    const jobs = await Job.countDocuments();
+    const applications = await Application.countDocuments();
+
+    const selected = await Application.countDocuments({
+      status: "SELECTED",
+  });
+
+
+    res.json({
+      students,
+      recruiters,
+      jobs,
+      applications,
+      selected
+    });
+  } catch (err) {
+    console.error("Admin getPlatformStats error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+exports.reviewRecruiter = async (req, res) => {
+  try {
+    const { action } = req.body;
+
+    if (!["APPROVE", "REJECT"].includes(action)) {
+      return res.status(400).json({ message: "Invalid action" });
+    }
+
+    const user = await User.findById(req.params.id);
+
+    if (!user || user.role !== "recruiter") {
+      return res.status(404).json({ message: "Recruiter not found" });
+    }
+
+    if (user.isApproved) {
+      return res.status(400).json({
+        message: "Recruiter already approved"
+      });
+    }
+
+    if (action === "APPROVE") {
+      user.isApproved = true;
+      await user.save();
+
+      return res.json({
+        message: "Recruiter approved successfully"
+      });
+    }
+
+    if (action === "REJECT") {
+      await User.findByIdAndDelete(user._id);
+
+      return res.json({
+        message: "Recruiter rejected and deleted"
+      });
+    }
+
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.getPendingRecruiters = async (req, res) => {
+  try {
+    const recruiters = await User.find({
+      role: "recruiter",
+      isApproved: false
+    }).select("-password");
+
+    res.json(recruiters);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
