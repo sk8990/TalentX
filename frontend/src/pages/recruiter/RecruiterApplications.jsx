@@ -7,6 +7,36 @@ import AssignmentIcon from "@mui/icons-material/Assignment";
 import EventIcon from "@mui/icons-material/Event";
 import DescriptionIcon from "@mui/icons-material/Description";
 
+const API_BASE_URL = API.defaults.baseURL || "";
+const SERVER_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, "");
+
+const getResumeUrl = (resumeUrl) => {
+  if (!resumeUrl || typeof resumeUrl !== "string") return "";
+
+  const trimmed = resumeUrl.trim();
+  if (!trimmed) return "";
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+
+  const normalized = trimmed.replace(/\\/g, "/");
+  const uploadsIndex = normalized.toLowerCase().indexOf("uploads/");
+
+  if (uploadsIndex >= 0) {
+    return `${SERVER_ORIGIN}/${normalized.slice(uploadsIndex)}`;
+  }
+
+  return `${SERVER_ORIGIN}/${normalized.replace(/^\/+/, "")}`;
+};
+
+const getOfferUrl = (offerPath) => {
+  if (!offerPath || typeof offerPath !== "string") return "";
+
+  const trimmed = offerPath.trim();
+  if (!trimmed) return "";
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+
+  return `${SERVER_ORIGIN}/${trimmed.replace(/^\/+/, "")}`;
+};
+
 export default function RecruiterApplications() {
   const [jobs, setJobs] = useState([]);
   const [selectedJobId, setSelectedJobId] = useState("");
@@ -180,7 +210,10 @@ export default function RecruiterApplications() {
 
       {applications.length > 0 && (
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-          {applications.map((app) => (
+          {applications.map((app) => {
+            const resumeLink = getResumeUrl(app.resumeUrl);
+            const offerLetterLink = getOfferUrl(app.offer?.pdfPath);
+            return (
             <article key={app._id} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -196,6 +229,24 @@ export default function RecruiterApplications() {
               </div>
 
               <div className="mt-5 flex flex-wrap gap-2">
+                {resumeLink ? (
+                  <a
+                    href={resumeLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-lg bg-slate-800 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-900"
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      <DescriptionIcon sx={{ fontSize: 14 }} />
+                      View Resume
+                    </span>
+                  </a>
+                ) : (
+                  <span className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-500">
+                    Resume unavailable
+                  </span>
+                )}
+
                 {app.status === "APPLIED" && (
                   <>
                     <ActionButton label="Shortlist" tone="blue" onClick={() => shortlist(app._id)} />
@@ -229,10 +280,24 @@ export default function RecruiterApplications() {
                   <ActionButton label="Generate Offer" tone="indigo" onClick={() => generateOffer(app._id)} />
                 )}
 
+                {app.status === "SELECTED" && offerLetterLink && (
+                  <a
+                    href={offerLetterLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-800"
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      <DescriptionIcon sx={{ fontSize: 14 }} />
+                      View Offer Letter
+                    </span>
+                  </a>
+                )}
+
                 {app.offer && <span className="rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-600">Offer: {app.offer.status}</span>}
               </div>
             </article>
-          ))}
+          )})}
         </div>
       )}
     </div>

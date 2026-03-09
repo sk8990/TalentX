@@ -135,3 +135,30 @@ exports.getPendingRecruiters = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+exports.getSelectedCandidates = async (req, res) => {
+  try {
+    const selectedApplications = await Application.find({ status: "SELECTED" })
+      .populate({
+        path: "studentId",
+        populate: {
+          path: "userId",
+          select: "name"
+        }
+      })
+      .populate("jobId", "companyName ctc")
+      .sort({ updatedAt: -1 });
+
+    const data = selectedApplications.map((application) => ({
+      _id: application._id,
+      candidateName: application.studentId?.userId?.name || "N/A",
+      companyName: application.jobId?.companyName || "N/A",
+      package: application.jobId?.ctc ?? null
+    }));
+
+    res.json(data);
+  } catch (err) {
+    console.error("Admin getSelectedCandidates error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};

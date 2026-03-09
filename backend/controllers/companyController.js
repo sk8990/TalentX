@@ -1,6 +1,7 @@
 const Company = require("../models/Company.js");
 const Job = require("../models/Job.js");
 const Application = require("../models/Application");
+const { expireJobsByDeadline } = require("../utils/jobExpiry");
 const seedCompanies = require("../data/companies.js");
 const allowedBranches = ["CS", "IT", "ENTC", "MECH", "CIVIL"];
 
@@ -72,7 +73,8 @@ function sanitizeAndValidateJobInput(body) {
 
   const ctc = Number(body.ctc);
   const minCgpa = Number(body.minCgpa);
-  const isActive = typeof body.isActive === "boolean" ? body.isActive : true;
+  const requestedActive = typeof body.isActive === "boolean" ? body.isActive : true;
+  const parsedDeadline = deadline ? new Date(deadline) : null;
 
   const rawBranches = Array.isArray(body.eligibleBranches)
     ? body.eligibleBranches
@@ -92,7 +94,13 @@ function sanitizeAndValidateJobInput(body) {
     return { error: "Minimum CGPA must be between 0 and 10" };
   }
   if (!deadline) return { error: "Deadline is required" };
+  if (!parsedDeadline || Number.isNaN(parsedDeadline.getTime())) {
+    return { error: "Deadline must be a valid date" };
+  }
   if (!eligibleBranches.length) return { error: "Select at least one eligible branch" };
+
+  const isExpired = parsedDeadline < new Date();
+  const isActive = isExpired ? false : requestedActive;
 
   const invalidBranch = eligibleBranches.find((branch) => !allowedBranches.includes(branch));
   if (invalidBranch) {
@@ -111,7 +119,7 @@ function sanitizeAndValidateJobInput(body) {
       minCgpa,
       eligibleBranches,
       eligibilityText,
-      deadline,
+      deadline: parsedDeadline,
       isActive,
     },
   };
@@ -179,6 +187,7 @@ exports.postJob = async (req, res) => {
 
 exports.getAllJobs = async (req, res) => {
   try {
+    await expireJobsByDeadline();
     const jobs = await Job.find().populate("recruiterId", "name email");
     res.json(jobs);
   } catch (err) {
@@ -189,6 +198,7 @@ exports.getAllJobs = async (req, res) => {
 
 exports.getRecruiterJobs = async (req, res) => {
   try {
+    await expireJobsByDeadline();
     const jobs = await Job.find({ recruiterId: req.user.id });
     res.json(jobs);
   } catch (err) {
@@ -257,6 +267,7 @@ exports.deleteJob = async (req, res) => {
 
 exports.getRecruiterStats = async (req, res) => {
   try {
+    await expireJobsByDeadline();
     const recruiterId = req.user.id;
     const jobs = await Job.find({ recruiterId }).select("_id");
     const jobIds = jobs.map((job) => job._id);

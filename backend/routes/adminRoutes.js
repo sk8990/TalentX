@@ -9,7 +9,8 @@ const {
   deleteJob,
   getPlatformStats,
   getPendingRecruiters,
-  reviewRecruiter
+  reviewRecruiter,
+  getSelectedCandidates
 } = require("../controllers/adminController");
 
 router.get("/users", auth, role("admin"), getAllUsers);
@@ -19,6 +20,7 @@ router.get("/jobs", auth, role("admin"), getAllJobs);
 router.delete("/jobs/:id", auth, role("admin"), deleteJob);
 
 router.get("/stats", auth, role("admin"), getPlatformStats);
+router.get("/selected-candidates", auth, role("admin"), getSelectedCandidates);
 router.get("/pending-recruiters", auth, role("admin"), getPendingRecruiters);
 
 router.put(

@@ -4,6 +4,7 @@ const Student = require("../models/Student");
 const path = require("path");
 const fs = require("fs");
 const generatePDF = require("../utils/generateOfferPDF");
+const { expireJobsByDeadline } = require("../utils/jobExpiry");
 
 /* =========================================
    APPLY JOB
@@ -11,6 +12,7 @@ const generatePDF = require("../utils/generateOfferPDF");
 exports.applyJob = async (req, res) => {
   try {
     const { jobId } = req.body;
+    await expireJobsByDeadline();
 
     if (!req.file) {
       return res.status(400).json({ message: "Resume is required to Apply" });
@@ -20,6 +22,15 @@ exports.applyJob = async (req, res) => {
 
     if (!student)
       return res.status(404).json({ message: "Student profile not found" });
+
+    const job = await Job.findById(jobId).select("isActive deadline");
+    if (!job) {
+      return res.status(404).json({ message: "Job not found" });
+    }
+
+    if (!job.isActive || new Date(job.deadline) < new Date()) {
+      return res.status(400).json({ message: "Job deadline has passed. This job is inactive." });
+    }
 
     const existing = await Application.findOne({
       studentId: student._id,
@@ -32,7 +43,7 @@ exports.applyJob = async (req, res) => {
     const application = await Application.create({
       studentId: student._id,
       jobId,
-      resumeUrl: req.file.path,
+      resumeUrl: `/uploads/${req.file.filename}`,
       status: "APPLIED"
     });
 
@@ -121,8 +132,41 @@ async function updateStatus(req, res, newStatus) {
 exports.shortlistApplication = (req, res) =>
   updateStatus(req, res, "SHORTLISTED");
 
-exports.sendAssessment = (req, res) =>
-  updateStatus(req, res, "ASSESSMENT_SENT");
+exports.sendAssessment = async (req, res) => {
+  try {
+    const { link } = req.body;
+    const rawLink = typeof link === "string" ? link.trim() : "";
+
+    if (!rawLink) {
+      return res.status(400).json({ message: "Assessment link is required" });
+    }
+
+    const normalizedLink = /^https?:\/\//i.test(rawLink)
+      ? rawLink
+      : `https://${rawLink}`;
+
+    const app = await Application.findById(req.params.applicationId)
+      .populate("jobId");
+
+    if (!app)
+      return res.status(404).json({ message: "Application not found" });
+
+    if (app.jobId.recruiterId.toString() !== req.user.id)
+      return res.status(403).json({ message: "Not authorized" });
+
+    app.status = "ASSESSMENT_SENT";
+    app.assessment = {
+      ...app.assessment,
+      link: normalizedLink
+    };
+
+    await app.save();
+
+    res.json(app);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 
 exports.updateAssessmentResult = async (req, res) => {
   try {

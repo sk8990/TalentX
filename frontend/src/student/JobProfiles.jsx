@@ -25,6 +25,7 @@ export default function JobProfiles() {
   const [branchFilter, setBranchFilter] = useState("all");
   const [ctcFilter, setCtcFilter] = useState("all");
   const [sortBy, setSortBy] = useState("deadline");
+  const [expandedJobId, setExpandedJobId] = useState(null);
   const [alertState, setAlertState] = useState({
     open: false,
     severity: "info",
@@ -401,13 +402,18 @@ export default function JobProfiles() {
           {activeSection === "all" ? "No jobs match your filters." : "No applied jobs match your filters."}
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+        <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-2">
           {filteredJobs.map((job) => {
             const eligible = isEligible(job);
             const alreadyApplied = appliedJobs.includes(job._id);
+            const isExpanded = expandedJobId === job._id;
 
             return (
-              <article key={job._id} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:shadow-md">
+              <article
+                key={job._id}
+                onClick={() => setExpandedJobId((prev) => (prev === job._id ? null : job._id))}
+                className="cursor-pointer rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:shadow-md"
+              >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3">
                     <img
@@ -428,7 +434,24 @@ export default function JobProfiles() {
                   )}
                 </div>
 
-                <p className="mt-3 text-sm text-slate-600">{job.description || "No description provided."}</p>
+                <p
+                  className="mt-3 text-sm text-slate-600"
+                  style={
+                    isExpanded
+                      ? undefined
+                      : {
+                          display: "-webkit-box",
+                          WebkitLineClamp: 4,
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
+                        }
+                  }
+                >
+                  {job.description || "No description provided."}
+                </p>
+                <p className="mt-2 text-xs font-medium text-indigo-600">
+                  {isExpanded ? "Click card to collapse" : "Click card to read more"}
+                </p>
 
                 <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
                   <div className="rounded-xl bg-slate-100 px-3 py-2 text-slate-600">
@@ -444,8 +467,17 @@ export default function JobProfiles() {
                 <p className="mt-3 text-xs text-slate-500">
                   Branches: {job.eligibleBranches.length > 0 ? job.eligibleBranches.join(", ") : "All"}
                 </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Deadline: {job.deadline ? new Date(job.deadline).toLocaleDateString() : "N/A"}
+                </p>
+                {isExpanded && (
+                  <p className="mt-3 text-xs text-slate-600">
+                    <span className="font-semibold text-slate-800">About Company:</span>{" "}
+                    {job.aboutCompany || "Not provided."}
+                  </p>
+                )}
 
-                <div className="mt-5">
+                <div className="mt-5" onClick={(e) => e.stopPropagation()}>
                   {!isProfileComplete ? (
                     <button
                       onClick={() => navigate("/student/profile")}

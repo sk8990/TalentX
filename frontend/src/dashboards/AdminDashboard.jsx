@@ -19,6 +19,7 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState([]);
   const [jobs, setJobs] = useState([]);
   const [pendingRecruiters, setPendingRecruiters] = useState([]);
+  const [selectedCandidates, setSelectedCandidates] = useState([]);
   const [tickets, setTickets] = useState([]);
   const [replies, setReplies] = useState({});
   const [loading, setLoading] = useState(true);
@@ -52,18 +53,20 @@ export default function AdminDashboard() {
       setLoading(true);
       setError("");
 
-      const [statsRes, usersRes, jobsRes, ticketsRes, pendingRes] = await Promise.all([
+      const [statsRes, usersRes, jobsRes, ticketsRes, pendingRes, selectedCandidatesRes] = await Promise.all([
         API.get("/admin/stats"),
         API.get("/admin/users"),
         API.get("/admin/jobs"),
         API.get("/support/admin"),
         API.get("/admin/pending-recruiters"),
+        API.get("/admin/selected-candidates"),
       ]);
 
       setStats(statsRes.data || {});
       setUsers(usersRes.data || []);
       setJobs(jobsRes.data || []);
       setPendingRecruiters(pendingRes.data || []);
+      setSelectedCandidates(selectedCandidatesRes.data || []);
       setTickets(ticketsRes.data || []);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load admin dashboard data");
@@ -221,6 +224,9 @@ export default function AdminDashboard() {
             </TabButton>
             <TabButton active={activeTab === "tickets"} onClick={() => setActiveTab("tickets")}>
               Support Tickets ({tickets.length})
+            </TabButton>
+            <TabButton active={activeTab === "selected"} onClick={() => setActiveTab("selected")}>
+              Selected Candidates ({selectedCandidates.length})
             </TabButton>
           </div>
         </section>
@@ -407,6 +413,27 @@ export default function AdminDashboard() {
                   </article>
                 ))}
               </div>
+            )}
+          </Section>
+        )}
+
+        {activeTab === "selected" && (
+          <Section
+            title="Selected Candidates"
+            subtitle="View candidates who are marked as selected by recruiters."
+          >
+            {selectedCandidates.length === 0 ? (
+              <EmptyState message="No selected candidates found." />
+            ) : (
+              <DataTable headers={["Candidate Name", "Company Name", "Package"]}>
+                {selectedCandidates.map((candidate) => (
+                  <tr key={candidate._id} className="border-b border-slate-100 last:border-none">
+                    <TD>{candidate.candidateName || "N/A"}</TD>
+                    <TD>{candidate.companyName || "N/A"}</TD>
+                    <TD>{candidate.package ?? "N/A"}</TD>
+                  </tr>
+                ))}
+              </DataTable>
             )}
           </Section>
         )}

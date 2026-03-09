@@ -1,9 +1,11 @@
 const Job = require("../models/Job");
 const Student = require("../models/Student");
+const { expireJobsByDeadline } = require("../utils/jobExpiry");
 
 exports.getEligibleJobs = async (req, res) => {
   try {
     const { search, sort } = req.query;
+    await expireJobsByDeadline();
 
     const student = await Student.findOne({ userId: req.user.id });
 
