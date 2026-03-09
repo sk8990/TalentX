@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import WorkIcon from "@mui/icons-material/Work";
 import DescriptionIcon from "@mui/icons-material/Description";
 import VerifiedIcon from "@mui/icons-material/Verified";
+import toast from "react-hot-toast";
 
 function toSafeNumber(value, fallback = 0) {
   const num = Number(value);
@@ -60,7 +61,7 @@ export default function RecruiterDashboard() {
       setStats(normalizedCompanyStats);
     } catch (err) {
       console.error("Failed to load recruiter stats", err);
-      alert("Failed to load dashboard");
+      toast.error("Failed to load dashboard");
     } finally {
       setLoading(false);
     }

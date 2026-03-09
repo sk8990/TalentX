@@ -7,7 +7,8 @@ import CloseIcon from "@mui/icons-material/Close";
 import SendIcon from "@mui/icons-material/Send";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
-import { Alert, FormControl, MenuItem, Select, Snackbar } from "@mui/material";
+import { FormControl, MenuItem, Select } from "@mui/material";
+import toast from "react-hot-toast";
 
 export default function JobProfiles() {
   const navigate = useNavigate();
@@ -26,14 +27,17 @@ export default function JobProfiles() {
   const [ctcFilter, setCtcFilter] = useState("all");
   const [sortBy, setSortBy] = useState("deadline");
   const [expandedJobId, setExpandedJobId] = useState(null);
-  const [alertState, setAlertState] = useState({
-    open: false,
-    severity: "info",
-    message: "",
-  });
 
   const showAlert = (severity, message) => {
-    setAlertState({ open: true, severity, message });
+    if (severity === "success") {
+      toast.success(message);
+      return;
+    }
+    if (severity === "warning") {
+      toast(message, { icon: "!" });
+      return;
+    }
+    toast.error(message);
   };
 
   useEffect(() => {
@@ -568,21 +572,6 @@ export default function JobProfiles() {
         </div>
       )}
 
-      <Snackbar
-        open={alertState.open}
-        autoHideDuration={3000}
-        onClose={() => setAlertState((prev) => ({ ...prev, open: false }))}
-        anchorOrigin={{ vertical: "top", horizontal: "right" }}
-      >
-        <Alert
-          onClose={() => setAlertState((prev) => ({ ...prev, open: false }))}
-          severity={alertState.severity}
-          variant="filled"
-          sx={{ width: "100%" }}
-        >
-          {alertState.message}
-        </Alert>
-      </Snackbar>
     </div>
   );
 }

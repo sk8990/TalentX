@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import API from "../api/axios";
 import WorkOutlineRoundedIcon from "@mui/icons-material/WorkOutlineRounded";
 import LockResetRoundedIcon from "@mui/icons-material/LockResetRounded";
-import { Alert, Snackbar } from "@mui/material";
+import toast from "react-hot-toast";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -11,16 +11,19 @@ export default function ForgotPassword() {
   const [newPassword, setNewPassword] = useState("");
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [alertState, setAlertState] = useState({
-    open: false,
-    severity: "info",
-    message: "",
-  });
 
   const navigate = useNavigate();
 
   const showAlert = (severity, message) => {
-    setAlertState({ open: true, severity, message });
+    if (severity === "success") {
+      toast.success(message);
+      return;
+    }
+    if (severity === "warning") {
+      toast(message, { icon: "⚠️" });
+      return;
+    }
+    toast.error(message);
   };
 
   const sendToken = async () => {
@@ -172,22 +175,6 @@ export default function ForgotPassword() {
           </div>
         </section>
       </div>
-
-      <Snackbar
-        open={alertState.open}
-        autoHideDuration={3000}
-        onClose={() => setAlertState((prev) => ({ ...prev, open: false }))}
-        anchorOrigin={{ vertical: "top", horizontal: "right" }}
-      >
-        <Alert
-          onClose={() => setAlertState((prev) => ({ ...prev, open: false }))}
-          severity={alertState.severity}
-          variant="filled"
-          sx={{ width: "100%" }}
-        >
-          {alertState.message}
-        </Alert>
-      </Snackbar>
     </div>
   );
 }

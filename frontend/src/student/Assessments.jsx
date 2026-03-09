@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import API from "../api/axios";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import toast from "react-hot-toast";
 
 const normalizeAssessmentLink = (link) => {
   if (!link || typeof link !== "string") return "";
@@ -19,7 +20,7 @@ export default function Assessments() {
         const res = await API.get("/application/my/assessments");
         setAssessments(res.data || []);
       } catch {
-        alert("Failed to load assessments");
+        toast.error("Failed to load assessments");
       } finally {
         setLoading(false);
       }
@@ -45,10 +46,15 @@ export default function Assessments() {
         <div className="space-y-4">
           {assessments.map((app) => {
             const assessmentLink = normalizeAssessmentLink(app.assessment?.link);
+            const companyName = app.jobId?.companyName?.trim() || "";
+            const jobTitle = app.jobId?.title || "Job Assessment";
             return (
               <article key={app._id} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h2 className="text-lg font-semibold text-slate-900">{app.jobId?.title || "Job Assessment"}</h2>
-                <p className="mt-1 text-sm text-slate-500">Assessment link provided by recruiter.</p>
+                <div>
+                  {companyName ? <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{companyName}</p> : null}
+                  <h2 className="text-lg font-semibold text-slate-900">{jobTitle}</h2>
+                </div>
+                <p className="mt-3 text-sm text-slate-500">Assessment link provided by recruiter.</p>
                 <div className="mt-5">
                   {assessmentLink ? (
                     <a

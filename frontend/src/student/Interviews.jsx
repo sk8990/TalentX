@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import API from "../api/axios";
 import VideoCallIcon from "@mui/icons-material/VideoCall";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import toast from "react-hot-toast";
 
 export default function Interviews() {
   const [interviews, setInterviews] = useState([]);
@@ -26,7 +27,7 @@ export default function Interviews() {
       setInterviews(validInterviews);
     } catch (err) {
       console.error("Failed to fetch interviews", err);
-      alert("Failed to load interviews");
+      toast.error("Failed to load interviews");
     } finally {
       if (silent) setRefreshing(false);
       else setLoading(false);
@@ -35,7 +36,7 @@ export default function Interviews() {
 
   const joinInterview = (link) => {
     if (!link) {
-      alert("Interview link not available");
+      toast.error("Interview link not available");
       return;
     }
     window.open(link, "_blank", "noopener,noreferrer");
@@ -122,11 +123,16 @@ function InterviewCard({ app, onJoin, past }) {
   const interview = app.interview;
   const scheduleMeta = getScheduleMeta(interview?.date);
   const canJoin = Boolean(interview?.link) && !past;
+  const companyName = app.jobId?.companyName?.trim() || "";
+  const jobTitle = app.jobId?.title || "Job Title";
 
   return (
     <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:shadow-md">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="text-xl font-semibold text-slate-900">{app.jobId?.title || "Job Title"}</h3>
+        <div>
+          {companyName ? <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{companyName}</p> : null}
+          <h3 className="text-xl font-semibold text-slate-900">{jobTitle}</h3>
+        </div>
         <span className={`rounded-full px-3 py-1 text-xs font-semibold ${scheduleMeta.badgeClass}`}>{scheduleMeta.label}</span>
       </div>
 

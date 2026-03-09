@@ -316,7 +316,7 @@ exports.getMyInterviews = async (req, res) => {
       studentId: student._id,
       status: "INTERVIEW_SCHEDULED"
     })
-      .populate("jobId", "title")
+      .populate("jobId", "title companyName companyLogo")
       .select("jobId interview status createdAt");
 
     res.json(interviews);
@@ -338,7 +338,7 @@ exports.getMyAssessments = async (req, res) => {
         $in: ["ASSESSMENT_SENT", "ASSESSMENT_PASSED", "ASSESSMENT_FAILED"] 
       }
     })
-      .populate("jobId", "title")
+      .populate("jobId", "title companyName companyLogo")
       .select("jobId assessment status createdAt");
 
     res.json(assessments);

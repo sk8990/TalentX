@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import API from "../api/axios";
 import { logout } from "../utils/logout";
+import toast from "react-hot-toast";
 
 export default function StudentDashboard() {
   const [jobs, setJobs] = useState([]);
@@ -16,9 +17,9 @@ export default function StudentDashboard() {
   const applyJob = async (jobId) => {
     try {
       await API.post("/application/apply", { jobId });
-      alert("Job applied successfully");
+      toast.success("Job applied successfully");
     } catch (err) {
-      alert(err.response?.data?.message || "Apply failed");
+      toast.error(err.response?.data?.message || "Apply failed");
     }
   };
 

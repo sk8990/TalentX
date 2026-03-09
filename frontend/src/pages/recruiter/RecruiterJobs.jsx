@@ -6,7 +6,9 @@ import PeopleIcon from "@mui/icons-material/People";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
-import { Alert, FormControl, MenuItem, Select, Snackbar } from "@mui/material";
+import { FormControl, MenuItem, Select } from "@mui/material";
+import toast from "react-hot-toast";
+import { useConfirmDialog } from "../../components/ConfirmDialog";
 
 const initialForm = {
   companyName: "",
@@ -32,11 +34,7 @@ export default function RecruiterJobs() {
   const [selectedJob, setSelectedJob] = useState(null);
   const [applications, setApplications] = useState([]);
   const [busy, setBusy] = useState(false);
-  const [alertState, setAlertState] = useState({
-    open: false,
-    severity: "info",
-    message: "",
-  });
+  const { confirm, confirmDialog } = useConfirmDialog();
 
   const [formData, setFormData] = useState(initialForm);
 
@@ -50,7 +48,15 @@ export default function RecruiterJobs() {
   };
 
   const showAlert = (severity, message) => {
-    setAlertState({ open: true, severity, message });
+    if (severity === "success") {
+      toast.success(message);
+      return;
+    }
+    if (severity === "warning") {
+      toast(message, { icon: "!" });
+      return;
+    }
+    toast.error(message);
   };
 
   const fetchJobs = async () => {
@@ -174,7 +180,14 @@ export default function RecruiterJobs() {
   };
 
   const deleteJob = async (id) => {
-    if (!window.confirm("Delete this job?")) return;
+    const shouldDelete = await confirm({
+      title: "Delete Job",
+      message: "Do you want to delete this job posting? This action cannot be undone.",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      tone: "danger",
+    });
+    if (!shouldDelete) return;
 
     try {
       setBusy(true);
@@ -300,7 +313,8 @@ export default function RecruiterJobs() {
   };
 
   return (
-    <div className="space-y-8">
+    <>
+      <div className="space-y-8">
       <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200 sm:p-8">
         <h2 className="text-2xl font-bold text-slate-900">Manage Jobs</h2>
         <p className="mt-1 text-sm text-slate-500">Create new openings, edit active roles, and review candidates.</p>
@@ -628,23 +642,9 @@ export default function RecruiterJobs() {
           </div>
         </div>
       )}
-
-      <Snackbar
-        open={alertState.open}
-        autoHideDuration={3000}
-        onClose={() => setAlertState((prev) => ({ ...prev, open: false }))}
-        anchorOrigin={{ vertical: "top", horizontal: "right" }}
-      >
-        <Alert
-          onClose={() => setAlertState((prev) => ({ ...prev, open: false }))}
-          severity={alertState.severity}
-          variant="filled"
-          sx={{ width: "100%" }}
-        >
-          {alertState.message}
-        </Alert>
-      </Snackbar>
-    </div>
+      </div>
+      {confirmDialog}
+    </>
   );
 }
 

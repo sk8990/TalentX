@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import API from "../../api/axios";
 import toast from "react-hot-toast";
 import CheckIcon from "@mui/icons-material/Check";
@@ -6,6 +6,16 @@ import CloseIcon from "@mui/icons-material/Close";
 import AssignmentIcon from "@mui/icons-material/Assignment";
 import EventIcon from "@mui/icons-material/Event";
 import DescriptionIcon from "@mui/icons-material/Description";
+import {
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContentText,
+  DialogContent,
+  DialogTitle,
+  MenuItem,
+  TextField,
+} from "@mui/material";
 
 const API_BASE_URL = API.defaults.baseURL || "";
 const SERVER_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, "");
@@ -42,6 +52,16 @@ export default function RecruiterApplications() {
   const [selectedJobId, setSelectedJobId] = useState("");
   const [applications, setApplications] = useState([]);
   const [busy, setBusy] = useState(false);
+  const [inputDialog, setInputDialog] = useState({
+    open: false,
+    key: "",
+    title: "",
+    description: "",
+    confirmText: "Submit",
+    fields: [],
+  });
+  const [inputValues, setInputValues] = useState({});
+  const inputResolverRef = useRef(null);
 
   useEffect(() => {
     fetchJobs();
@@ -94,39 +114,112 @@ export default function RecruiterApplications() {
 
   const reject = (id) => runAction(() => API.put(`/application/${id}/reject`), "Rejected");
 
-  const sendAssessment = (id) => {
-    const link = prompt("Enter assessment link:");
-    if (!link) return;
-    runAction(() => API.put(`/application/${id}/assessment`, { link }), "Assessment sent");
+  const openInputDialog = ({ key = "", title, description = "", confirmText = "Submit", fields = [] }) =>
+    new Promise((resolve) => {
+      inputResolverRef.current = resolve;
+      setInputValues(
+        fields.reduce((acc, field) => {
+          acc[field.name] = field.defaultValue || "";
+          return acc;
+        }, {})
+      );
+      setInputDialog({
+        open: true,
+        key,
+        title,
+        description,
+        confirmText,
+        fields,
+      });
+    });
+
+  const closeInputDialog = (result) => {
+    setInputDialog((prev) => ({ ...prev, open: false }));
+    if (inputResolverRef.current) {
+      inputResolverRef.current(result);
+      inputResolverRef.current = null;
+    }
   };
 
-  const markAssessmentResult = (id, passed) => {
-    const score = prompt("Enter score:");
-    if (!score) return;
+  useEffect(() => {
+    return () => {
+      if (inputResolverRef.current) {
+        inputResolverRef.current(null);
+        inputResolverRef.current = null;
+      }
+    };
+  }, []);
+
+  const sendAssessment = async (id) => {
+    const values = await openInputDialog({
+      title: "Send Assessment",
+      confirmText: "Send",
+      fields: [{ name: "link", label: "Assessment Link", placeholder: "https://example.com/assessment", required: true }],
+    });
+    if (!values?.link?.trim()) return;
+
+    runAction(() => API.put(`/application/${id}/assessment`, { link: values.link.trim() }), "Assessment sent");
+  };
+
+  const markAssessmentResult = async (id, passed) => {
+    const values = await openInputDialog({
+      title: "Enter Assessment Score",
+      confirmText: "Update",
+      fields: [{ name: "score", label: "Score", placeholder: "e.g. 85", required: true }],
+    });
+    if (!values?.score?.trim()) return;
 
     runAction(
       () =>
         API.put(`/application/${id}/assessment/result`, {
           result: passed ? "PASS" : "FAIL",
-          score,
+          score: values.score.trim(),
         }),
       "Assessment updated"
     );
   };
 
-  const scheduleInterview = (id) => {
-    const date = prompt("Enter interview date (YYYY-MM-DD HH:MM)");
-    const mode = prompt("Mode (Online/Offline)");
-    const link = prompt("Meeting link (if online)");
+  const scheduleInterview = async (id) => {
+    const values = await openInputDialog({
+      key: "scheduleInterview",
+      title: "Schedule Interview",
+      description: "Set interview slot and mode. For online interviews, add a meeting link.",
+      confirmText: "Schedule",
+      fields: [
+        { name: "date", label: "Interview Date & Time", type: "datetime-local", required: true },
+        {
+          name: "mode",
+          label: "Interview Mode",
+          type: "select",
+          options: ["Online", "Offline"],
+          required: true,
+          defaultValue: "Online",
+        },
+        {
+          name: "link",
+          label: "Meeting Link",
+          placeholder: "https://meet.google.com/...",
+          required: false,
+        },
+      ],
+    });
 
-    if (!date || !mode) return;
+    const dateValue = values?.date?.trim();
+    const modeValue = values?.mode?.trim();
+    const linkValue = values?.link?.trim() || "";
+    const isOnline = modeValue?.toLowerCase() === "online";
+    if (!dateValue || !modeValue) return;
+    if (isOnline && !linkValue) {
+      toast.error("Meeting link is required for online interviews");
+      return;
+    }
 
     runAction(
       () =>
         API.put(`/application/${id}/interview`, {
-          date,
-          mode,
-          link,
+          date: dateValue.replace("T", " "),
+          mode: modeValue,
+          link: isOnline ? linkValue : "",
         }),
       "Interview scheduled"
     );
@@ -134,12 +227,18 @@ export default function RecruiterApplications() {
 
   const selectCandidate = (id) => runAction(() => API.put(`/application/${id}/select`), "Candidate selected");
 
-  const generateOffer = (id) => {
-    const salary = prompt("Enter salary (e.g. 6 LPA):");
-    const joiningDate = prompt("Enter joining date (YYYY-MM-DD):");
-    const location = prompt("Enter location:");
+  const generateOffer = async (id) => {
+    const values = await openInputDialog({
+      title: "Generate Offer",
+      confirmText: "Generate",
+      fields: [
+        { name: "salary", label: "Salary", placeholder: "e.g. 6 LPA", required: true },
+        { name: "joiningDate", label: "Joining Date", placeholder: "YYYY-MM-DD", required: true },
+        { name: "location", label: "Location", placeholder: "City / Office", required: true },
+      ],
+    });
 
-    if (!salary || !joiningDate || !location) {
+    if (!values?.salary?.trim() || !values?.joiningDate?.trim() || !values?.location?.trim()) {
       toast.error("All fields required");
       return;
     }
@@ -147,9 +246,9 @@ export default function RecruiterApplications() {
     runAction(
       () =>
         API.put(`/application/${id}/offer`, {
-          salary,
-          joiningDate,
-          location,
+          salary: values.salary.trim(),
+          joiningDate: values.joiningDate.trim(),
+          location: values.location.trim(),
         }),
       "Offer generated"
     );
@@ -157,9 +256,16 @@ export default function RecruiterApplications() {
 
   const inputClass =
     "w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100";
+  const isScheduleInterviewDialog = inputDialog.key === "scheduleInterview";
+  const scheduleMode = (inputValues.mode || "").toLowerCase();
+  const scheduleLinkRequired = isScheduleInterviewDialog && scheduleMode === "online";
+  const scheduleSubmitDisabled =
+    isScheduleInterviewDialog &&
+    (!inputValues.date?.trim() || !inputValues.mode?.trim() || (scheduleLinkRequired && !inputValues.link?.trim()));
 
   return (
-    <div className="space-y-8">
+    <>
+      <div className="space-y-8">
       <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200 sm:p-8">
         <h2 className="text-2xl font-bold text-slate-900">Application Pipeline</h2>
         <p className="mt-1 text-sm text-slate-500">Filter candidates by job and progress them through each hiring stage.</p>
@@ -300,7 +406,94 @@ export default function RecruiterApplications() {
           )})}
         </div>
       )}
-    </div>
+      </div>
+
+      <Dialog
+        open={inputDialog.open}
+        onClose={() => closeInputDialog(null)}
+        fullWidth
+        maxWidth="sm"
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            border: "1px solid #e2e8f0",
+            boxShadow: "0 24px 45px rgba(15, 23, 42, 0.25)",
+            background: "linear-gradient(180deg, #f8fbff 0%, #ffffff 38%)",
+          },
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 700, color: "#0f172a", pb: 0.5 }}>{inputDialog.title}</DialogTitle>
+        {inputDialog.description ? (
+          <DialogContentText sx={{ px: 3, color: "#475569", fontSize: "0.86rem" }}>
+            {inputDialog.description}
+          </DialogContentText>
+        ) : null}
+        <DialogContent sx={{ display: "grid", gap: 2, pt: 1 }}>
+          {inputDialog.fields.map((field) => {
+            if (isScheduleInterviewDialog && field.name === "link" && scheduleMode === "offline") {
+              return null;
+            }
+
+            return (
+              <TextField
+                key={field.name}
+                select={field.type === "select"}
+                type={field.type === "datetime-local" ? "datetime-local" : "text"}
+                label={field.label}
+                value={inputValues[field.name] || ""}
+                onChange={(e) =>
+                  setInputValues((prev) => ({
+                    ...prev,
+                    [field.name]: e.target.value,
+                  }))
+                }
+                placeholder={field.placeholder || ""}
+                size="small"
+                fullWidth
+                required={Boolean(field.required) || (field.name === "link" && scheduleLinkRequired)}
+                InputLabelProps={field.type === "datetime-local" ? { shrink: true } : undefined}
+                helperText={
+                  isScheduleInterviewDialog && field.name === "link" && scheduleLinkRequired
+                    ? "Required for online interviews"
+                    : " "
+                }
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: 2,
+                    backgroundColor: "#ffffff",
+                  },
+                }}
+              >
+                {field.type === "select"
+                  ? field.options?.map((option) => (
+                      <MenuItem key={option} value={option}>
+                        {option}
+                      </MenuItem>
+                    ))
+                  : null}
+              </TextField>
+            );
+          })}
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button
+            onClick={() => closeInputDialog(null)}
+            variant="outlined"
+            sx={{ textTransform: "none", borderRadius: 2 }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={() => closeInputDialog(inputValues)}
+            variant="contained"
+            disabled={scheduleSubmitDisabled}
+            sx={{ textTransform: "none", borderRadius: 2, bgcolor: "#4f46e5", "&:hover": { bgcolor: "#4338ca" } }}
+          >
+            {inputDialog.confirmText}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 }
 

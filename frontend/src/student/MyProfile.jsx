@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "../api/axios";
 import EditIcon from "@mui/icons-material/Edit";
 import SaveIcon from "@mui/icons-material/Save";
+import toast from "react-hot-toast";
 
 export default function MyProfile() {
   const [profile, setProfile] = useState(null);
@@ -48,7 +49,7 @@ export default function MyProfile() {
       setProfile(res.data);
       setEdit(false);
     } catch (err) {
-      alert(err.response?.data?.message || "Update failed");
+      toast.error(err.response?.data?.message || "Update failed");
     }
   };
 

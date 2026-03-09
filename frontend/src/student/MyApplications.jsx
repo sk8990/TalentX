@@ -3,6 +3,7 @@ import API from "../api/axios";
 import DownloadIcon from "@mui/icons-material/Download";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
+import toast from "react-hot-toast";
 
 const statusStyle = {
   APPLIED: "bg-slate-100 text-slate-700",
@@ -71,7 +72,7 @@ export default function MyApplications() {
       await API.put(`/application/${id}/offer/respond`, { decision });
       fetchApps();
     } catch {
-      alert("Failed to respond to offer");
+      toast.error("Failed to respond to offer");
     }
   };
 

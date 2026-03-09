@@ -1,5 +1,6 @@
 import { useState } from "react";
 import API from "../api/axios";
+import toast from "react-hot-toast";
 
 export default function ApplyJobModal({ jobId, onClose }) {
   const [file, setFile] = useState(null);
@@ -8,7 +9,7 @@ export default function ApplyJobModal({ jobId, onClose }) {
 
   const submitApplication = async () => {
     if (!file) {
-      alert("Please upload your resume (PDF)");
+      toast.error("Please upload your resume (PDF)");
       return;
     }
 
@@ -26,11 +27,11 @@ export default function ApplyJobModal({ jobId, onClose }) {
         }
       });
 
-      alert("Application submitted");
+      toast.success("Application submitted");
       onClose(true);
 
     } catch (err) {
-      alert(err.response?.data?.message || "Apply failed");
+      toast.error(err.response?.data?.message || "Apply failed");
     } finally {
       setLoading(false);
     }

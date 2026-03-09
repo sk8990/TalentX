@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import API from "../api/axios";
 import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
 import { FormControl, MenuItem, Select } from "@mui/material";
+import toast from "react-hot-toast";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -21,12 +22,12 @@ export default function Register() {
     const trimmedEmail = email.trim().toLowerCase();
 
     if (!trimmedName || !trimmedEmail || !password || !role) {
-      alert("All fields are required");
+      toast.error("All fields are required");
       return;
     }
 
     if (!isValidEmail(trimmedEmail)) {
-      alert("Please enter a valid email address");
+      toast.error("Please enter a valid email address");
       return;
     }
 
@@ -40,10 +41,10 @@ export default function Register() {
         role
       });
 
-      alert("Registration successful. Please login.");
+      toast.success("Registration successful. Please login.");
       navigate("/");
     } catch (err) {
-      alert(err.response?.data?.message || "Registration failed");
+      toast.error(err.response?.data?.message || "Registration failed");
     } finally {
       setLoading(false);
     }

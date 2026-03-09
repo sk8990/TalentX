@@ -13,6 +13,7 @@ import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteIcon from "@mui/icons-material/Delete";
 import SendIcon from "@mui/icons-material/Send";
+import { useConfirmDialog } from "../components/ConfirmDialog";
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
@@ -25,6 +26,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState("recruiters");
+  const { confirm, confirmDialog } = useConfirmDialog();
 
   const navigate = useNavigate();
 
@@ -96,7 +98,14 @@ export default function AdminDashboard() {
   };
 
   const deleteJob = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this job?")) return;
+    const shouldDelete = await confirm({
+      title: "Delete Job",
+      message: "Are you sure you want to delete this job? This action cannot be undone.",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      tone: "danger",
+    });
+    if (!shouldDelete) return;
 
     try {
       await API.delete(`/admin/jobs/${id}`);
@@ -169,8 +178,9 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-white to-sky-100 p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto max-w-7xl space-y-6">
+    <>
+      <div className="min-h-screen bg-gradient-to-br from-slate-100 via-white to-sky-100 p-4 sm:p-6 lg:p-8">
+        <div className="mx-auto max-w-7xl space-y-6">
         <header className="rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-800 to-cyan-700 p-6 text-white shadow-xl sm:p-8">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -437,8 +447,10 @@ export default function AdminDashboard() {
             )}
           </Section>
         )}
+        </div>
       </div>
-    </div>
+      {confirmDialog}
+    </>
   );
 }
 
