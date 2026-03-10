@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import API from "../../api/axios";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import SaveIcon from "@mui/icons-material/Save";
@@ -32,8 +33,8 @@ export default function RecruiterJobs() {
   const [companies, setCompanies] = useState([]);
   const [selectedCompany, setSelectedCompany] = useState("other");
   const [selectedJob, setSelectedJob] = useState(null);
-  const [applications, setApplications] = useState([]);
   const [busy, setBusy] = useState(false);
+  const navigate = useNavigate();
   const { confirm, confirmDialog } = useConfirmDialog();
 
   const [formData, setFormData] = useState(initialForm);
@@ -170,7 +171,6 @@ export default function RecruiterJobs() {
       setFormData(initialForm);
       setSelectedCompany("other");
       setSelectedJob(null);
-      setApplications([]);
       fetchJobs();
     } catch (err) {
       showAlert("error", err.response?.data?.message || "Operation failed");
@@ -196,7 +196,6 @@ export default function RecruiterJobs() {
       if (selectedJob?._id === id) {
         setSelectedJob(null);
         setFormData(initialForm);
-        setApplications([]);
       }
       fetchJobs();
     } catch {
@@ -224,7 +223,6 @@ export default function RecruiterJobs() {
       isActive: typeof job.isActive === "boolean" ? job.isActive : true,
     });
     setSelectedCompany(matchedCompany ? matchedCompany.name : "other");
-    setApplications([]);
   };
 
   const toggleBranch = (branch) => {
@@ -239,16 +237,8 @@ export default function RecruiterJobs() {
     });
   };
 
-  const viewApplications = async (jobId) => {
-    try {
-      setBusy(true);
-      const res = await API.get(`/application/job/${jobId}`);
-      setApplications(res.data || []);
-    } catch {
-      showAlert("error", "Failed to fetch applications");
-    } finally {
-      setBusy(false);
-    }
+  const viewApplications = (jobId) => {
+    navigate(`/recruiter/applications?jobId=${jobId}`);
   };
 
   const inputClass =
@@ -628,20 +618,6 @@ export default function RecruiterJobs() {
         </div>
       </div>
 
-      {applications.length > 0 && (
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-          <h3 className="text-xl font-semibold text-slate-900">Applicants Preview</h3>
-          <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-2">
-            {applications.map((app) => (
-              <div key={app._id} className="rounded-2xl border border-slate-200 p-4">
-                <p className="text-sm text-slate-600"><span className="font-semibold text-slate-800">Branch:</span> {app.studentId?.branch || "N/A"}</p>
-                <p className="mt-1 text-sm text-slate-600"><span className="font-semibold text-slate-800">CGPA:</span> {app.studentId?.cgpa || "N/A"}</p>
-                <p className="mt-1 text-sm text-slate-600"><span className="font-semibold text-slate-800">Status:</span> {app.status}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
       </div>
       {confirmDialog}
     </>

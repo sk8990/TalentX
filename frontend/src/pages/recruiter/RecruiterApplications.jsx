@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import API from "../../api/axios";
 import toast from "react-hot-toast";
 import CheckIcon from "@mui/icons-material/Check";
@@ -52,6 +53,7 @@ export default function RecruiterApplications() {
   const [selectedJobId, setSelectedJobId] = useState("");
   const [applications, setApplications] = useState([]);
   const [busy, setBusy] = useState(false);
+  const [searchParams] = useSearchParams();
   const [inputDialog, setInputDialog] = useState({
     open: false,
     key: "",
@@ -66,6 +68,13 @@ export default function RecruiterApplications() {
   useEffect(() => {
     fetchJobs();
   }, []);
+
+  useEffect(() => {
+    const jobId = searchParams.get("jobId") || "";
+    if (!jobId || jobId === selectedJobId) return;
+    setSelectedJobId(jobId);
+    fetchApplications(jobId);
+  }, [searchParams, selectedJobId]);
 
   const selectedJob = useMemo(
     () => jobs.find((job) => job._id === selectedJobId),
