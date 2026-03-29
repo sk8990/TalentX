@@ -221,7 +221,8 @@ async function loadStatsByInterviewerUserIds(userIds) {
   if (!userIds.length) return map;
 
   const apps = await Application.find({
-    "interviewerAssignment.interviewerUserId": { $in: userIds }
+    "interviewerAssignment.interviewerUserId": { $in: userIds },
+    "interview.panelType": { $ne: "AI" }
   }).select("interviewerAssignment interview interviewerFeedback interviewSession status");
 
   const nowTs = Date.now();
@@ -570,7 +571,8 @@ exports.getMyAssignedInterviews = async (req, res) => {
 
     const apps = await Application.find({
       status: "INTERVIEW_SCHEDULED",
-      "interviewerAssignment.interviewerUserId": req.user.id
+      "interviewerAssignment.interviewerUserId": req.user.id,
+      "interview.panelType": { $ne: "AI" }
     })
       .populate("jobId", "title companyName companyLogo recruiterId")
       .populate({

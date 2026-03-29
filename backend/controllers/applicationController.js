@@ -961,7 +961,8 @@ exports.assignInterviewerToApplication = async (req, res) => {
     const interviewerApps = await Application.find({
       _id: { $ne: app._id },
       status: "INTERVIEW_SCHEDULED",
-      "interviewerAssignment.interviewerUserId": interviewerProfile.userId._id
+      "interviewerAssignment.interviewerUserId": interviewerProfile.userId._id,
+      "interview.panelType": { $ne: "AI" }
     }).select("interview");
 
     for (const existing of interviewerApps) {

@@ -654,7 +654,7 @@ export default function RecruiterApplications() {
                               Interview: {new Date(app.interview.date).toLocaleString()} ({formatPanelType(app.interview?.panelType)})
                             </p>
                           ) : null}
-                          {app?.interviewerAssignment?.interviewerUserId ? (
+                          {String(app?.interview?.panelType || "HUMAN").trim().toUpperCase() !== "AI" && app?.interviewerAssignment?.interviewerUserId ? (
                             <p className="mt-1 text-xs text-indigo-700">
                               Assigned Interviewer: {app.interviewerAssignment.interviewerUserId.name || "N/A"}
                             </p>
