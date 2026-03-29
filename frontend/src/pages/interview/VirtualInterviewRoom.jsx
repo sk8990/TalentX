@@ -11,6 +11,9 @@ import {
 } from "@mui/material";
 import toast from "react-hot-toast";
 import API, { getServerOrigin } from "../../api/axios";
+import InterviewerFeedbackForm, {
+  getDefaultInterviewerFeedbackForm
+} from "../../components/interviewer/InterviewerFeedbackForm";
 
 const RTC_CONFIG = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
 const REASONS = ["STUDENT_NO_SHOW", "INTERVIEWER_UNAVAILABLE", "OTHER"];
@@ -141,6 +144,12 @@ export default function VirtualInterviewRoom({ role }) {
   const [requestingJoin, setRequestingJoin] = useState(false);
   const [decidingJoin, setDecidingJoin] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  const [roomClosed, setRoomClosed] = useState(false);
+  const [endConfirmOpen, setEndConfirmOpen] = useState(false);
+  const [endingInterview, setEndingInterview] = useState(false);
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
+  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
+  const [feedbackForm, setFeedbackForm] = useState(() => getDefaultInterviewerFeedbackForm());
   const [reschedule, setReschedule] = useState({
     open: false,
     reason: "STUDENT_NO_SHOW",
@@ -155,6 +164,7 @@ export default function VirtualInterviewRoom({ role }) {
   const allChecksPassed = useMemo(() => Object.values(checks).every((v) => v === "pass"), [checks]);
   const joinStatus = joinRequest.status;
   const studentRequiresApproval = role === "student";
+  const hasSubmittedFeedback = Boolean(roomData?.interviewerFeedback?.submittedAt);
   const title = useMemo(() => {
     const job = roomData?.job?.title || "Interview";
     const company = roomData?.job?.companyName || "";
@@ -174,11 +184,13 @@ export default function VirtualInterviewRoom({ role }) {
     setConnectionState("idle");
   };
 
-  const cleanupSession = async () => {
+  const cleanupSession = async ({ emitLeave = true } = {}) => {
     closePeer();
     if (socketRef.current) {
       try {
-        socketRef.current.emit("leave-interview-room", {}, () => {});
+        if (emitLeave) {
+          socketRef.current.emit("leave-interview-room", {}, () => {});
+        }
         socketRef.current.disconnect();
       } catch {
         // ignore
@@ -228,9 +240,12 @@ export default function VirtualInterviewRoom({ role }) {
     }
   };
 
-  const leaveRoom = async () => {
-    await cleanupSession();
-    navigate(backPath);
+  const leaveRoom = async ({ navigateToBack = true, emitLeave = true } = {}) => {
+    await cleanupSession({ emitLeave });
+    setSessionStarted(false);
+    if (navigateToBack) {
+      navigate(backPath);
+    }
   };
 
   const ensurePeer = (socketId) => {
@@ -371,6 +386,28 @@ export default function VirtualInterviewRoom({ role }) {
           closePeer();
           setConnectionState("waiting");
         });
+        socket.on("interview-ended", (payload) => {
+          const message = String(payload?.message || "Interview ended by interviewer").trim();
+          setRoomData((prev) => ({
+            ...prev,
+            interviewSession: {
+              endedAt: payload?.endedAt || new Date().toISOString(),
+              endedBy: prev?.interviewSession?.endedBy || null
+            }
+          }));
+
+          if (role === "student") {
+            toast(message);
+            setRoomClosed(true);
+            leaveRoom({ navigateToBack: false }).finally(() => {
+              navigate(backPath);
+            });
+            return;
+          }
+
+          closePeer();
+          setConnectionState("ended");
+        });
         socket.on("signal", (payload) => {
           handleSignal(payload).catch(() => {
             setConnectionState("waiting");
@@ -465,6 +502,7 @@ export default function VirtualInterviewRoom({ role }) {
     if (!full) {
       setViolation("Fullscreen permission denied. Protected mode requires fullscreen.");
     }
+    setRoomClosed(false);
     setSessionStarted(true);
   };
 
@@ -564,8 +602,110 @@ export default function VirtualInterviewRoom({ role }) {
     }
   };
 
+  const submitFeedback = async () => {
+    try {
+      setFeedbackSubmitting(true);
+      const res = await API.post(`/interviewer/interviews/${applicationId}/feedback`, feedbackForm);
+      setRoomData((prev) => ({
+        ...prev,
+        interviewerFeedback: res.data
+      }));
+      setFeedbackModalOpen(false);
+      toast.success("Feedback submitted");
+      navigate(backPath);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to submit feedback");
+    } finally {
+      setFeedbackSubmitting(false);
+    }
+  };
+
+  const skipFeedbackForNow = () => {
+    setFeedbackModalOpen(false);
+    navigate(backPath);
+  };
+
+  const endInterview = async () => {
+    try {
+      setEndingInterview(true);
+      const res = await API.post(`/interviewer/interviews/${applicationId}/end`);
+      setRoomData((prev) => ({
+        ...prev,
+        interviewSession: res.data?.interviewSession || prev?.interviewSession || null,
+        interviewerFeedback: res.data?.interviewerFeedback || prev?.interviewerFeedback || null
+      }));
+      setEndConfirmOpen(false);
+      toast.success(res.data?.alreadyEnded ? "Interview already ended" : "Interview ended");
+      await cleanupSession();
+      setSessionStarted(false);
+      setRoomClosed(true);
+
+      if (res.data?.interviewerFeedback?.submittedAt) {
+        navigate(backPath);
+        return;
+      }
+
+      setFeedbackModalOpen(true);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to end interview");
+    } finally {
+      setEndingInterview(false);
+    }
+  };
+
   if (loading) return <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-500">Preparing virtual interview room...</div>;
   if (error) return <div className="space-y-3 rounded-3xl border border-rose-200 bg-rose-50 p-6 text-rose-700"><p>{error}</p><button onClick={() => navigate(backPath)} className="rounded-xl border border-rose-200 bg-white px-4 py-2 text-sm font-semibold">Back</button></div>;
+
+  if (roomClosed && role === "interviewer") {
+    return (
+      <div className="space-y-4">
+        <section className="rounded-3xl bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 px-6 py-5 text-white">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-300">Virtual Interview Panel</p>
+          <h1 className="mt-1 text-2xl font-bold">{title}</h1>
+          <p className="mt-2 text-sm text-slate-300">Interview session ended. You can submit feedback now or return to your dashboard.</p>
+        </section>
+
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-slate-900">Interview Ended</h2>
+          <p className="mt-2 text-sm text-slate-600">
+            The live room is closed for both participants. Feedback stays available in your pending bucket until you submit it.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {!hasSubmittedFeedback ? (
+              <button
+                onClick={() => setFeedbackModalOpen(true)}
+                className="rounded-xl bg-indigo-600 px-5 py-2 text-sm font-semibold text-white"
+              >
+                Open Feedback Form
+              </button>
+            ) : null}
+            <button
+              onClick={() => navigate(backPath)}
+              className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700"
+            >
+              Back to Dashboard
+            </button>
+          </div>
+        </section>
+
+        <Dialog open={feedbackModalOpen} onClose={skipFeedbackForNow} fullWidth maxWidth="md">
+          <DialogTitle>Submit Interview Feedback</DialogTitle>
+          <DialogContent>
+            <InterviewerFeedbackForm
+              className="mt-2 border-0 bg-transparent p-0"
+              value={feedbackForm}
+              onChange={setFeedbackForm}
+              onSubmit={submitFeedback}
+              submitting={feedbackSubmitting}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={skipFeedbackForNow} variant="outlined">Skip for Now</Button>
+          </DialogActions>
+        </Dialog>
+      </div>
+    );
+  }
 
   if (!sessionStarted) {
     return (
@@ -653,13 +793,17 @@ export default function VirtualInterviewRoom({ role }) {
       </section>
 
       <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-        <p className="text-sm font-semibold text-slate-700">Status: <span className="text-slate-900">{connecting ? "Connecting..." : connectionState === "connected" ? "Live" : connectionState === "waiting" ? "Waiting for participant" : "Ready"}</span></p>
+        <p className="text-sm font-semibold text-slate-700">Status: <span className="text-slate-900">{connecting ? "Connecting..." : connectionState === "connected" ? "Live" : connectionState === "waiting" ? "Waiting for participant" : connectionState === "ended" ? "Interview ended" : "Ready"}</span></p>
         <p className="mt-1 text-xs font-semibold text-amber-700">Violation Count: {violationCount}</p>
         <div className="mt-3 flex flex-wrap gap-2">
           <button onClick={toggleAudio} className={`rounded-xl px-4 py-2 text-sm font-semibold ${audioEnabled ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>{audioEnabled ? "Mic On" : "Mic Off"}</button>
           <button onClick={toggleVideo} className={`rounded-xl px-4 py-2 text-sm font-semibold ${videoEnabled ? "bg-indigo-100 text-indigo-700" : "bg-amber-100 text-amber-700"}`}>{videoEnabled ? "Camera On" : "Camera Off"}</button>
           {role === "student" ? <button onClick={() => setSupportOpen(true)} className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-700">Need Help?</button> : null}
-          <button onClick={leaveRoom} className="rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white">End Interview</button>
+          {role === "interviewer" ? (
+            <button onClick={() => setEndConfirmOpen(true)} className="rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white">
+              End Interview
+            </button>
+          ) : null}
         </div>
       </section>
 
@@ -675,6 +819,21 @@ export default function VirtualInterviewRoom({ role }) {
         <DialogActions><Button onClick={() => setSupportOpen(false)} variant="contained">Close</Button></DialogActions>
       </Dialog>
 
+      <Dialog open={endConfirmOpen} onClose={() => setEndConfirmOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>End Interview?</DialogTitle>
+        <DialogContent>
+          <p className="text-sm text-slate-700">
+            This will close the live interview for both participants. The student will be exited from the room, and you can submit feedback immediately after.
+          </p>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEndConfirmOpen(false)} variant="outlined">Cancel</Button>
+          <Button onClick={endInterview} disabled={endingInterview} color="error" variant="contained">
+            {endingInterview ? "Ending..." : "End and Open Feedback"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Dialog open={reschedule.open} onClose={() => setReschedule((prev) => ({ ...prev, open: false }))} fullWidth maxWidth="sm">
         <DialogTitle>Reschedule Interview</DialogTitle>
         <DialogContent sx={{ display: "grid", gap: 2, pt: 1 }}>
@@ -686,6 +845,22 @@ export default function VirtualInterviewRoom({ role }) {
         <DialogActions>
           <Button onClick={() => setReschedule((prev) => ({ ...prev, open: false }))} variant="outlined">Cancel</Button>
           <Button onClick={submitReschedule} disabled={reschedule.submitting} variant="contained">{reschedule.submitting ? "Rescheduling..." : "Confirm Reschedule"}</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={feedbackModalOpen} onClose={skipFeedbackForNow} fullWidth maxWidth="md">
+        <DialogTitle>Submit Interview Feedback</DialogTitle>
+        <DialogContent>
+          <InterviewerFeedbackForm
+            className="mt-2 border-0 bg-transparent p-0"
+            value={feedbackForm}
+            onChange={setFeedbackForm}
+            onSubmit={submitFeedback}
+            submitting={feedbackSubmitting}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={skipFeedbackForNow} variant="outlined">Skip for Now</Button>
         </DialogActions>
       </Dialog>
     </div>

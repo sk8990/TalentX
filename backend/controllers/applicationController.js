@@ -15,6 +15,12 @@ const {
 } = require("../services/interviewRoomService");
 const { buildInterviewAccess, getInterviewWindow } = require("../utils/interviewAccess");
 const {
+  buildEmptyInterviewJoinRequest,
+  clearInterviewJoinRequest,
+  clearInterviewSession,
+  hasInterviewSessionEnded
+} = require("../utils/interviewLifecycle");
+const {
   notify,
   notifyApplicationStatus,
   notifyInterviewScheduled,
@@ -56,19 +62,17 @@ function buildStudentInterviewAccess(interview) {
   return buildInterviewAccess(interview);
 }
 
-function buildEmptyInterviewJoinRequest() {
-  return {
-    status: "NONE",
-    requestedBy: null,
-    requestedAt: null,
-    decisionBy: null,
-    decidedAt: null,
-    rejectReason: ""
-  };
-}
+function applyInterviewSessionAccess(app, access) {
+  if (!hasInterviewSessionEnded(app)) {
+    return access;
+  }
 
-function clearInterviewJoinRequest(app) {
-  app.interviewJoinRequest = buildEmptyInterviewJoinRequest();
+  return {
+    ...access,
+    canAccessRoom: false,
+    canJoin: false,
+    countdownSeconds: 0
+  };
 }
 
 function getStudentNotificationContext(application) {
@@ -476,6 +480,7 @@ exports.scheduleInterview = async (req, res) => {
     };
     app.interviewSlots = [];
     clearInterviewJoinRequest(app);
+    clearInterviewSession(app);
 
     await app.save();
 
@@ -589,6 +594,7 @@ exports.publishInterviewSlots = async (req, res) => {
     app.interview = undefined;
     app.interviewSlots = parsedSlots;
     clearInterviewJoinRequest(app);
+    clearInterviewSession(app);
     await app.save();
 
     const student = getStudentNotificationContext(app);
@@ -672,6 +678,7 @@ exports.bookInterviewSlot = async (req, res) => {
       link: slot.link
     };
     clearInterviewJoinRequest(app);
+    clearInterviewSession(app);
 
     await app.save();
 
@@ -814,6 +821,7 @@ exports.assignInterviewerToApplication = async (req, res) => {
       assignedAt: now
     };
     clearInterviewJoinRequest(app);
+    clearInterviewSession(app);
     await app.save();
 
     notify({
@@ -891,6 +899,7 @@ exports.unassignInterviewerFromApplication = async (req, res) => {
       assignedAt: null
     };
     clearInterviewJoinRequest(app);
+    clearInterviewSession(app);
     await app.save();
 
     notify({
@@ -1076,10 +1085,10 @@ exports.getMyInterviews = async (req, res) => {
       status: "INTERVIEW_SCHEDULED"
     })
       .populate("jobId", "title companyName companyLogo")
-      .select("jobId interview status createdAt interviewerAssignment interviewerFeedback interviewJoinRequest");
+      .select("jobId interview status createdAt interviewerAssignment interviewerFeedback interviewJoinRequest interviewSession");
 
     const payload = interviews.map((app) => {
-      const access = buildStudentInterviewAccess(app.interview);
+      const access = applyInterviewSessionAccess(app, buildStudentInterviewAccess(app.interview));
       const baseInterview = app?.interview ? { ...app.interview.toObject?.() } : {};
       const isOnline = String(baseInterview?.mode || "").trim().toLowerCase() === "online";
       const interview = !isOnline || access.canAccessRoom
@@ -1094,6 +1103,7 @@ exports.getMyInterviews = async (req, res) => {
         createdAt: app.createdAt,
         interviewerAssignment: app.interviewerAssignment,
         interviewerFeedback: app.interviewerFeedback,
+        interviewSession: app.interviewSession,
         joinRequest: getInterviewJoinRequest(app),
         ...access
       };
@@ -1149,6 +1159,8 @@ exports.getMyInterviewRoom = async (req, res) => {
         accessWindowStart: accessResult.access.accessWindowStart,
         accessWindowEnd: accessResult.access.accessWindowEnd
       },
+      interviewSession: app.interviewSession || null,
+      interviewerFeedback: app.interviewerFeedback || null,
       access: accessResult.access,
       joinRequest: accessResult.joinRequest || buildEmptyInterviewJoinRequest(),
       socket: {

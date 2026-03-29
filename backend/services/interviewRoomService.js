@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Application = require("../models/Application");
 const { buildInterviewAccess, isOnlineInterview } = require("../utils/interviewAccess");
+const { hasInterviewSessionEnded } = require("../utils/interviewLifecycle");
 
 function getInterviewRoomName(applicationId) {
   return `interview:${applicationId}`;
@@ -55,7 +56,7 @@ async function loadInterviewApplication(applicationId) {
     })
     .populate("interviewerAssignment.interviewerUserId", "name email")
     .select(
-      "jobId studentId interview status interviewerAssignment interviewerFeedback interviewJoinRequest createdAt updatedAt"
+      "jobId studentId interview status interviewerAssignment interviewerFeedback interviewJoinRequest interviewSession createdAt updatedAt"
     );
 }
 
@@ -95,6 +96,22 @@ async function validateInterviewRoomAccess({
 
   const access = buildInterviewAccess(app.interview);
   const joinRequest = getInterviewJoinRequest(app);
+  if (hasInterviewSessionEnded(app)) {
+    return {
+      ok: false,
+      statusCode: 410,
+      message: "This interview session has already ended",
+      application: app,
+      access: {
+        ...access,
+        canAccessRoom: false,
+        canJoin: false,
+        countdownSeconds: 0
+      },
+      joinRequest
+    };
+  }
+
   if (!access.canJoin) {
     return {
       ok: false,

@@ -7,6 +7,7 @@ const {
   getMyInterviewJoinRequest,
   decideMyInterviewJoinRequest,
   rescheduleMyInterview,
+  endMyInterview,
   submitMyInterviewFeedback
 } = require("../controllers/interviewerController");
 
@@ -15,6 +16,7 @@ router.get("/interviews/:applicationId/room", auth, role("interviewer"), getMyIn
 router.get("/interviews/:applicationId/join-request", auth, role("interviewer"), getMyInterviewJoinRequest);
 router.put("/interviews/:applicationId/join-request", auth, role("interviewer"), decideMyInterviewJoinRequest);
 router.post("/interviews/:applicationId/reschedule", auth, role("interviewer"), rescheduleMyInterview);
+router.post("/interviews/:applicationId/end", auth, role("interviewer"), endMyInterview);
 router.post(
   "/interviews/:applicationId/feedback",
   auth,

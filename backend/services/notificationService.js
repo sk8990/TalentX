@@ -1,13 +1,7 @@
 const Notification = require("../models/Notification");
 const { sendEmail, emailTemplates } = require("./emailService");
 const User = require("../models/User");
-
-// In-memory store for Socket.IO instance
-let io = null;
-
-function setSocketIO(socketIO) {
-  io = socketIO;
-}
+const { emitToUser } = require("./realtimeService");
 
 /**
  * Creates a notification, sends real-time via Socket.IO, and optionally sends email.
@@ -24,18 +18,15 @@ async function notify({ userId, type, title, message, link, metadata, sendMail, 
       metadata,
     });
 
-    // Emit via Socket.IO if available
-    if (io) {
-      io.to(`user:${userId}`).emit("notification", {
-        _id: notification._id,
-        type,
-        title,
-        message,
-        link,
-        isRead: false,
-        createdAt: notification.createdAt,
-      });
-    }
+    emitToUser(userId, "notification", {
+      _id: notification._id,
+      type,
+      title,
+      message,
+      link,
+      isRead: false,
+      createdAt: notification.createdAt,
+    });
 
     // Send email if requested
     if (sendMail && emailData) {
@@ -147,7 +138,6 @@ async function notifyTicketAnswered(userId, ticketId) {
 }
 
 module.exports = {
-  setSocketIO,
   notify,
   notifyApplicationStatus,
   notifyInterviewScheduled,

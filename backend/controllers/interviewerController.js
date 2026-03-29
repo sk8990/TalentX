@@ -5,12 +5,19 @@ const InterviewerProfile = require("../models/InterviewerProfile");
 const User = require("../models/User");
 const { sendEmail } = require("../services/emailService");
 const { notify, notifyInterviewScheduled } = require("../services/notificationService");
+const { emitToRoom } = require("../services/realtimeService");
 const { writeAuditLog } = require("../services/auditService");
 const {
+  getInterviewRoomName,
   validateInterviewRoomAccess,
   getInterviewJoinRequest
 } = require("../services/interviewRoomService");
 const { buildInterviewAccess, getInterviewWindow } = require("../utils/interviewAccess");
+const {
+  buildEmptyInterviewJoinRequest,
+  clearInterviewSession,
+  hasInterviewSessionEnded
+} = require("../utils/interviewLifecycle");
 
 const RECOMMENDATION_ENUM = ["STRONG_YES", "YES", "MAYBE", "NO", "STRONG_NO"];
 const RESCHEDULE_REASON_ENUM = ["STUDENT_NO_SHOW", "INTERVIEWER_UNAVAILABLE", "OTHER"];
@@ -48,17 +55,6 @@ function normalizeExpertise(value) {
   }
 
   return [];
-}
-
-function buildEmptyInterviewJoinRequest() {
-  return {
-    status: "NONE",
-    requestedBy: null,
-    requestedAt: null,
-    decisionBy: null,
-    decidedAt: null,
-    rejectReason: ""
-  };
 }
 
 function getFrontendBaseUrl() {
@@ -148,6 +144,8 @@ function categorizeInterview(app, nowTs) {
   const hasFeedback = Boolean(app?.interviewerFeedback?.submittedAt);
   if (hasFeedback) return "completed";
 
+  if (hasInterviewSessionEnded(app)) return "pending";
+
   const window = getInterviewWindow(app?.interview);
   if (!window) return "pending";
 
@@ -156,6 +154,19 @@ function categorizeInterview(app, nowTs) {
   }
 
   return "upcoming";
+}
+
+function applyInterviewSessionAccess(app, access) {
+  if (!hasInterviewSessionEnded(app)) {
+    return access;
+  }
+
+  return {
+    ...access,
+    canAccessRoom: false,
+    canJoin: false,
+    countdownSeconds: 0
+  };
 }
 
 function sanitizeRatings(ratingsInput) {
@@ -211,7 +222,7 @@ async function loadStatsByInterviewerUserIds(userIds) {
 
   const apps = await Application.find({
     "interviewerAssignment.interviewerUserId": { $in: userIds }
-  }).select("interviewerAssignment interview interviewerFeedback status");
+  }).select("interviewerAssignment interview interviewerFeedback interviewSession status");
 
   const nowTs = Date.now();
   for (const app of apps) {
@@ -568,14 +579,14 @@ exports.getMyAssignedInterviews = async (req, res) => {
         populate: { path: "userId", select: "name email" }
       })
       .populate("interviewerFeedback.submittedBy", "name email")
-      .select("jobId studentId interview interviewerAssignment interviewerFeedback interviewJoinRequest status createdAt updatedAt")
+      .select("jobId studentId interview interviewerAssignment interviewerFeedback interviewJoinRequest interviewSession status createdAt updatedAt")
       .sort({ "interview.date": 1 });
 
     const payload = apps
       .map((app) => {
         const bucket = categorizeInterview(app, nowTs);
         if (bucketFilter && bucket !== bucketFilter) return null;
-        const access = buildInterviewAccess(app.interview);
+        const access = applyInterviewSessionAccess(app, buildInterviewAccess(app.interview));
 
         return {
           _id: app._id,
@@ -585,6 +596,7 @@ exports.getMyAssignedInterviews = async (req, res) => {
           status: app.status,
           interviewerAssignment: app.interviewerAssignment,
           interviewerFeedback: app.interviewerFeedback,
+          interviewSession: app.interviewSession,
           joinRequest: getInterviewJoinRequest(app),
           bucket,
           createdAt: app.createdAt,
@@ -649,6 +661,8 @@ exports.getMyInterviewRoomAccess = async (req, res) => {
         accessWindowStart: accessResult.access.accessWindowStart,
         accessWindowEnd: accessResult.access.accessWindowEnd
       },
+      interviewSession: app.interviewSession || null,
+      interviewerFeedback: app.interviewerFeedback || null,
       access: accessResult.access,
       joinRequest: accessResult.joinRequest || buildEmptyInterviewJoinRequest(),
       socket: {
@@ -865,6 +879,7 @@ exports.rescheduleMyInterview = async (req, res) => {
       notes: ""
     };
     app.interviewJoinRequest = buildEmptyInterviewJoinRequest();
+    clearInterviewSession(app);
 
     app.interviewReschedule = {
       ...app.interviewReschedule,
@@ -946,6 +961,70 @@ exports.rescheduleMyInterview = async (req, res) => {
   }
 };
 
+exports.endMyInterview = async (req, res) => {
+  try {
+    const app = await Application.findById(req.params.applicationId)
+      .populate("jobId", "title companyName recruiterId")
+      .select("jobId interview status interviewerAssignment interviewerFeedback interviewSession");
+
+    if (!app) {
+      return res.status(404).json({ message: "Application not found" });
+    }
+
+    if (app.status !== "INTERVIEW_SCHEDULED" || !app.interview?.date) {
+      return res.status(400).json({ message: "Only scheduled interviews can be ended" });
+    }
+
+    const assignedInterviewerUserId = String(
+      app?.interviewerAssignment?.interviewerUserId?._id ||
+      app?.interviewerAssignment?.interviewerUserId ||
+      ""
+    );
+    if (!assignedInterviewerUserId || assignedInterviewerUserId !== String(req.user.id)) {
+      return res.status(403).json({ message: "You are not assigned to this interview" });
+    }
+
+    const alreadyEnded = hasInterviewSessionEnded(app);
+    if (!alreadyEnded) {
+      app.interviewSession = {
+        endedAt: new Date(),
+        endedBy: req.user.id
+      };
+      await app.save();
+
+      await writeAuditLog({
+        actorId: req.user.id,
+        actorRole: req.user.role,
+        action: "INTERVIEW_ENDED_BY_INTERVIEWER",
+        entityType: "INTERVIEW_SESSION",
+        entityId: app._id,
+        applicationId: app._id,
+        jobId: app?.jobId?._id || null,
+        metadata: {
+          endedAt: app.interviewSession.endedAt
+        }
+      });
+    }
+
+    emitToRoom(getInterviewRoomName(String(app._id)), "interview-ended", {
+      applicationId: String(app._id),
+      endedAt: app?.interviewSession?.endedAt || new Date(),
+      endedByRole: "interviewer",
+      message: "Interview ended by interviewer"
+    });
+
+    return res.json({
+      message: alreadyEnded ? "Interview already ended" : "Interview ended successfully",
+      alreadyEnded,
+      interviewSession: app.interviewSession,
+      interviewerFeedback: app.interviewerFeedback || null
+    });
+  } catch (err) {
+    console.error("endMyInterview error:", err);
+    return res.status(500).json({ message: "Failed to end interview" });
+  }
+};
+
 exports.submitMyInterviewFeedback = async (req, res) => {
   try {
     const recommendation = String(req.body?.recommendation || "").trim().toUpperCase();
@@ -976,7 +1055,11 @@ exports.submitMyInterviewFeedback = async (req, res) => {
       return res.status(400).json({ message: "Interview feedback can only be submitted for scheduled interviews" });
     }
 
-    const assignedInterviewerUserId = String(app?.interviewerAssignment?.interviewerUserId || "");
+    const assignedInterviewerUserId = String(
+      app?.interviewerAssignment?.interviewerUserId?._id ||
+      app?.interviewerAssignment?.interviewerUserId ||
+      ""
+    );
     if (!assignedInterviewerUserId || assignedInterviewerUserId !== String(req.user.id)) {
       return res.status(403).json({ message: "You are not assigned to this interview" });
     }
@@ -990,7 +1073,7 @@ exports.submitMyInterviewFeedback = async (req, res) => {
       return res.status(400).json({ message: "Interview schedule is invalid" });
     }
 
-    if (Date.now() < window.end.getTime()) {
+    if (!hasInterviewSessionEnded(app) && Date.now() < window.end.getTime()) {
       return res.status(400).json({ message: "Feedback can be submitted only after interview ends" });
     }
 

@@ -164,6 +164,18 @@ const applicationSchema = new mongoose.Schema(
       }
     },
 
+    interviewSession: {
+      endedAt: {
+        type: Date,
+        default: null
+      },
+      endedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: null
+      }
+    },
+
     interviewerFeedback: {
       submittedBy: {
         type: mongoose.Schema.Types.ObjectId,
