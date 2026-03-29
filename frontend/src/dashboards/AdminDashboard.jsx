@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import API from "../api/axios";
+import API, { getServerOrigin } from "../api/axios";
 import toast from "react-hot-toast";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import LogoutIcon from "@mui/icons-material/Logout";
@@ -13,7 +13,29 @@ import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteIcon from "@mui/icons-material/Delete";
 import SendIcon from "@mui/icons-material/Send";
-import { useConfirmDialog } from "../components/ConfirmDialog";
+import DownloadIcon from "@mui/icons-material/Download";
+import HistoryIcon from "@mui/icons-material/History";
+import FilterAltIcon from "@mui/icons-material/FilterAlt";
+import NavigateBeforeIcon from "@mui/icons-material/NavigateBefore";
+import NavigateNextIcon from "@mui/icons-material/NavigateNext";
+import { useConfirmDialog } from "../components/useConfirmDialog";
+
+const AUDIT_ACTION_OPTIONS = [
+  "APPLICATION_STATUS_UPDATED",
+  "ASSESSMENT_SENT",
+  "ASSESSMENT_RESULT_UPDATED",
+  "INTERVIEW_SCHEDULED",
+  "INTERVIEW_SLOTS_PUBLISHED",
+  "INTERVIEW_SLOT_BOOKED",
+  "BULK_APPLICATION_STATUS_UPDATED",
+  "BULK_STATUS_ACTION_EXECUTED",
+  "OFFER_GENERATED",
+  "OFFER_RESPONSE_UPDATED",
+];
+
+const AUDIT_ENTITY_OPTIONS = ["APPLICATION", "INTERVIEW_SLOT", "BULK_ACTION"];
+const AUDIT_ROLE_OPTIONS = ["student", "recruiter", "admin", "system"];
+const AUDIT_LOG_ENDPOINTS = ["/admin/audit-logs", "/admin/audit/logs", "/admin/audit_logs"];
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
@@ -26,7 +48,25 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState("recruiters");
+  const [exporting, setExporting] = useState("");
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [auditFilters, setAuditFilters] = useState({
+    action: "",
+    entityType: "",
+    actorRole: "",
+    from: "",
+    to: "",
+  });
+  const [auditMeta, setAuditMeta] = useState({
+    page: 1,
+    limit: 15,
+    total: 0,
+    totalPages: 1,
+  });
+  const [auditEndpoint, setAuditEndpoint] = useState(AUDIT_LOG_ENDPOINTS[0]);
   const { confirm, confirmDialog } = useConfirmDialog();
+  const serverOrigin = getServerOrigin();
 
   const navigate = useNavigate();
 
@@ -75,6 +115,108 @@ export default function AdminDashboard() {
       toast.error("Failed to load admin data");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAuditLogs = async ({ page = 1, filters = auditFilters } = {}) => {
+    try {
+      setAuditLoading(true);
+      const params = {
+        page,
+        limit: auditMeta.limit,
+      };
+
+      if (filters.action) params.action = filters.action;
+      if (filters.entityType) params.entityType = filters.entityType;
+      if (filters.actorRole) params.actorRole = filters.actorRole;
+      if (filters.from) params.from = filters.from;
+      if (filters.to) params.to = filters.to;
+
+      const endpointCandidates = [
+        auditEndpoint,
+        ...AUDIT_LOG_ENDPOINTS.filter((item) => item !== auditEndpoint),
+      ];
+
+      let res = null;
+      let last404 = null;
+
+      for (const endpoint of endpointCandidates) {
+        try {
+          res = await API.get(endpoint, { params });
+          if (endpoint !== auditEndpoint) {
+            setAuditEndpoint(endpoint);
+          }
+          break;
+        } catch (err) {
+          if (err.response?.status === 404) {
+            last404 = err;
+            continue;
+          }
+          throw err;
+        }
+      }
+
+      if (!res) {
+        throw last404 || new Error("Audit logs endpoint not available");
+      }
+
+      setAuditLogs(res.data?.items || []);
+      setAuditMeta({
+        page: res.data?.page || page,
+        limit: res.data?.limit || auditMeta.limit,
+        total: res.data?.total || 0,
+        totalPages: res.data?.totalPages || 1,
+      });
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to load audit logs");
+    } finally {
+      setAuditLoading(false);
+    }
+  };
+
+  const applyAuditFilters = async () => {
+    await fetchAuditLogs({ page: 1, filters: auditFilters });
+  };
+
+  const clearAuditFilters = async () => {
+    const cleared = {
+      action: "",
+      entityType: "",
+      actorRole: "",
+      from: "",
+      to: "",
+    };
+    setAuditFilters(cleared);
+    await fetchAuditLogs({ page: 1, filters: cleared });
+  };
+
+  const downloadExport = async (type) => {
+    try {
+      setExporting(type);
+      const response = await API.get(`/export/${type}`, {
+        responseType: "blob",
+      });
+
+      const contentType = response.headers["content-type"] || "application/vnd.ms-excel";
+      const blob = new Blob([response.data], { type: contentType });
+      const url = window.URL.createObjectURL(blob);
+      const disposition = String(response.headers["content-disposition"] || "");
+      const fileNameMatch = disposition.match(/filename="?([^"]+)"?/i);
+      const fileName = fileNameMatch?.[1] || `${type}.xls`;
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.success("Export downloaded");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Export failed");
+    } finally {
+      setExporting("");
     }
   };
 
@@ -238,6 +380,18 @@ export default function AdminDashboard() {
             <TabButton active={activeTab === "selected"} onClick={() => setActiveTab("selected")}>
               Selected Candidates ({selectedCandidates.length})
             </TabButton>
+            <TabButton active={activeTab === "exports"} onClick={() => setActiveTab("exports")}>
+              Export Center
+            </TabButton>
+            <TabButton
+              active={activeTab === "audit"}
+              onClick={() => {
+                setActiveTab("audit");
+                fetchAuditLogs({ page: 1, filters: auditFilters });
+              }}
+            >
+              Audit Logs
+            </TabButton>
           </div>
         </section>
 
@@ -382,7 +536,7 @@ export default function AdminDashboard() {
 
                     {ticket.screenshotPath && (
                       <a
-                        href={`http://localhost:5000${ticket.screenshotPath}`}
+                        href={`${serverOrigin}${ticket.screenshotPath}`}
                         target="_blank"
                         rel="noreferrer"
                         className="mt-3 inline-block text-xs font-semibold text-indigo-600 hover:text-indigo-700"
@@ -447,11 +601,233 @@ export default function AdminDashboard() {
             )}
           </Section>
         )}
+
+        {activeTab === "exports" && (
+          <Section
+            title="Export Center"
+            subtitle="Download platform reports in Excel format for audits, placement reports, and external analysis."
+          >
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-sm font-semibold text-slate-900">Placement Export</p>
+                <p className="mt-1 text-xs text-slate-500">Selected candidates with company, role, and package.</p>
+                <button
+                  onClick={() => downloadExport("placements")}
+                  disabled={exporting === "placements"}
+                  className="mt-3 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                >
+                  <span className="inline-flex items-center gap-1">
+                    <DownloadIcon sx={{ fontSize: 14 }} />
+                    {exporting === "placements" ? "Exporting..." : "Download placements.xls"}
+                  </span>
+                </button>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-sm font-semibold text-slate-900">User Export</p>
+                <p className="mt-1 text-xs text-slate-500">All users with role, status, and approval details.</p>
+                <button
+                  onClick={() => downloadExport("users")}
+                  disabled={exporting === "users"}
+                  className="mt-3 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                >
+                  <span className="inline-flex items-center gap-1">
+                    <DownloadIcon sx={{ fontSize: 14 }} />
+                    {exporting === "users" ? "Exporting..." : "Download users.xls"}
+                  </span>
+                </button>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-sm font-semibold text-slate-900">Job Export</p>
+                <p className="mt-1 text-xs text-slate-500">Complete jobs catalog with recruiter attribution.</p>
+                <button
+                  onClick={() => downloadExport("jobs")}
+                  disabled={exporting === "jobs"}
+                  className="mt-3 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                >
+                  <span className="inline-flex items-center gap-1">
+                    <DownloadIcon sx={{ fontSize: 14 }} />
+                    {exporting === "jobs" ? "Exporting..." : "Download jobs.xls"}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </Section>
+        )}
+
+        {activeTab === "audit" && (
+          <Section
+            title="Audit Logs"
+            subtitle="Track system actions across application workflow, interview slots, and bulk operations."
+          >
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="grid gap-3 md:grid-cols-5">
+                <select
+                  value={auditFilters.action}
+                  onChange={(e) => setAuditFilters((prev) => ({ ...prev, action: e.target.value }))}
+                  className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                >
+                  <option value="">All Actions</option>
+                  {AUDIT_ACTION_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  value={auditFilters.entityType}
+                  onChange={(e) => setAuditFilters((prev) => ({ ...prev, entityType: e.target.value }))}
+                  className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                >
+                  <option value="">All Entities</option>
+                  {AUDIT_ENTITY_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  value={auditFilters.actorRole}
+                  onChange={(e) => setAuditFilters((prev) => ({ ...prev, actorRole: e.target.value }))}
+                  className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                >
+                  <option value="">All Actor Roles</option>
+                  {AUDIT_ROLE_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+
+                <input
+                  type="date"
+                  value={auditFilters.from}
+                  onChange={(e) => setAuditFilters((prev) => ({ ...prev, from: e.target.value }))}
+                  className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                />
+
+                <input
+                  type="date"
+                  value={auditFilters.to}
+                  onChange={(e) => setAuditFilters((prev) => ({ ...prev, to: e.target.value }))}
+                  className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                />
+              </div>
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  onClick={applyAuditFilters}
+                  disabled={auditLoading}
+                  className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                >
+                  <span className="inline-flex items-center gap-1">
+                    <FilterAltIcon sx={{ fontSize: 14 }} />
+                    Apply Filters
+                  </span>
+                </button>
+                <button
+                  onClick={clearAuditFilters}
+                  disabled={auditLoading}
+                  className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Reset
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              {auditLoading ? (
+                <p className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
+                  Loading audit logs...
+                </p>
+              ) : auditLogs.length === 0 ? (
+                <EmptyState message="No audit logs found for the selected filters." />
+              ) : (
+                <>
+                  <DataTable headers={["Time", "Action", "Actor", "Entity", "Reference", "Changes"]}>
+                    {auditLogs.map((log) => (
+                      <tr key={log._id} className="border-b border-slate-100 last:border-none">
+                        <TD>{new Date(log.createdAt).toLocaleString()}</TD>
+                        <TD>
+                          <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 px-2.5 py-1 text-xs font-semibold text-indigo-700">
+                            <HistoryIcon sx={{ fontSize: 12 }} />
+                            {log.action}
+                          </span>
+                        </TD>
+                        <TD>
+                          <p className="text-xs font-semibold text-slate-800">{log.actorId?.name || "System"}</p>
+                          <p className="text-[11px] text-slate-500">{log.actorRole || "system"}</p>
+                        </TD>
+                        <TD>{log.entityType}</TD>
+                        <TD>
+                          <p className="text-xs text-slate-700">{String(log.entityId || "").slice(-8)}</p>
+                          {log.jobId?.companyName ? (
+                            <p className="text-[11px] text-slate-500">{log.jobId.companyName}</p>
+                          ) : null}
+                        </TD>
+                        <TD>
+                          <code className="block max-w-[280px] whitespace-pre-wrap break-words rounded bg-slate-100 p-2 text-[11px] text-slate-700">
+                            {safeJSONStringify(log.changes)}
+                          </code>
+                        </TD>
+                      </tr>
+                    ))}
+                  </DataTable>
+
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs text-slate-500">
+                      Showing page {auditMeta.page} of {auditMeta.totalPages} ({auditMeta.total} total records)
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => fetchAuditLogs({ page: Math.max(auditMeta.page - 1, 1), filters: auditFilters })}
+                        disabled={auditMeta.page <= 1 || auditLoading}
+                        className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <span className="inline-flex items-center gap-1">
+                          <NavigateBeforeIcon sx={{ fontSize: 14 }} />
+                          Prev
+                        </span>
+                      </button>
+                      <button
+                        onClick={() =>
+                          fetchAuditLogs({
+                            page: Math.min(auditMeta.page + 1, auditMeta.totalPages),
+                            filters: auditFilters,
+                          })
+                        }
+                        disabled={auditMeta.page >= auditMeta.totalPages || auditLoading}
+                        className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <span className="inline-flex items-center gap-1">
+                          Next
+                          <NavigateNextIcon sx={{ fontSize: 14 }} />
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </Section>
+        )}
         </div>
       </div>
       {confirmDialog}
     </>
   );
+}
+
+function safeJSONStringify(value) {
+  try {
+    const text = JSON.stringify(value || {}, null, 2);
+    return text.length > 400 ? `${text.slice(0, 400)}...` : text;
+  } catch {
+    return "{}";
+  }
 }
 
 function StatCard({ label, value, tone, icon: Icon }) {

@@ -1,4 +1,3 @@
-import { useEffect, useRef, useState } from "react";
 import {
   Button,
   Dialog,
@@ -9,15 +8,7 @@ import {
 } from "@mui/material";
 import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
 
-const defaultOptions = {
-  title: "Please Confirm",
-  message: "Are you sure you want to continue?",
-  confirmText: "Confirm",
-  cancelText: "Cancel",
-  tone: "danger",
-};
-
-function ConfirmDialog({
+export default function ConfirmDialog({
   open,
   title,
   message,
@@ -83,49 +74,3 @@ function ConfirmDialog({
     </Dialog>
   );
 }
-
-export function useConfirmDialog() {
-  const [options, setOptions] = useState(defaultOptions);
-  const [open, setOpen] = useState(false);
-  const resolveRef = useRef(null);
-
-  const closeDialog = (value) => {
-    setOpen(false);
-    if (resolveRef.current) {
-      resolveRef.current(value);
-      resolveRef.current = null;
-    }
-  };
-
-  const confirm = (newOptions = {}) =>
-    new Promise((resolve) => {
-      resolveRef.current = resolve;
-      setOptions({ ...defaultOptions, ...newOptions });
-      setOpen(true);
-    });
-
-  useEffect(() => {
-    return () => {
-      if (resolveRef.current) {
-        resolveRef.current(false);
-        resolveRef.current = null;
-      }
-    };
-  }, []);
-
-  const confirmDialog = (
-    <ConfirmDialog
-      open={open}
-      title={options.title}
-      message={options.message}
-      confirmText={options.confirmText}
-      cancelText={options.cancelText}
-      tone={options.tone}
-      onCancel={() => closeDialog(false)}
-      onConfirm={() => closeDialog(true)}
-    />
-  );
-
-  return { confirm, confirmDialog };
-}
-

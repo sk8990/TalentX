@@ -34,6 +34,36 @@ const studentSchema = new mongoose.Schema(
 
     resumeUrl: {
       type: String
+    },
+
+    resumeSummary: {
+      type: String,
+      default: ""
+    },
+
+    resumeParsedAt: {
+      type: Date,
+      default: null
+    },
+
+    preferences: {
+      alertsEnabled: {
+        type: Boolean,
+        default: true
+      },
+      preferredRoles: {
+        type: [String],
+        default: []
+      },
+      preferredLocations: {
+        type: [String],
+        default: []
+      },
+      minCtc: {
+        type: Number,
+        default: 0,
+        min: 0
+      }
     }
   },
   { timestamps: true }

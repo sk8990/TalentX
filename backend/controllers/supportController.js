@@ -1,6 +1,7 @@
 const axios = require("axios");
 const SupportTicket = require("../models/SupportTicket");
 const Student = require("../models/Student");
+const { notify, notifyTicketAnswered } = require("../services/notificationService");
 
 exports.askAI = async (req, res) => {
   try {
@@ -154,6 +155,31 @@ exports.respondTicket = async (req, res) => {
     ticket.status = "ANSWERED";
 
     await ticket.save();
+
+    if (ticket.requesterRole === "student" && ticket.studentId) {
+      const student = await Student.findById(ticket.studentId).select("userId");
+      const studentUserId = student?.userId ? student.userId.toString() : null;
+
+      if (studentUserId) {
+        notifyTicketAnswered(studentUserId, ticket._id.toString()).catch((err) => {
+          console.error("[NOTIFY] student ticket response failed:", err.message);
+        });
+      }
+    }
+
+    if (ticket.requesterRole === "recruiter" && ticket.recruiterId) {
+      notify({
+        userId: ticket.recruiterId.toString(),
+        type: "TICKET_ANSWERED",
+        title: "Support Ticket Answered",
+        message: "Your support ticket has been responded to by an admin.",
+        link: "/recruiter/support",
+        metadata: { ticketId: ticket._id.toString() },
+        sendMail: false
+      }).catch((err) => {
+        console.error("[NOTIFY] recruiter ticket response failed:", err.message);
+      });
+    }
 
     res.json(ticket);
   } catch (err) {

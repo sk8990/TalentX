@@ -11,13 +11,19 @@ const {
   sendAssessment,
   updateAssessmentResult,
   scheduleInterview,
+  publishInterviewSlots,
+  bookInterviewSlot,
   selectCandidate,
   rejectCandidate,
   getMyApplications,
   respondToOffer,
   generateOffer,
   getMyInterviews,
-  getMyAssessments
+  getMyInterviewRoom,
+  getMyInterviewSlots,
+  getMyAssessments,
+  assignInterviewerToApplication,
+  unassignInterviewerFromApplication
 } = require("../controllers/applicationController");
 
 router.post("/apply", auth, role("student"), profileComplete, upload.single("resume"), applyJob);
@@ -29,6 +35,20 @@ router.get(
   auth,
   role("student"),
   getMyInterviews
+);
+
+router.get(
+  "/:applicationId/interview/room",
+  auth,
+  role("student"),
+  getMyInterviewRoom
+);
+
+router.get(
+  "/my/interview-slots",
+  auth,
+  role("student"),
+  getMyInterviewSlots
 );
 
 router.get(
@@ -48,6 +68,24 @@ router.put("/:applicationId/assessment", auth, role("recruiter"), sendAssessment
 router.put("/:applicationId/assessment/result", auth, role("recruiter"), updateAssessmentResult);
 
 router.put("/:applicationId/interview", auth, role("recruiter"), scheduleInterview);
+
+router.put("/:applicationId/interview/slots", auth, role("recruiter"), publishInterviewSlots);
+
+router.put(
+  "/:applicationId/interviewer/assign",
+  auth,
+  role("recruiter"),
+  assignInterviewerToApplication
+);
+
+router.put(
+  "/:applicationId/interviewer/unassign",
+  auth,
+  role("recruiter"),
+  unassignInterviewerFromApplication
+);
+
+router.put("/:applicationId/interview/book", auth, role("student"), bookInterviewSlot);
 
 router.put("/:applicationId/select", auth, role("recruiter"), selectCandidate);
 

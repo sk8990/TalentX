@@ -2,8 +2,10 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import WorkIcon from "@mui/icons-material/Work";
 import GroupsIcon from "@mui/icons-material/Groups";
+import PersonAddAltIcon from "@mui/icons-material/PersonAddAlt";
 import LogoutIcon from "@mui/icons-material/Logout";
 import SupportAgentIcon from "@mui/icons-material/SupportAgent";
+import NotificationBell from "../../components/NotificationBell";
 
 export default function RecruiterLayout() {
   const navigate = useNavigate();
@@ -24,14 +26,17 @@ export default function RecruiterLayout() {
     <div className="min-h-screen bg-slate-100">
       <div className="mx-auto flex w-full max-w-[1440px]">
         <aside className="sticky top-0 hidden h-screen w-72 flex-col border-r border-slate-200 bg-white px-6 py-7 lg:flex">
-          <div className="mb-10 flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-600 font-bold text-white">
-              TX
+          <div className="mb-10 flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-600 font-bold text-white">
+                TX
+              </div>
+              <div>
+                <h1 className="text-lg font-bold text-slate-900">TalentX</h1>
+                <p className="text-xs text-slate-500">Recruiter Workspace</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-lg font-bold text-slate-900">TalentX</h1>
-              <p className="text-xs text-slate-500">Recruiter Workspace</p>
-            </div>
+            <NotificationBell />
           </div>
 
           <nav className="flex flex-1 flex-col gap-2">
@@ -46,6 +51,10 @@ export default function RecruiterLayout() {
             <NavLink to="/recruiter/applications" className={navItemClass}>
               <GroupsIcon sx={{ fontSize: 18 }} />
               Applications
+            </NavLink>
+            <NavLink to="/recruiter/interviewers" className={navItemClass}>
+              <PersonAddAltIcon sx={{ fontSize: 18 }} />
+              Interviewers
             </NavLink>
             <NavLink to="/recruiter/support" className={navItemClass}>
               <SupportAgentIcon sx={{ fontSize: 18 }} />
@@ -75,6 +84,7 @@ export default function RecruiterLayout() {
                   <h1 className="text-base font-bold text-slate-900">TalentX Recruiter</h1>
                   <p className="text-xs text-slate-500">Manage jobs and candidates</p>
                 </div>
+                <NotificationBell />
               </div>
               <button
                 onClick={logout}
@@ -86,7 +96,7 @@ export default function RecruiterLayout() {
                 </span>
               </button>
             </div>
-            <nav className="mt-4 grid grid-cols-4 gap-2">
+            <nav className="mt-4 grid grid-cols-5 gap-2">
               <NavLink to="/recruiter/dashboard" className={navItemClass}>
                 Dashboard
               </NavLink>
@@ -95,6 +105,9 @@ export default function RecruiterLayout() {
               </NavLink>
               <NavLink to="/recruiter/applications" className={navItemClass}>
                 Applications
+              </NavLink>
+              <NavLink to="/recruiter/interviewers" className={navItemClass}>
+                Interviewers
               </NavLink>
               <NavLink to="/recruiter/support" className={navItemClass}>
                 Support

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../../api/axios";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
@@ -9,7 +9,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import { FormControl, MenuItem, Select } from "@mui/material";
 import toast from "react-hot-toast";
-import { useConfirmDialog } from "../../components/ConfirmDialog";
+import { useConfirmDialog } from "../../components/useConfirmDialog";
 
 const initialForm = {
   companyName: "",
@@ -48,7 +48,7 @@ export default function RecruiterJobs() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const showAlert = (severity, message) => {
+  const showAlert = useCallback((severity, message) => {
     if (severity === "success") {
       toast.success(message);
       return;
@@ -58,18 +58,18 @@ export default function RecruiterJobs() {
       return;
     }
     toast.error(message);
-  };
+  }, []);
 
-  const fetchJobs = async () => {
+  const fetchJobs = useCallback(async () => {
     try {
       const res = await API.get("/company/recruiter/jobs");
       setJobs(res.data || []);
     } catch {
       showAlert("error", "Failed to fetch jobs");
     }
-  };
+  }, [showAlert]);
 
-  const fetchCompanies = async () => {
+  const fetchCompanies = useCallback(async () => {
     try {
       const res = await API.get("/company/list");
       setCompanies(Array.isArray(res.data) ? res.data : []);
@@ -77,12 +77,12 @@ export default function RecruiterJobs() {
       setCompanies([]);
       showAlert("error", "Failed to fetch company list");
     }
-  };
+  }, [showAlert]);
 
   useEffect(() => {
     fetchJobs();
     fetchCompanies();
-  }, []);
+  }, [fetchCompanies, fetchJobs]);
 
   const generateAI = async () => {
     if (!formData.title.trim()) {

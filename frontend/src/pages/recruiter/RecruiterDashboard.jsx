@@ -109,6 +109,13 @@ export default function RecruiterDashboard() {
           </Link>
 
           <Link
+            to="/recruiter/interviewers"
+            className="rounded-xl bg-cyan-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-800"
+          >
+            Manage Interviewers
+          </Link>
+
+          <Link
             to="/recruiter/support"
             className="rounded-xl bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700"
           >

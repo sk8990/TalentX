@@ -1,23 +1,27 @@
 import { useEffect, useState } from "react";
-import API from "../api/axios";
+import API, { getServerOrigin } from "../api/axios";
 import toast from "react-hot-toast";
 
 export default function AdminSupport() {
+  const serverOrigin = getServerOrigin();
   const [tickets, setTickets] = useState([]);
   const [replies, setReplies] = useState({});
-
-  useEffect(() => {
-    fetchTickets();
-  }, []);
-
-  const fetchTickets = async () => {
+  
+  async function fetchTickets() {
     try {
       const res = await API.get("/support/admin");
       setTickets(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to load tickets");
     }
-  };
+  }
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void fetchTickets();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
 
   const respond = async (id) => {
     const text = (replies[id] || "").trim();
@@ -73,7 +77,7 @@ export default function AdminSupport() {
               <div className="mt-3">
                 <p className="font-semibold">Screenshot:</p>
                 <a
-                  href={`http://localhost:5000${ticket.screenshotPath}`}
+                  href={`${serverOrigin}${ticket.screenshotPath}`}
                   target="_blank"
                   rel="noreferrer"
                   className="text-sm font-medium text-indigo-600 underline"

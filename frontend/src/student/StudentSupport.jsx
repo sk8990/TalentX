@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import API from "../api/axios";
+import API, { getServerOrigin } from "../api/axios";
 import toast from "react-hot-toast";
 import SmartToyIcon from "@mui/icons-material/SmartToy";
 import SendIcon from "@mui/icons-material/Send";
@@ -8,6 +8,7 @@ import AddPhotoAlternateIcon from "@mui/icons-material/AddPhotoAlternate";
 import CloseIcon from "@mui/icons-material/Close";
 
 export default function StudentSupport() {
+  const serverOrigin = getServerOrigin();
   const [question, setQuestion] = useState("");
   const [chat, setChat] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -203,7 +204,7 @@ export default function StudentSupport() {
 
                 {ticket?.screenshotPath && (
                   <a
-                    href={`http://localhost:5000${ticket?.screenshotPath}`}
+                    href={`${serverOrigin}${ticket?.screenshotPath}`}
                     target="_blank"
                     rel="noreferrer"
                     className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-700"

@@ -34,9 +34,8 @@ export default function ForgotPassword() {
 
     try {
       setLoading(true);
-      const res = await API.post("/auth/forgot-password", { email: email.trim() });
-      console.log("RESET TOKEN:", res.data.resetToken);
-      showAlert("success", "Reset token generated. Check console (dev mode).");
+      await API.post("/auth/forgot-password", { email: email.trim() });
+      showAlert("success", "If your email is registered, a reset token has been sent.");
       setStep(2);
     } catch (err) {
       showAlert("error", err.response?.data?.message || "Failed to generate token");

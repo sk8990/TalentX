@@ -1,5 +1,6 @@
 import { useState } from "react";
 import API from "../api/axios";
+import "./Login.css";
 import { Link, useNavigate } from "react-router-dom";
 import WorkOutlineRoundedIcon from "@mui/icons-material/WorkOutlineRounded";
 import TrendingUpRoundedIcon from "@mui/icons-material/TrendingUpRounded";
@@ -33,7 +34,10 @@ export default function Login() {
       });
 
       const token = res.data.token;
-      const user = res.data.user;
+      const user = {
+        ...(res.data.user || {}),
+        forcePasswordReset: Boolean(res.data.forcePasswordReset)
+      };
 
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
@@ -44,6 +48,8 @@ export default function Login() {
         navigate("/recruiter");
       } else if (user.role === "admin") {
         navigate("/admin");
+      } else if (user.role === "interviewer") {
+        navigate(user.forcePasswordReset ? "/interviewer/reset-password" : "/interviewer");
       }
     } catch (err) {
       setError(err.response?.data?.message || "Login failed. Please try again.");
@@ -181,33 +187,6 @@ export default function Login() {
         </section>
       </div>
 
-      <style>{`
-        .ticker-track {
-          display: flex;
-          align-items: center;
-          gap: 2.2rem;
-          width: max-content;
-          white-space: nowrap;
-          height: 100%;
-          animation: ticker-slide 14s linear infinite;
-        }
-
-        .ticker-item {
-          font-size: 1.15rem;
-          font-weight: 800;
-          letter-spacing: 0.02em;
-          color: rgba(237, 242, 255, 0.98);
-        }
-
-        @keyframes ticker-slide {
-          0% {
-            transform: translateX(0);
-          }
-          100% {
-            transform: translateX(-50%);
-          }
-        }
-      `}</style>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import API from "../api/axios";
+import API, { getServerOrigin } from "../api/axios";
 import DownloadIcon from "@mui/icons-material/Download";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
@@ -49,6 +49,7 @@ function Timeline({ currentStatus }) {
 }
 
 export default function MyApplications() {
+  const serverOrigin = getServerOrigin();
   const [apps, setApps] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -127,7 +128,7 @@ export default function MyApplications() {
 
               {app.offer.pdfPath && (
                 <a
-                  href={`http://localhost:5000${app.offer.pdfPath}`}
+                  href={`${serverOrigin}${app.offer.pdfPath}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="mt-4 inline-block rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"

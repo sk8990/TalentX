@@ -1,3 +1,4 @@
+import { createElement } from "react";
 import { Link } from "react-router-dom";
 import RocketLaunchIcon from "@mui/icons-material/RocketLaunch";
 import SchoolIcon from "@mui/icons-material/School";
@@ -46,11 +47,11 @@ export default function About() {
   );
 }
 
-function FeatureCard({ icon: Icon, title, text }) {
+function FeatureCard({ icon, title, text }) {
   return (
     <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
       <div className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700">
-        <Icon sx={{ fontSize: 22 }} />
+        {icon ? createElement(icon, { sx: { fontSize: 22 } }) : null}
       </div>
       <h3 className="mt-4 text-lg font-semibold text-slate-900">{title}</h3>
       <p className="mt-2 text-sm text-slate-600">{text}</p>
@@ -58,11 +59,11 @@ function FeatureCard({ icon: Icon, title, text }) {
   );
 }
 
-function InfoItem({ icon: Icon, text }) {
+function InfoItem({ icon, text }) {
   return (
     <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
       <span className="mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-lg bg-white text-indigo-700">
-        <Icon sx={{ fontSize: 18 }} />
+        {icon ? createElement(icon, { sx: { fontSize: 18 } }) : null}
       </span>
       <p className="text-sm text-slate-700">{text}</p>
     </div>

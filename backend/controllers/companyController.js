@@ -1,8 +1,11 @@
 const Company = require("../models/Company.js");
 const Job = require("../models/Job.js");
 const Application = require("../models/Application");
+const Student = require("../models/Student");
 const { expireJobsByDeadline } = require("../utils/jobExpiry");
 const seedCompanies = require("../data/companies.js");
+const { notify } = require("../services/notificationService");
+const { normalizeList } = require("../utils/jobMatch");
 const allowedBranches = ["CS", "IT", "ENTC", "MECH", "CIVIL"];
 
 function normalizeDomain(domainInput) {
@@ -125,6 +128,70 @@ function sanitizeAndValidateJobInput(body) {
   };
 }
 
+function studentWantsJobAlert(student, job) {
+  const preferences = student?.preferences || {};
+  if (preferences.alertsEnabled === false) {
+    return false;
+  }
+
+  const preferredMinCtc = Number(preferences.minCtc || 0);
+  if (preferredMinCtc > 0 && Number(job.ctc || 0) < preferredMinCtc) {
+    return false;
+  }
+
+  const rolePreferences = normalizeList(preferences.preferredRoles).map((item) => item.toLowerCase());
+  if (rolePreferences.length) {
+    const roleText = `${job.title || ""} ${job.description || ""}`.toLowerCase();
+    if (!rolePreferences.some((item) => roleText.includes(item))) {
+      return false;
+    }
+  }
+
+  const locationPreferences = normalizeList(preferences.preferredLocations).map((item) => item.toLowerCase());
+  if (locationPreferences.length) {
+    const locationText = `${job.aboutCompany || ""} ${job.description || ""} ${job.companyName || ""}`.toLowerCase();
+    if (!locationPreferences.some((item) => locationText.includes(item))) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+async function notifyStudentsForNewJob(job) {
+  const baseFilter = {
+    cgpa: { $gte: Number(job.minCgpa || 0) }
+  };
+
+  if (Array.isArray(job.eligibleBranches) && job.eligibleBranches.length) {
+    baseFilter.branch = { $in: job.eligibleBranches };
+  }
+
+  const targetStudents = await Student.find(baseFilter).select("userId preferences");
+  const tasks = targetStudents
+    .filter((student) => student.userId && studentWantsJobAlert(student, job))
+    .map((student) =>
+      notify({
+        userId: student.userId.toString(),
+        type: "JOB_POSTED",
+        title: `New Job Match: ${job.title}`,
+        message: `${job.companyName} posted a role that matches your preferences.`,
+        link: "/student/jobs",
+        metadata: {
+          jobId: job._id.toString(),
+          ctc: job.ctc
+        },
+        sendMail: false
+      })
+    );
+
+  if (!tasks.length) {
+    return;
+  }
+
+  await Promise.allSettled(tasks);
+}
+
 exports.createCompany = async (req, res) => {
   try {
     const company = await Company.create(req.body);
@@ -167,6 +234,10 @@ exports.postJob = async (req, res) => {
       companyDomain: finalDomain,
       companyLogo: finalLogo,
       recruiterId: req.user.id,
+    });
+
+    notifyStudentsForNewJob(job).catch((notifyErr) => {
+      console.error("postJob notifyStudentsForNewJob error:", notifyErr.message);
     });
 
     res.status(201).json(job);
@@ -251,18 +322,25 @@ exports.updateJob = async (req, res) => {
 };
 
 exports.deleteJob = async (req, res) => {
-  const { jobId } = req.params;
+  try {
+    const { jobId } = req.params;
 
-  const job = await Job.findOneAndDelete({
-    _id: jobId,
-    recruiterId: req.user.id
-  });
+    const job = await Job.findOneAndDelete({
+      _id: jobId,
+      recruiterId: req.user.id
+    });
 
-  if (!job) {
-    return res.status(404).json({ message: "Job not found" });
+    if (!job) {
+      return res.status(404).json({ message: "Job not found" });
+    }
+
+    res.json({ message: "Job deleted successfully" });
+  } catch (err) {
+    if (err.name === "CastError") {
+      return res.status(400).json({ message: "Invalid job id" });
+    }
+    res.status(500).json({ message: err.message });
   }
-
-  res.json({ message: "Job deleted successfully" });
 };
 
 exports.getRecruiterStats = async (req, res) => {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../api/axios";
 import SearchIcon from "@mui/icons-material/Search";
@@ -9,6 +9,41 @@ import FilterListIcon from "@mui/icons-material/FilterList";
 import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
 import { FormControl, MenuItem, Select } from "@mui/material";
 import toast from "react-hot-toast";
+
+let jobProfilesBootstrapInFlight = null;
+
+async function fetchJobProfilesBootstrapData() {
+  if (jobProfilesBootstrapInFlight) {
+    return jobProfilesBootstrapInFlight;
+  }
+
+  jobProfilesBootstrapInFlight = (async () => {
+    const jobsRes = await API.get("/student/jobs?sort=deadline");
+
+    let appliedRes = { data: [] };
+    try {
+      appliedRes = await API.get("/application/my");
+    } catch (err) {
+      console.error("Applications fetch failed:", err);
+    }
+
+    const jobs = jobsRes.data?.jobs || [];
+    const student = jobsRes.data?.student || null;
+    const appliedIds = Array.isArray(appliedRes.data)
+      ? appliedRes.data.map((app) => app.jobId?._id || app.jobId)
+      : [];
+
+    return {
+      jobs,
+      student,
+      appliedIds: [...new Set(appliedIds)],
+    };
+  })().finally(() => {
+    jobProfilesBootstrapInFlight = null;
+  });
+
+  return jobProfilesBootstrapInFlight;
+}
 
 export default function JobProfiles() {
   const navigate = useNavigate();
@@ -25,8 +60,7 @@ export default function JobProfiles() {
   const [eligibilityFilter, setEligibilityFilter] = useState("all");
   const [branchFilter, setBranchFilter] = useState("all");
   const [ctcFilter, setCtcFilter] = useState("all");
-  const [sortBy, setSortBy] = useState("deadline");
-  const [expandedJobId, setExpandedJobId] = useState(null);
+  const [sortBy, setSortBy] = useState("match");
 
   const showAlert = (severity, message) => {
     if (severity === "success") {
@@ -44,24 +78,10 @@ export default function JobProfiles() {
     const fetchAll = async () => {
       try {
         setLoading(true);
-
-        const jobsRes = await API.get("/student/jobs?sort=deadline");
-
-        let appliedRes = { data: [] };
-        try {
-          appliedRes = await API.get("/application/my");
-        } catch (err) {
-          console.error("Applications fetch failed:", err);
-        }
-
-        setJobs(jobsRes.data?.jobs || []);
-        setStudent(jobsRes.data?.student || null);
-
-        const appliedIds = Array.isArray(appliedRes.data)
-          ? appliedRes.data.map((app) => app.jobId?._id || app.jobId)
-          : [];
-
-        setAppliedJobs([...new Set(appliedIds)]);
+        const payload = await fetchJobProfilesBootstrapData();
+        setJobs(payload.jobs);
+        setStudent(payload.student);
+        setAppliedJobs(payload.appliedIds);
       } catch (err) {
         console.error("fetchAll error:", err);
         showAlert("error", err?.response?.data?.message || "Failed to load jobs");
@@ -72,6 +92,26 @@ export default function JobProfiles() {
 
     fetchAll();
   }, []);
+
+  useEffect(() => {
+    if (!selectedJob) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setSelectedJob(null);
+        setResume(null);
+      }
+    };
+
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [selectedJob]);
 
   const allJobs = useMemo(
     () => jobs.filter((job) => !appliedJobs.includes(job._id)),
@@ -85,31 +125,64 @@ export default function JobProfiles() {
 
   const visibleJobs = activeSection === "all" ? allJobs : appliedOnlyJobs;
 
-  const isEligible = (job) => {
+  const isEligible = useCallback((job) => {
     if (!student) return false;
-    if (student.cgpa < job.minCgpa) return false;
 
-    if (job.eligibleBranches.length > 0 && !job.eligibleBranches.includes(student.branch)) {
+    const eligibleBranches = Array.isArray(job?.eligibleBranches) ? job.eligibleBranches : [];
+    const minCgpa = Number(job?.minCgpa || 0);
+
+    if (student.cgpa < minCgpa) return false;
+
+    if (eligibleBranches.length > 0 && !eligibleBranches.includes(student.branch)) {
       return false;
     }
 
     return true;
-  };
+  }, [student]);
 
-  const getIneligibilityReason = (job) => {
+  const getIneligibilityReason = useCallback((job) => {
     if (!student) return "Student profile not loaded.";
+
+    const eligibleBranches = Array.isArray(job?.eligibleBranches) ? job.eligibleBranches : [];
+    const minCgpa = Number(job?.minCgpa || 0);
 
     const reasons = [];
 
-    if (student.cgpa < job.minCgpa) {
-      reasons.push(`CGPA ${student.cgpa} is below minimum ${job.minCgpa}`);
+    if (student.cgpa < minCgpa) {
+      reasons.push(`CGPA ${student.cgpa} is below minimum ${minCgpa}`);
     }
 
-    if (job.eligibleBranches.length > 0 && !job.eligibleBranches.includes(student.branch)) {
+    if (eligibleBranches.length > 0 && !eligibleBranches.includes(student.branch)) {
       reasons.push(`Branch ${student.branch} is not in eligible branches`);
     }
 
     return reasons.join(". ");
+  }, [student]);
+
+  const getJobSkills = (job) => {
+    const merged = [];
+
+    const appendSkills = (value) => {
+      if (Array.isArray(value)) {
+        merged.push(...value);
+        return;
+      }
+      if (typeof value === "string") {
+        merged.push(...value.split(","));
+      }
+    };
+
+    appendSkills(job?.skills);
+    appendSkills(job?.requiredSkills);
+    appendSkills(job?.keySkills);
+    appendSkills(job?.techStack);
+
+    const cleaned = [...new Set(merged.map((item) => String(item || "").trim()).filter(Boolean))];
+    if (cleaned.length > 0) {
+      return cleaned;
+    }
+
+    return Array.isArray(job?.eligibleBranches) ? job.eligibleBranches : [];
   };
 
   const filteredJobs = useMemo(() => {
@@ -158,6 +231,8 @@ export default function JobProfiles() {
       results = [...results].sort((a, b) => Number(b.ctc || 0) - Number(a.ctc || 0));
     } else if (sortBy === "ctcLow") {
       results = [...results].sort((a, b) => Number(a.ctc || 0) - Number(b.ctc || 0));
+    } else if (sortBy === "match") {
+      results = [...results].sort((a, b) => Number(b.match?.score || 0) - Number(a.match?.score || 0));
     } else if (sortBy === "title") {
       results = [...results].sort((a, b) => String(a.title || "").localeCompare(String(b.title || "")));
     } else {
@@ -167,7 +242,7 @@ export default function JobProfiles() {
     }
 
     return results;
-  }, [visibleJobs, search, eligibilityFilter, branchFilter, ctcFilter, sortBy, student]);
+  }, [visibleJobs, search, eligibilityFilter, branchFilter, ctcFilter, sortBy, isEligible]);
 
   const menuProps = {
     PaperProps: {
@@ -274,6 +349,10 @@ export default function JobProfiles() {
   }
 
   const isProfileComplete = student.branch && student.year && student.cgpa > 0;
+  const selectedJobEligible = selectedJob ? isEligible(selectedJob) : false;
+  const selectedJobAlreadyApplied = selectedJob ? appliedJobs.includes(selectedJob._id) : false;
+  const selectedJobSkills = selectedJob ? getJobSkills(selectedJob) : [];
+  const selectedJobMatch = selectedJob?.match || null;
 
   return (
     <div className="space-y-8">
@@ -365,6 +444,7 @@ export default function JobProfiles() {
                 sx={selectSx}
               >
                 <MenuItem value="deadline">Deadline (Soonest)</MenuItem>
+                <MenuItem value="match">Match Score (High to Low)</MenuItem>
                 <MenuItem value="ctcHigh">CTC (High to Low)</MenuItem>
                 <MenuItem value="ctcLow">CTC (Low to High)</MenuItem>
                 <MenuItem value="title">Title (A-Z)</MenuItem>
@@ -410,12 +490,14 @@ export default function JobProfiles() {
           {filteredJobs.map((job) => {
             const eligible = isEligible(job);
             const alreadyApplied = appliedJobs.includes(job._id);
-            const isExpanded = expandedJobId === job._id;
 
             return (
               <article
                 key={job._id}
-                onClick={() => setExpandedJobId((prev) => (prev === job._id ? null : job._id))}
+                onClick={() => {
+                  setSelectedJob(job);
+                  setResume(null);
+                }}
                 className="cursor-pointer rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:shadow-md"
               >
                 <div className="flex items-start justify-between gap-3">
@@ -433,28 +515,31 @@ export default function JobProfiles() {
                       <p className="mt-1 text-xs text-slate-500">{job.companyName || "Unknown company"}</p>
                     </div>
                   </div>
-                  {alreadyApplied && (
-                    <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">Applied</span>
-                  )}
+                  <div className="flex flex-col items-end gap-2">
+                    {typeof job.match?.score === "number" && (
+                      <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700">
+                        Match {job.match.score}%
+                      </span>
+                    )}
+                    {alreadyApplied && (
+                      <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">Applied</span>
+                    )}
+                  </div>
                 </div>
 
                 <p
                   className="mt-3 text-sm text-slate-600"
-                  style={
-                    isExpanded
-                      ? undefined
-                      : {
-                          display: "-webkit-box",
-                          WebkitLineClamp: 4,
-                          WebkitBoxOrient: "vertical",
-                          overflow: "hidden",
-                        }
-                  }
+                  style={{
+                    display: "-webkit-box",
+                    WebkitLineClamp: 4,
+                    WebkitBoxOrient: "vertical",
+                    overflow: "hidden",
+                  }}
                 >
                   {job.description || "No description provided."}
                 </p>
                 <p className="mt-2 text-xs font-medium text-indigo-600">
-                  {isExpanded ? "Click card to collapse" : "Click card to read more"}
+                  Click card to view full details
                 </p>
 
                 <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
@@ -469,17 +554,11 @@ export default function JobProfiles() {
                 </div>
 
                 <p className="mt-3 text-xs text-slate-500">
-                  Branches: {job.eligibleBranches.length > 0 ? job.eligibleBranches.join(", ") : "All"}
+                  Branches: {Array.isArray(job.eligibleBranches) && job.eligibleBranches.length > 0 ? job.eligibleBranches.join(", ") : "All"}
                 </p>
                 <p className="mt-1 text-xs text-slate-500">
                   Deadline: {job.deadline ? new Date(job.deadline).toLocaleDateString() : "N/A"}
                 </p>
-                {isExpanded && (
-                  <p className="mt-3 text-xs text-slate-600">
-                    <span className="font-semibold text-slate-800">About Company:</span>{" "}
-                    {job.aboutCompany || "Not provided."}
-                  </p>
-                )}
 
                 <div className="mt-5" onClick={(e) => e.stopPropagation()}>
                   {!isProfileComplete ? (
@@ -495,7 +574,10 @@ export default function JobProfiles() {
                     </button>
                   ) : eligible ? (
                     <button
-                      onClick={() => setSelectedJob(job)}
+                      onClick={() => {
+                        setSelectedJob(job);
+                        setResume(null);
+                      }}
                       disabled={applyingId === job._id}
                       className="w-full rounded-xl bg-indigo-600 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-60"
                     >
@@ -519,31 +601,141 @@ export default function JobProfiles() {
       )}
 
       {selectedJob && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4">
-          <div className="w-full max-w-2xl rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl sm:p-8">
-            <h2 className="text-2xl font-bold text-slate-900">{selectedJob.title}</h2>
-            <p className="mt-1 text-sm text-slate-500">{selectedJob.companyName}</p>
-
-            <div className="mt-5 max-h-64 space-y-3 overflow-y-auto pr-2 text-sm text-slate-700">
-              <p><span className="font-semibold text-slate-900">Description:</span> {selectedJob.description}</p>
-              <p><span className="font-semibold text-slate-900">CTC:</span> {selectedJob.ctc} LPA</p>
-              <p><span className="font-semibold text-slate-900">Eligibility:</span> {selectedJob.eligibilityText || "N/A"}</p>
-              <p><span className="font-semibold text-slate-900">About Company:</span> {selectedJob.aboutCompany || "N/A"}</p>
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/55 px-3 py-4 sm:items-center sm:px-4 sm:py-6"
+          onClick={() => {
+            setSelectedJob(null);
+            setResume(null);
+          }}
+        >
+          <div
+            className="flex w-full max-w-3xl max-h-[calc(100vh-2rem)] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl sm:max-h-[calc(100vh-3rem)] sm:p-8"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-bold text-slate-900">{selectedJob.title}</h2>
+                <p className="mt-1 text-sm text-slate-500">{selectedJob.companyName || "Unknown company"}</p>
+              </div>
+              <div className="flex flex-col items-end gap-2">
+                {typeof selectedJobMatch?.score === "number" && (
+                  <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700">
+                    Match {selectedJobMatch.score}%
+                  </span>
+                )}
+                {selectedJobAlreadyApplied && (
+                  <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">Applied</span>
+                )}
+              </div>
             </div>
 
-            <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Upload Resume (PDF)</label>
-              <input
-                type="file"
-                accept="application/pdf"
-                onChange={(e) => setResume(e.target.files[0])}
-                className="mt-2 block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-indigo-100 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-indigo-700 hover:file:bg-indigo-200"
-              />
-              <p className="mt-2 inline-flex items-center gap-1 text-xs text-slate-500">
-                <UploadFileIcon sx={{ fontSize: 14 }} />
-                Upload latest PDF resume.
-              </p>
+            <div className="mt-5 grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
+              <div className="rounded-xl bg-slate-100 px-3 py-2 text-slate-600">
+                <span className="block font-semibold text-slate-800">CTC</span>
+                {selectedJob.ctc || "N/A"} LPA
+              </div>
+              <div className="rounded-xl bg-slate-100 px-3 py-2 text-slate-600">
+                <span className="block font-semibold text-slate-800">Min CGPA</span>
+                {selectedJob.minCgpa ?? "N/A"}
+              </div>
+              <div className="rounded-xl bg-slate-100 px-3 py-2 text-slate-600">
+                <span className="block font-semibold text-slate-800">Deadline</span>
+                {selectedJob.deadline ? new Date(selectedJob.deadline).toLocaleDateString() : "N/A"}
+              </div>
+              <div className="rounded-xl bg-slate-100 px-3 py-2 text-slate-600">
+                <span className="block font-semibold text-slate-800">Domain</span>
+                {selectedJob.companyDomain || "N/A"}
+              </div>
             </div>
+
+            <div className="mt-5 min-h-0 flex-1 space-y-5 overflow-y-auto pr-2 text-sm text-slate-700">
+              <div>
+                <h3 className="text-base font-semibold text-slate-900">Job Description</h3>
+                <p className="mt-1 whitespace-pre-line">{selectedJob.description || "No description provided."}</p>
+              </div>
+
+              <div>
+                <h3 className="text-base font-semibold text-slate-900">Eligibility Criteria</h3>
+                <p className="mt-1 whitespace-pre-line">{selectedJob.eligibilityText || "No eligibility text provided."}</p>
+                <p className="mt-2 text-xs text-slate-500">
+                  Eligible Branches:{" "}
+                  {selectedJob.eligibleBranches?.length > 0 ? selectedJob.eligibleBranches.join(", ") : "All branches"}
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-base font-semibold text-slate-900">Required Skills</h3>
+                {selectedJobSkills.length > 0 ? (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {selectedJobSkills.map((skill) => (
+                      <span
+                        key={`${selectedJob._id}-${skill}`}
+                        className="rounded-full border border-indigo-300 bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700"
+                      >
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-1 text-slate-600">No specific skills listed.</p>
+                )}
+              </div>
+
+              <div>
+                <h3 className="text-base font-semibold text-slate-900">About Company</h3>
+                <p className="mt-1 whitespace-pre-line">{selectedJob.aboutCompany || "No additional company information provided."}</p>
+              </div>
+
+              {selectedJobMatch?.reasons?.length > 0 && (
+                <div>
+                  <h3 className="text-base font-semibold text-slate-900">Match Insights</h3>
+                  <ul className="mt-2 list-disc pl-5 text-sm text-slate-700">
+                    {selectedJobMatch.reasons.map((reason, idx) => (
+                      <li key={`${selectedJob._id}-reason-${idx}`}>{reason}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+
+            {!selectedJobAlreadyApplied && (
+              <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                {!isProfileComplete ? (
+                  <div className="space-y-3">
+                    <p className="text-sm text-slate-600">Complete your profile to apply for this job.</p>
+                    <button
+                      onClick={() => {
+                        setSelectedJob(null);
+                        setResume(null);
+                        navigate("/student/profile");
+                      }}
+                      className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
+                    >
+                      Complete Profile
+                    </button>
+                  </div>
+                ) : selectedJobEligible ? (
+                  <div>
+                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Upload Resume (PDF)</label>
+                    <input
+                      type="file"
+                      accept="application/pdf"
+                      onChange={(e) => setResume(e.target.files[0])}
+                      className="mt-2 block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-indigo-100 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-indigo-700 hover:file:bg-indigo-200"
+                    />
+                    <p className="mt-2 inline-flex items-center gap-1 text-xs text-slate-500">
+                      <UploadFileIcon sx={{ fontSize: 14 }} />
+                      Upload latest PDF resume.
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-sm font-semibold text-rose-700">Not eligible for this job.</p>
+                    <p className="mt-1 text-xs text-rose-700">{getIneligibilityReason(selectedJob)}</p>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="mt-6 flex flex-wrap justify-end gap-3">
               <button
@@ -558,15 +750,18 @@ export default function JobProfiles() {
                   Close
                 </span>
               </button>
-              <button
-                onClick={() => applyJob(selectedJob._id)}
-                className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700"
-              >
-                <span className="inline-flex items-center gap-1">
-                  <SendIcon sx={{ fontSize: 16 }} />
-                  Apply
-                </span>
-              </button>
+              {!selectedJobAlreadyApplied && isProfileComplete && selectedJobEligible && (
+                <button
+                  onClick={() => applyJob(selectedJob._id)}
+                  disabled={applyingId === selectedJob._id}
+                  className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-60"
+                >
+                  <span className="inline-flex items-center gap-1">
+                    <SendIcon sx={{ fontSize: 16 }} />
+                    {applyingId === selectedJob._id ? "Applying..." : "Apply"}
+                  </span>
+                </button>
+              )}
             </div>
           </div>
         </div>

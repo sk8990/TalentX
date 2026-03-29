@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require("crypto");
 const Student = require("../models/Student");
+const { sendEmail } = require("../services/emailService");
 
 const zxcvbn = require("zxcvbn");
 
@@ -56,6 +57,11 @@ exports.register = async (req, res) => {
       return res.status(400).json({ message: "Please enter a valid email address" });
     }
 
+    const allowedRoles = ["student", "recruiter"];
+    if (!allowedRoles.includes(normalizedRole)) {
+      return res.status(400).json({ message: "Invalid role selected. Interviewer accounts are created by recruiters." });
+    }
+
     const passwordError = validatePassword(password);
     if (passwordError) {
       return res.status(400).json({ message: passwordError });
@@ -90,9 +96,12 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
     try {
         const {email, password } = req.body;
-        const user = await User.findOne({email});
+        const normalizedEmail = String(email || "").trim().toLowerCase();
+        const user = await User.findOne({ email: normalizedEmail });
         if(!user)
             return res.status(401).json({message: 'Invalid credentials'});
+        if (!user.isActive)
+            return res.status(403).json({message: "Account disabled by admin"});
         const isMatch = await bcrypt.compare(password, user.password);
         if(!isMatch)
             return res.status(401).json({message: 'Invalid Credentials'});
@@ -107,7 +116,7 @@ exports.login = async (req, res) => {
             {expiresIn: '1d'}
         );
 
-        res.json({
+        const responsePayload = {
   token,
   user: {
     _id: user._id,
@@ -115,7 +124,13 @@ exports.login = async (req, res) => {
     email: user.email,
     role: user.role
   }
-});
+};
+
+        if (user.mustChangePassword) {
+          responsePayload.forcePasswordReset = true;
+        }
+
+        res.json(responsePayload);
 
     } catch (err) {
         res.status(500).json({error: err.message});
@@ -127,29 +142,49 @@ exports.login = async (req, res) => {
 =========================== */
 exports.forgotPassword = async (req, res) => {
   try {
-    const { email } = req.body;
+    const normalizedEmail = String(req.body?.email || "").trim().toLowerCase();
 
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
+    if (!isValidEmail(normalizedEmail)) {
+      return res.status(200).json({
+        message: "If this email is registered, reset instructions have been sent."
+      });
     }
 
-    // Generate token
-    const resetToken = crypto.randomBytes(20).toString("hex");
+    const user = await User.findOne({ email: normalizedEmail });
 
-    user.resetPasswordToken = crypto
-      .createHash("sha256")
-      .update(resetToken)
-      .digest("hex");
+    if (user) {
+      const resetToken = crypto.randomBytes(20).toString("hex");
 
-    user.resetPasswordExpire = Date.now() + 15 * 60 * 1000; // 15 min
+      user.resetPasswordToken = crypto
+        .createHash("sha256")
+        .update(resetToken)
+        .digest("hex");
 
-    await user.save();
+      user.resetPasswordExpire = Date.now() + 15 * 60 * 1000; // 15 min
+      await user.save();
 
-    // In real app → email this link
+      const frontendUrl = String(process.env.FRONTEND_URL || "http://localhost:5173").trim().replace(/\/+$/, "");
+      const resetPage = `${frontendUrl}/forgot-password`;
+      const html = `
+        <div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
+          <h2>Password Reset Request</h2>
+          <p>We received a request to reset your TalentX account password.</p>
+          <p>Use this reset token (valid for 15 minutes):</p>
+          <p style="font-size: 18px; font-weight: 700; letter-spacing: 0.04em;">${resetToken}</p>
+          <p>Open <a href="${resetPage}">${resetPage}</a> and submit this token with your new password.</p>
+          <p>If you did not request this, you can ignore this email.</p>
+        </div>
+      `;
+
+      await sendEmail({
+        to: user.email,
+        subject: "TalentX Password Reset",
+        html
+      });
+    }
+
     res.json({
-      message: "Password reset token generated",
-      resetToken
+      message: "If this email is registered, reset instructions have been sent."
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -162,6 +197,11 @@ exports.forgotPassword = async (req, res) => {
 exports.resetPassword = async (req, res) => {
   try {
     const { token, newPassword } = req.body;
+
+    const passwordError = validatePassword(newPassword);
+    if (passwordError) {
+      return res.status(400).json({ message: passwordError });
+    }
 
     const hashedToken = crypto
       .createHash("sha256")
@@ -177,7 +217,7 @@ exports.resetPassword = async (req, res) => {
       return res.status(400).json({ message: "Invalid or expired token" });
     }
 
-    user.password = await bcrypt.hash(newPassword, 10);
+    user.password = await bcrypt.hash(newPassword, 12);
     user.resetPasswordToken = undefined;
     user.resetPasswordExpire = undefined;
 
@@ -185,6 +225,47 @@ exports.resetPassword = async (req, res) => {
 
     res.json({ message: "Password reset successful" });
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+/* ===========================
+   INTERVIEWER FIRST-LOGIN PASSWORD RESET
+=========================== */
+exports.interviewerResetPassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: "Current password and new password are required" });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (!user.mustChangePassword) {
+      return res.status(400).json({ message: "Password reset is not required" });
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: "Current password is incorrect" });
+    }
+
+    const passwordError = validatePassword(newPassword);
+    if (passwordError) {
+      return res.status(400).json({ message: passwordError });
+    }
+
+    user.password = await bcrypt.hash(newPassword, 12);
+    user.mustChangePassword = false;
+    await user.save();
+
+    res.json({ message: "Password reset successful. You can now access your panel." });
+  } catch (err) {
+    console.error("INTERVIEWER RESET ERROR:", err);
     res.status(500).json({ error: err.message });
   }
 };

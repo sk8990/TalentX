@@ -12,6 +12,7 @@ const {
   respondTicket
 } = require('../controllers/supportController');
 
+// Student routes
 router.post('/ask-ai', auth, role('student'), askAI);
 router.post("/ticket", auth, role("student"), (req, res, next) => {
   supportUpload.single("screenshot")(req, res, (err) => {
@@ -22,8 +23,8 @@ router.post("/ticket", auth, role("student"), (req, res, next) => {
   });
 }, createTicket);
 router.get("/my", auth, role("student"), getMyTickets);
-router.get("/tickets/my", auth, role("student"), getMyTickets);
-router.get("/student/tickets", auth, role("student"), getMyTickets);
+
+// Recruiter routes
 router.post("/recruiter/ticket", auth, role("recruiter"), (req, res, next) => {
   supportUpload.single("screenshot")(req, res, (err) => {
     if (err) {
@@ -34,6 +35,7 @@ router.post("/recruiter/ticket", auth, role("recruiter"), (req, res, next) => {
 }, createRecruiterTicket);
 router.get("/recruiter/my", auth, role("recruiter"), getMyRecruiterTickets);
 
+// Admin routes
 router.get('/admin', auth, role('admin'), getAllTickets);
 router.put('/admin/:id/respond', auth, role('admin'), respondTicket);
 

@@ -1,38 +1,37 @@
 const router = require("express").Router();
 const auth = require("../middleware/authMiddleware");
 const role = require("../middleware/roleMiddleware");
-const Application = require("../models/Application");
-const Job = require("../models/Job");
+const { getRecruiterStats } = require("../controllers/companyController");
+const {
+  getRecruiterInterviewers,
+  createRecruiterInterviewer,
+  updateRecruiterInterviewer,
+  deactivateRecruiterInterviewer,
+  resendRecruiterInterviewerCredentials
+} = require("../controllers/interviewerController");
 
-// Recruiter Stats
-router.get("/stats", auth, role("recruiter"), async (req, res) => {
-  try {
-    const recruiterId = req.user.id;
+// Use the centralized stats controller instead of inline logic
+router.get("/stats", auth, role("recruiter"), getRecruiterStats);
 
-    const jobs = await Job.find({ recruiterId });
-    const jobIds = jobs.map(job => job._id);
-
-    const applications = await Application.find({
-      jobId: { $in: jobIds }
-    });
-
-    res.json({
-      jobs: jobs.length,
-      applications: applications.length,
-      shortlisted: applications.filter(a => a.status === "SHORTLISTED").length,
-      selected: applications.filter(a => a.status === "SELECTED").length,
-      accepted: applications.filter(a => a.status === "ACCEPTED").length,
-    });
-  } catch (err) {
-    res.status(500).json({ message: "Failed to fetch stats" });
-  }
-});
+// Recruiter-managed interviewers
+router.get("/interviewers", auth, role("recruiter"), getRecruiterInterviewers);
+router.post("/interviewers", auth, role("recruiter"), createRecruiterInterviewer);
+router.put("/interviewers/:id", auth, role("recruiter"), updateRecruiterInterviewer);
+router.delete("/interviewers/:id", auth, role("recruiter"), deactivateRecruiterInterviewer);
+router.post(
+  "/interviewers/:id/resend-credentials",
+  auth,
+  role("recruiter"),
+  resendRecruiterInterviewerCredentials
+);
 
 // Recruiter Applications
 router.get("/applications", auth, role("recruiter"), async (req, res) => {
   try {
-    const recruiterId = req.user.id;
+    const Application = require("../models/Application");
+    const Job = require("../models/Job");
 
+    const recruiterId = req.user.id;
     const jobs = await Job.find({ recruiterId });
     const jobIds = jobs.map(job => job._id);
 

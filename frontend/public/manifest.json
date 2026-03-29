@@ -1,0 +1,16 @@
+{
+  "name": "TalentX",
+  "short_name": "TalentX",
+  "description": "A modern job portal connecting students with recruiters",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#4f46e5",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

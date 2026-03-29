@@ -7,8 +7,12 @@ const userSchema = new mongoose.Schema(
     password: String,
     role: {
       type: String,
-      enum: ["student", "recruiter", "admin"],
+      enum: ["student", "recruiter", "admin", "interviewer"],
       required: true
+    },
+    mustChangePassword: {
+      type: Boolean,
+      default: false
     },
     isActive: {
   type: Boolean,

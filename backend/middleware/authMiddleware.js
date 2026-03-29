@@ -22,16 +22,11 @@ module.exports = async (req, res, next) => {
 
     if (!user.isActive)
       return res.status(403).json({ message: "Account disabled by admin" });
-   
-    console.log("AUTH USER:", {
-  id: user._id,
-  role: user.role,
-  isActive: user.isActive
-});
 
     req.user = {
       id: user._id.toString(),
-      role: user.role
+      role: user.role,
+      mustChangePassword: Boolean(user.mustChangePassword)
     };
 
     next();

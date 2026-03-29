@@ -1,14 +1,21 @@
 const multer = require("multer");
 const path = require("path");
+const fs = require("fs");
 
 // Storage config
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, "uploads/");
+    const dir = "uploads/";
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    cb(null, dir);
   },
   filename: function (req, file, cb) {
-    const uniqueName =
-      Date.now() + "-" + file.originalname.replace(/\s+/g, "");
+    const safeBase = path
+      .basename(file.originalname || "resume.pdf", path.extname(file.originalname || ""))
+      .replace(/[^a-zA-Z0-9_-]/g, "");
+    const uniqueName = `${Date.now()}-${safeBase || "resume"}.pdf`;
     cb(null, uniqueName);
   }
 });
