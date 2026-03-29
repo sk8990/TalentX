@@ -9,7 +9,10 @@ const fs = require("fs");
 const generatePDF = require("../utils/generateOfferPDF");
 const { expireJobsByDeadline } = require("../utils/jobExpiry");
 const { writeAuditLog } = require("../services/auditService");
-const { validateInterviewRoomAccess } = require("../services/interviewRoomService");
+const {
+  validateInterviewRoomAccess,
+  getInterviewJoinRequest
+} = require("../services/interviewRoomService");
 const { buildInterviewAccess, getInterviewWindow } = require("../utils/interviewAccess");
 const {
   notify,
@@ -51,6 +54,21 @@ function hasInterviewerFeedback(app) {
 
 function buildStudentInterviewAccess(interview) {
   return buildInterviewAccess(interview);
+}
+
+function buildEmptyInterviewJoinRequest() {
+  return {
+    status: "NONE",
+    requestedBy: null,
+    requestedAt: null,
+    decisionBy: null,
+    decidedAt: null,
+    rejectReason: ""
+  };
+}
+
+function clearInterviewJoinRequest(app) {
+  app.interviewJoinRequest = buildEmptyInterviewJoinRequest();
 }
 
 function getStudentNotificationContext(application) {
@@ -457,6 +475,7 @@ exports.scheduleInterview = async (req, res) => {
       link
     };
     app.interviewSlots = [];
+    clearInterviewJoinRequest(app);
 
     await app.save();
 
@@ -569,6 +588,7 @@ exports.publishInterviewSlots = async (req, res) => {
     app.status = "ASSESSMENT_PASSED";
     app.interview = undefined;
     app.interviewSlots = parsedSlots;
+    clearInterviewJoinRequest(app);
     await app.save();
 
     const student = getStudentNotificationContext(app);
@@ -651,6 +671,7 @@ exports.bookInterviewSlot = async (req, res) => {
       mode: slot.mode,
       link: slot.link
     };
+    clearInterviewJoinRequest(app);
 
     await app.save();
 
@@ -792,6 +813,7 @@ exports.assignInterviewerToApplication = async (req, res) => {
       assignedBy: req.user.id,
       assignedAt: now
     };
+    clearInterviewJoinRequest(app);
     await app.save();
 
     notify({
@@ -868,6 +890,7 @@ exports.unassignInterviewerFromApplication = async (req, res) => {
       assignedBy: null,
       assignedAt: null
     };
+    clearInterviewJoinRequest(app);
     await app.save();
 
     notify({
@@ -1053,7 +1076,7 @@ exports.getMyInterviews = async (req, res) => {
       status: "INTERVIEW_SCHEDULED"
     })
       .populate("jobId", "title companyName companyLogo")
-      .select("jobId interview status createdAt interviewerAssignment interviewerFeedback");
+      .select("jobId interview status createdAt interviewerAssignment interviewerFeedback interviewJoinRequest");
 
     const payload = interviews.map((app) => {
       const access = buildStudentInterviewAccess(app.interview);
@@ -1071,6 +1094,7 @@ exports.getMyInterviews = async (req, res) => {
         createdAt: app.createdAt,
         interviewerAssignment: app.interviewerAssignment,
         interviewerFeedback: app.interviewerFeedback,
+        joinRequest: getInterviewJoinRequest(app),
         ...access
       };
     });
@@ -1086,7 +1110,8 @@ exports.getMyInterviewRoom = async (req, res) => {
     const accessResult = await validateInterviewRoomAccess({
       applicationId: req.params.applicationId,
       userId: req.user.id,
-      role: "student"
+      role: "student",
+      requireStudentApproval: false
     });
 
     if (!accessResult.ok) {
@@ -1098,6 +1123,7 @@ exports.getMyInterviewRoom = async (req, res) => {
         payload.accessWindowStart = accessResult.access.accessWindowStart;
         payload.accessWindowEnd = accessResult.access.accessWindowEnd;
       }
+      payload.joinRequest = accessResult.joinRequest || buildEmptyInterviewJoinRequest();
       return res.status(accessResult.statusCode).json(payload);
     }
 
@@ -1124,6 +1150,7 @@ exports.getMyInterviewRoom = async (req, res) => {
         accessWindowEnd: accessResult.access.accessWindowEnd
       },
       access: accessResult.access,
+      joinRequest: accessResult.joinRequest || buildEmptyInterviewJoinRequest(),
       socket: {
         url: getBackendOrigin(req),
         path: "/socket.io"
@@ -1132,6 +1159,126 @@ exports.getMyInterviewRoom = async (req, res) => {
   } catch (err) {
     console.error("getMyInterviewRoom error:", err);
     return res.status(500).json({ message: "Failed to load interview room" });
+  }
+};
+
+exports.requestMyInterviewJoinApproval = async (req, res) => {
+  try {
+    const accessResult = await validateInterviewRoomAccess({
+      applicationId: req.params.applicationId,
+      userId: req.user.id,
+      role: "student",
+      requireStudentApproval: false
+    });
+
+    if (!accessResult.ok) {
+      const payload = {
+        message: accessResult.message,
+        joinRequest: accessResult.joinRequest || buildEmptyInterviewJoinRequest()
+      };
+      if (accessResult.access) {
+        payload.countdownSeconds = accessResult.access.countdownSeconds;
+        payload.canAccessRoom = accessResult.access.canAccessRoom;
+        payload.canJoin = accessResult.access.canJoin;
+        payload.accessWindowStart = accessResult.access.accessWindowStart;
+        payload.accessWindowEnd = accessResult.access.accessWindowEnd;
+      }
+      return res.status(accessResult.statusCode).json(payload);
+    }
+
+    const app = accessResult.application;
+    const interviewerUserId = String(
+      app?.interviewerAssignment?.interviewerUserId?._id ||
+      app?.interviewerAssignment?.interviewerUserId ||
+      ""
+    );
+
+    if (!interviewerUserId) {
+      return res.status(400).json({ message: "No interviewer is assigned yet for this interview" });
+    }
+
+    const existingRequest = getInterviewJoinRequest(app);
+    if (existingRequest.status === "APPROVED") {
+      return res.json({
+        message: "Join request already approved",
+        joinRequest: existingRequest
+      });
+    }
+
+    if (existingRequest.status === "PENDING") {
+      return res.status(202).json({
+        message: "Join request is already pending interviewer approval",
+        joinRequest: existingRequest
+      });
+    }
+
+    const now = new Date();
+    app.interviewJoinRequest = {
+      status: "PENDING",
+      requestedBy: req.user.id,
+      requestedAt: now,
+      decisionBy: null,
+      decidedAt: null,
+      rejectReason: ""
+    };
+    await app.save();
+
+    notify({
+      userId: interviewerUserId,
+      type: "INTERVIEW_JOIN_REQUESTED",
+      title: `Join Request: ${app?.jobId?.title || "Interview"}`,
+      message: "Student requested to join the virtual interview room.",
+      link: `/interviewer/interviews/${app._id}/room`,
+      metadata: {
+        applicationId: app._id,
+        requestedAt: now
+      },
+      sendMail: false
+    }).catch((notifyErr) => logNotificationError("interview join request", notifyErr));
+
+    return res.status(202).json({
+      message: "Join request sent to interviewer",
+      joinRequest: getInterviewJoinRequest(app)
+    });
+  } catch (err) {
+    console.error("requestMyInterviewJoinApproval error:", err);
+    return res.status(500).json({ message: "Failed to send join request" });
+  }
+};
+
+exports.getMyInterviewJoinApprovalStatus = async (req, res) => {
+  try {
+    const accessResult = await validateInterviewRoomAccess({
+      applicationId: req.params.applicationId,
+      userId: req.user.id,
+      role: "student",
+      requireStudentApproval: false
+    });
+
+    if (!accessResult.ok) {
+      const payload = {
+        message: accessResult.message,
+        joinRequest: accessResult.joinRequest || buildEmptyInterviewJoinRequest()
+      };
+      if (accessResult.access) {
+        payload.countdownSeconds = accessResult.access.countdownSeconds;
+        payload.canAccessRoom = accessResult.access.canAccessRoom;
+        payload.canJoin = accessResult.access.canJoin;
+        payload.accessWindowStart = accessResult.access.accessWindowStart;
+        payload.accessWindowEnd = accessResult.access.accessWindowEnd;
+      }
+      return res.status(accessResult.statusCode).json(payload);
+    }
+
+    return res.json({
+      joinRequest: accessResult.joinRequest || buildEmptyInterviewJoinRequest(),
+      canJoin: accessResult.access?.canJoin || false,
+      accessWindowStart: accessResult.access?.accessWindowStart || null,
+      accessWindowEnd: accessResult.access?.accessWindowEnd || null
+    });
+  } catch (err) {
+    console.error("getMyInterviewJoinApprovalStatus error:", err);
+    return res.status(500).json({ message: "Failed to get join approval status" });
   }
 };
 

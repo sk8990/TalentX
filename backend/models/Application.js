@@ -134,6 +134,36 @@ const applicationSchema = new mongoose.Schema(
       }
     },
 
+    interviewJoinRequest: {
+      status: {
+        type: String,
+        enum: ["NONE", "PENDING", "APPROVED", "REJECTED"],
+        default: "NONE"
+      },
+      requestedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: null
+      },
+      requestedAt: {
+        type: Date,
+        default: null
+      },
+      decisionBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: null
+      },
+      decidedAt: {
+        type: Date,
+        default: null
+      },
+      rejectReason: {
+        type: String,
+        default: ""
+      }
+    },
+
     interviewerFeedback: {
       submittedBy: {
         type: mongoose.Schema.Types.ObjectId,

@@ -18,6 +18,17 @@ function getStudentUserId(app) {
   return String(app?.studentId?.userId?._id || app?.studentId?.userId || "");
 }
 
+function getInterviewJoinRequest(app) {
+  return {
+    status: String(app?.interviewJoinRequest?.status || "NONE").trim().toUpperCase() || "NONE",
+    requestedBy: app?.interviewJoinRequest?.requestedBy || null,
+    requestedAt: app?.interviewJoinRequest?.requestedAt || null,
+    decisionBy: app?.interviewJoinRequest?.decisionBy || null,
+    decidedAt: app?.interviewJoinRequest?.decidedAt || null,
+    rejectReason: String(app?.interviewJoinRequest?.rejectReason || "").trim()
+  };
+}
+
 function buildWindowErrorMessage(access) {
   const start = access?.accessWindowStart ? new Date(access.accessWindowStart) : null;
   const end = access?.accessWindowEnd ? new Date(access.accessWindowEnd) : null;
@@ -44,11 +55,16 @@ async function loadInterviewApplication(applicationId) {
     })
     .populate("interviewerAssignment.interviewerUserId", "name email")
     .select(
-      "jobId studentId interview status interviewerAssignment interviewerFeedback createdAt updatedAt"
+      "jobId studentId interview status interviewerAssignment interviewerFeedback interviewJoinRequest createdAt updatedAt"
     );
 }
 
-async function validateInterviewRoomAccess({ applicationId, userId, role }) {
+async function validateInterviewRoomAccess({
+  applicationId,
+  userId,
+  role,
+  requireStudentApproval = true
+}) {
   const normalizedUserId = String(userId || "").trim();
   const normalizedRole = String(role || "").trim().toLowerCase();
   const app = await loadInterviewApplication(applicationId);
@@ -78,13 +94,15 @@ async function validateInterviewRoomAccess({ applicationId, userId, role }) {
   }
 
   const access = buildInterviewAccess(app.interview);
+  const joinRequest = getInterviewJoinRequest(app);
   if (!access.canJoin) {
     return {
       ok: false,
       statusCode: 403,
       message: buildWindowErrorMessage(access),
       application: app,
-      access
+      access,
+      joinRequest
     };
   }
 
@@ -98,12 +116,27 @@ async function validateInterviewRoomAccess({ applicationId, userId, role }) {
       };
     }
 
+    if (requireStudentApproval && joinRequest.status !== "APPROVED") {
+      return {
+        ok: false,
+        statusCode: 403,
+        message:
+          joinRequest.status === "REJECTED"
+            ? (joinRequest.rejectReason || "Your join request was rejected by the interviewer")
+            : "Interviewer approval is required before entering the interview room",
+        application: app,
+        access,
+        joinRequest
+      };
+    }
+
     return {
       ok: true,
       statusCode: 200,
       message: "Access granted",
       application: app,
       access,
+      joinRequest,
       roomName: getInterviewRoomName(String(app._id)),
       participantRole: "student",
       participantName: app?.studentId?.userId?.name || "Candidate"
@@ -134,6 +167,7 @@ async function validateInterviewRoomAccess({ applicationId, userId, role }) {
       message: "Access granted",
       application: app,
       access,
+      joinRequest,
       roomName: getInterviewRoomName(String(app._id)),
       participantRole: "interviewer",
       participantName: app?.interviewerAssignment?.interviewerUserId?.name || "Interviewer"
@@ -150,5 +184,6 @@ async function validateInterviewRoomAccess({ applicationId, userId, role }) {
 module.exports = {
   getInterviewRoomName,
   loadInterviewApplication,
-  validateInterviewRoomAccess
+  validateInterviewRoomAccess,
+  getInterviewJoinRequest
 };

@@ -14,6 +14,12 @@ import API, { getServerOrigin } from "../../api/axios";
 
 const RTC_CONFIG = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
 const REASONS = ["STUDENT_NO_SHOW", "INTERVIEWER_UNAVAILABLE", "OTHER"];
+const JOIN_STATUS = {
+  NONE: "NONE",
+  PENDING: "PENDING",
+  APPROVED: "APPROVED",
+  REJECTED: "REJECTED"
+};
 
 function formatDateTime(value) {
   if (!value) return "N/A";
@@ -52,7 +58,7 @@ async function requestFullscreenSafe() {
   try {
     await fn.call(document.documentElement);
     return true;
-  } catch (_err) {
+  } catch {
     return false;
   }
 }
@@ -62,7 +68,7 @@ async function exitFullscreenSafe() {
   if (!fn) return;
   try {
     await fn.call(document);
-  } catch (_err) {
+  } catch {
     // ignore
   }
 }
@@ -71,6 +77,16 @@ function statusBadge(status) {
   if (status === "pass") return "text-emerald-700";
   if (status === "fail") return "text-rose-700";
   return "text-slate-600";
+}
+
+function normalizeJoinRequest(value) {
+  const status = String(value?.status || JOIN_STATUS.NONE).trim().toUpperCase();
+  return {
+    status: Object.values(JOIN_STATUS).includes(status) ? status : JOIN_STATUS.NONE,
+    requestedAt: value?.requestedAt || null,
+    decidedAt: value?.decidedAt || null,
+    rejectReason: String(value?.rejectReason || "").trim()
+  };
 }
 
 export default function VirtualInterviewRoom({ role }) {
@@ -82,6 +98,7 @@ export default function VirtualInterviewRoom({ role }) {
   const remoteSocketIdRef = useRef("");
   const peerRef = useRef(null);
   const socketRef = useRef(null);
+  const autoStartAttemptedRef = useRef(false);
 
   const [roomData, setRoomData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -97,6 +114,10 @@ export default function VirtualInterviewRoom({ role }) {
   const [violation, setViolation] = useState("");
   const [violationCount, setViolationCount] = useState(0);
   const [supportOpen, setSupportOpen] = useState(false);
+  const [joinRequest, setJoinRequest] = useState(() => normalizeJoinRequest(null));
+  const [requestingJoin, setRequestingJoin] = useState(false);
+  const [decidingJoin, setDecidingJoin] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
   const [reschedule, setReschedule] = useState({
     open: false,
     reason: "STUDENT_NO_SHOW",
@@ -109,6 +130,8 @@ export default function VirtualInterviewRoom({ role }) {
   const endpoint = role === "interviewer" ? `/interviewer/interviews/${applicationId}/room` : `/application/${applicationId}/interview/room`;
   const backPath = role === "interviewer" ? "/interviewer" : "/student/interviews";
   const allChecksPassed = useMemo(() => Object.values(checks).every((v) => v === "pass"), [checks]);
+  const joinStatus = joinRequest.status;
+  const studentRequiresApproval = role === "student";
   const title = useMemo(() => {
     const job = roomData?.job?.title || "Interview";
     const company = roomData?.job?.companyName || "";
@@ -118,7 +141,7 @@ export default function VirtualInterviewRoom({ role }) {
   const closePeer = () => {
     try {
       if (peerRef.current) peerRef.current.close();
-    } catch (_err) {
+    } catch {
       // ignore
     }
     peerRef.current = null;
@@ -134,7 +157,7 @@ export default function VirtualInterviewRoom({ role }) {
       try {
         socketRef.current.emit("leave-interview-room", {}, () => {});
         socketRef.current.disconnect();
-      } catch (_err) {
+      } catch {
         // ignore
       }
       socketRef.current = null;
@@ -160,7 +183,7 @@ export default function VirtualInterviewRoom({ role }) {
       const microphone = probe.getAudioTracks().length ? "pass" : "fail";
       probe.getTracks().forEach((track) => track.stop());
       setChecks({ internet: base.internet, camera, microphone });
-    } catch (_err) {
+    } catch {
       setChecks({ internet: navigator.onLine ? "pass" : "fail", camera: "fail", microphone: "fail" });
     } finally {
       setCheckRunning(false);
@@ -196,6 +219,15 @@ export default function VirtualInterviewRoom({ role }) {
     return peer;
   };
 
+  const sendOfferTo = async (targetSocketId) => {
+    if (!targetSocketId || !socketRef.current) return;
+    const peer = ensurePeer(targetSocketId);
+    const offer = await peer.createOffer();
+    await peer.setLocalDescription(offer);
+    socketRef.current.emit("signal", { targetId: targetSocketId, type: "offer", data: offer });
+    setConnectionState("connecting");
+  };
+
   const handleSignal = async (payload) => {
     const fromId = String(payload?.fromId || "");
     const type = String(payload?.type || "");
@@ -204,7 +236,11 @@ export default function VirtualInterviewRoom({ role }) {
     if (fromId !== remoteSocketIdRef.current) return;
 
     if (type === "offer") {
-      const peer = ensurePeer(fromId);
+      let peer = ensurePeer(fromId);
+      if (peer.signalingState !== "stable") {
+        closePeer();
+        peer = ensurePeer(fromId);
+      }
       await peer.setRemoteDescription(payload.data);
       const answer = await peer.createAnswer();
       await peer.setLocalDescription(answer);
@@ -213,7 +249,13 @@ export default function VirtualInterviewRoom({ role }) {
     }
     const peer = ensurePeer(fromId);
     if (type === "answer") await peer.setRemoteDescription(payload.data);
-    if (type === "ice-candidate" && payload.data) await peer.addIceCandidate(payload.data);
+    if (type === "ice-candidate" && payload.data) {
+      try {
+        await peer.addIceCandidate(payload.data);
+      } catch {
+        // Ignore stale ICE candidates from previous connections.
+      }
+    }
   };
 
   useEffect(() => {
@@ -223,6 +265,7 @@ export default function VirtualInterviewRoom({ role }) {
         const res = await API.get(endpoint);
         if (cancelled) return;
         setRoomData(res.data);
+        setJoinRequest(normalizeJoinRequest(res.data?.joinRequest));
         await runSystemCheck();
       } catch (err) {
         setError(err.response?.data?.message || "Failed to open interview room");
@@ -272,17 +315,25 @@ export default function VirtualInterviewRoom({ role }) {
             const peer = participants[0];
             setRemoteName(peer.name || "Participant");
             remoteSocketIdRef.current = String(peer.socketId || "");
-            const pc = ensurePeer(remoteSocketIdRef.current);
-            const offer = await pc.createOffer();
-            await pc.setLocalDescription(offer);
-            socket.emit("signal", { targetId: remoteSocketIdRef.current, type: "offer", data: offer });
+            await sendOfferTo(remoteSocketIdRef.current);
           });
         });
 
-        socket.on("participant-joined", (participant) => {
-          if (!remoteSocketIdRef.current) {
-            remoteSocketIdRef.current = String(participant?.socketId || "");
+        socket.on("participant-joined", async (participant) => {
+          try {
+            const participantSocketId = String(participant?.socketId || "");
+            if (!participantSocketId) return;
+            if (remoteSocketIdRef.current && remoteSocketIdRef.current !== participantSocketId) {
+              closePeer();
+            }
+            remoteSocketIdRef.current = participantSocketId;
             setRemoteName(participant?.name || "Participant");
+            if (localStreamRef.current) {
+              await sendOfferTo(participantSocketId);
+            } else {
+              setConnectionState("waiting");
+            }
+          } catch {
             setConnectionState("waiting");
           }
         });
@@ -290,7 +341,11 @@ export default function VirtualInterviewRoom({ role }) {
           closePeer();
           setConnectionState("waiting");
         });
-        socket.on("signal", handleSignal);
+        socket.on("signal", (payload) => {
+          handleSignal(payload).catch(() => {
+            setConnectionState("waiting");
+          });
+        });
         socket.on("connect_error", () => setError("Realtime connection failed"));
       } catch (err) {
         setError(err.response?.data?.message || err.message || "Failed to start interview");
@@ -334,6 +389,69 @@ export default function VirtualInterviewRoom({ role }) {
     };
   }, [sessionStarted]);
 
+  useEffect(() => {
+    if (role !== "student" || sessionStarted || joinStatus !== JOIN_STATUS.PENDING) return undefined;
+    let cancelled = false;
+    const pollStatus = async () => {
+      try {
+        const res = await API.get(`/application/${applicationId}/interview/join-request`);
+        if (cancelled) return;
+        const next = normalizeJoinRequest(res.data?.joinRequest);
+        setJoinRequest(next);
+      } catch {
+        // Ignore transient polling errors.
+      }
+    };
+    pollStatus();
+    const timer = setInterval(pollStatus, 3000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [role, sessionStarted, joinStatus, applicationId]);
+
+  useEffect(() => {
+    if (role !== "interviewer") return undefined;
+    let cancelled = false;
+    const pollInterviewerView = async () => {
+      try {
+        const res = await API.get(`/interviewer/interviews/${applicationId}/join-request`);
+        if (cancelled) return;
+        setJoinRequest(normalizeJoinRequest(res.data?.joinRequest));
+      } catch {
+        // Ignore if request is temporarily unavailable.
+      }
+    };
+    pollInterviewerView();
+    const timer = setInterval(pollInterviewerView, 3000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [role, applicationId]);
+
+  const enterSession = async () => {
+    const full = await requestFullscreenSafe();
+    if (!full) {
+      setViolation("Fullscreen permission denied. Protected mode requires fullscreen.");
+    }
+    setSessionStarted(true);
+  };
+
+  useEffect(() => {
+    if (role !== "student" || sessionStarted) return;
+    if (joinStatus !== JOIN_STATUS.APPROVED) {
+      autoStartAttemptedRef.current = false;
+      return;
+    }
+    if (autoStartAttemptedRef.current) return;
+    autoStartAttemptedRef.current = true;
+    toast.success("Interviewer approved your join request");
+    enterSession().catch(() => {
+      setError("Unable to start interview session");
+    });
+  }, [role, joinStatus, sessionStarted]);
+
   const toggleAudio = () => {
     if (!localStreamRef.current) return;
     const next = !audioEnabled;
@@ -350,11 +468,53 @@ export default function VirtualInterviewRoom({ role }) {
     socketRef.current?.emit("media-state", { audioEnabled, videoEnabled: next });
   };
 
+  const sendJoinRequest = async () => {
+    try {
+      setRequestingJoin(true);
+      const res = await API.post(`/application/${applicationId}/interview/join-request`);
+      const next = normalizeJoinRequest(res.data?.joinRequest);
+      setJoinRequest(next);
+      if (next.status === JOIN_STATUS.PENDING) {
+        toast.success("Join request sent. Waiting for interviewer approval.");
+      }
+      if (next.status === JOIN_STATUS.APPROVED) {
+        await enterSession();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to send join request");
+    } finally {
+      setRequestingJoin(false);
+    }
+  };
+
+  const decideJoinRequest = async (decision) => {
+    try {
+      setDecidingJoin(true);
+      const res = await API.put(`/interviewer/interviews/${applicationId}/join-request`, {
+        decision,
+        reason: decision === "REJECT" ? rejectReason : ""
+      });
+      setJoinRequest(normalizeJoinRequest(res.data?.joinRequest));
+      toast.success(
+        decision === "APPROVE" ? "Student join request approved" : "Student join request rejected"
+      );
+      if (decision === "REJECT") {
+        setRejectReason("");
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update join request");
+    } finally {
+      setDecidingJoin(false);
+    }
+  };
+
   const startInterview = async () => {
     if (!allChecksPassed) return toast.error("Please pass all system checks first");
-    const full = await requestFullscreenSafe();
-    if (!full) setViolation("Fullscreen permission denied. Protected mode requires fullscreen.");
-    setSessionStarted(true);
+    if (studentRequiresApproval && joinStatus !== JOIN_STATUS.APPROVED) {
+      await sendJoinRequest();
+      return;
+    }
+    await enterSession();
   };
 
   const submitReschedule = async () => {
@@ -388,9 +548,41 @@ export default function VirtualInterviewRoom({ role }) {
         <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-slate-900">System Check Before Start</h2>
           <div className="mt-4 grid gap-3 sm:grid-cols-3">{Object.entries(checks).map(([key, value]) => <div key={key} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2"><p className="text-xs font-semibold uppercase text-slate-500">{key}</p><p className={`mt-1 text-sm font-semibold ${statusBadge(value)}`}>{value.toUpperCase()}</p></div>)}</div>
+          {role === "student" ? (
+            <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Interviewer Approval</p>
+              <p className="mt-1 text-sm font-semibold text-slate-800">
+                Status: {joinStatus === JOIN_STATUS.PENDING ? "Pending" : joinStatus === JOIN_STATUS.APPROVED ? "Approved" : joinStatus === JOIN_STATUS.REJECTED ? "Rejected" : "Not Requested"}
+              </p>
+              {joinStatus === JOIN_STATUS.PENDING ? (
+                <p className="mt-1 text-xs text-amber-700">Your request has been sent. Waiting for interviewer decision.</p>
+              ) : null}
+              {joinStatus === JOIN_STATUS.REJECTED ? (
+                <p className="mt-1 text-xs text-rose-700">{joinRequest.rejectReason || "The interviewer rejected your join request. You can request again."}</p>
+              ) : null}
+            </div>
+          ) : null}
+          {role === "interviewer" && joinStatus === JOIN_STATUS.PENDING ? (
+            <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">Student Join Request</p>
+              <p className="mt-1 text-sm font-semibold text-amber-900">A student is requesting entry to this interview room.</p>
+              <TextField
+                value={rejectReason}
+                onChange={(event) => setRejectReason(event.target.value)}
+                size="small"
+                fullWidth
+                placeholder="Optional rejection reason"
+                sx={{ mt: 1, bgcolor: "#fff" }}
+              />
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button onClick={() => decideJoinRequest("APPROVE")} disabled={decidingJoin} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60">{decidingJoin ? "Saving..." : "Approve Join"}</button>
+                <button onClick={() => decideJoinRequest("REJECT")} disabled={decidingJoin} className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 disabled:cursor-not-allowed disabled:opacity-60">Reject</button>
+              </div>
+            </div>
+          ) : null}
           <div className="mt-4 flex flex-wrap gap-2">
             <button onClick={runSystemCheck} disabled={checkRunning} className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold">{checkRunning ? "Running..." : "Retry Checks"}</button>
-            <button onClick={startInterview} disabled={!allChecksPassed || checkRunning} className="rounded-xl bg-indigo-600 px-5 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600">Start Interview (Fullscreen)</button>
+            <button onClick={startInterview} disabled={!allChecksPassed || checkRunning || requestingJoin || (role === "student" && joinStatus === JOIN_STATUS.PENDING)} className="rounded-xl bg-indigo-600 px-5 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600">{role === "student" ? (joinStatus === JOIN_STATUS.APPROVED ? "Start Interview (Fullscreen)" : joinStatus === JOIN_STATUS.PENDING ? "Waiting for Approval..." : requestingJoin ? "Sending Request..." : "Request Join Access") : "Start Interview (Fullscreen)"}</button>
             <button onClick={() => navigate(backPath)} className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700">Cancel</button>
           </div>
         </section>
@@ -409,6 +601,16 @@ export default function VirtualInterviewRoom({ role }) {
           </div>
         </div>
       </section>
+
+      {role === "interviewer" && joinStatus === JOIN_STATUS.PENDING ? (
+        <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+          <p className="text-sm font-semibold text-amber-900">Student requested to join this interview.</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button onClick={() => decideJoinRequest("APPROVE")} disabled={decidingJoin} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60">{decidingJoin ? "Saving..." : "Approve Join"}</button>
+            <button onClick={() => decideJoinRequest("REJECT")} disabled={decidingJoin} className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 disabled:cursor-not-allowed disabled:opacity-60">Reject</button>
+          </div>
+        </section>
+      ) : null}
 
       <section className="grid gap-4 lg:grid-cols-2">
         <article className="relative overflow-hidden rounded-3xl border border-slate-200 bg-black"><video ref={remoteVideoRef} autoPlay playsInline className="h-[360px] w-full object-cover" />{!remoteName ? <div className="absolute inset-0 grid place-items-center bg-slate-950/70 text-sm text-slate-200">Waiting for participant...</div> : null}<div className="absolute bottom-3 left-3 rounded-lg bg-black/55 px-3 py-1.5 text-xs font-semibold text-white">{remoteName || "Remote"}</div></article>

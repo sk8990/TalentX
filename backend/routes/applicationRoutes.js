@@ -20,6 +20,8 @@ const {
   generateOffer,
   getMyInterviews,
   getMyInterviewRoom,
+  requestMyInterviewJoinApproval,
+  getMyInterviewJoinApprovalStatus,
   getMyInterviewSlots,
   getMyAssessments,
   assignInterviewerToApplication,
@@ -42,6 +44,20 @@ router.get(
   auth,
   role("student"),
   getMyInterviewRoom
+);
+
+router.post(
+  "/:applicationId/interview/join-request",
+  auth,
+  role("student"),
+  requestMyInterviewJoinApproval
+);
+
+router.get(
+  "/:applicationId/interview/join-request",
+  auth,
+  role("student"),
+  getMyInterviewJoinApprovalStatus
 );
 
 router.get(

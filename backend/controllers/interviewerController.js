@@ -6,7 +6,10 @@ const User = require("../models/User");
 const { sendEmail } = require("../services/emailService");
 const { notify, notifyInterviewScheduled } = require("../services/notificationService");
 const { writeAuditLog } = require("../services/auditService");
-const { validateInterviewRoomAccess } = require("../services/interviewRoomService");
+const {
+  validateInterviewRoomAccess,
+  getInterviewJoinRequest
+} = require("../services/interviewRoomService");
 const { buildInterviewAccess, getInterviewWindow } = require("../utils/interviewAccess");
 
 const RECOMMENDATION_ENUM = ["STRONG_YES", "YES", "MAYBE", "NO", "STRONG_NO"];
@@ -45,6 +48,17 @@ function normalizeExpertise(value) {
   }
 
   return [];
+}
+
+function buildEmptyInterviewJoinRequest() {
+  return {
+    status: "NONE",
+    requestedBy: null,
+    requestedAt: null,
+    decisionBy: null,
+    decidedAt: null,
+    rejectReason: ""
+  };
 }
 
 function getFrontendBaseUrl() {
@@ -554,7 +568,7 @@ exports.getMyAssignedInterviews = async (req, res) => {
         populate: { path: "userId", select: "name email" }
       })
       .populate("interviewerFeedback.submittedBy", "name email")
-      .select("jobId studentId interview interviewerAssignment interviewerFeedback status createdAt updatedAt")
+      .select("jobId studentId interview interviewerAssignment interviewerFeedback interviewJoinRequest status createdAt updatedAt")
       .sort({ "interview.date": 1 });
 
     const payload = apps
@@ -571,6 +585,7 @@ exports.getMyAssignedInterviews = async (req, res) => {
           status: app.status,
           interviewerAssignment: app.interviewerAssignment,
           interviewerFeedback: app.interviewerFeedback,
+          joinRequest: getInterviewJoinRequest(app),
           bucket,
           createdAt: app.createdAt,
           updatedAt: app.updatedAt,
@@ -603,6 +618,7 @@ exports.getMyInterviewRoomAccess = async (req, res) => {
         payload.accessWindowStart = accessResult.access.accessWindowStart;
         payload.accessWindowEnd = accessResult.access.accessWindowEnd;
       }
+      payload.joinRequest = accessResult.joinRequest || buildEmptyInterviewJoinRequest();
       return res.status(accessResult.statusCode).json(payload);
     }
 
@@ -634,6 +650,7 @@ exports.getMyInterviewRoomAccess = async (req, res) => {
         accessWindowEnd: accessResult.access.accessWindowEnd
       },
       access: accessResult.access,
+      joinRequest: accessResult.joinRequest || buildEmptyInterviewJoinRequest(),
       socket: {
         url: getBackendOrigin(req),
         path: "/socket.io"
@@ -642,6 +659,113 @@ exports.getMyInterviewRoomAccess = async (req, res) => {
   } catch (err) {
     console.error("getMyInterviewRoomAccess error:", err);
     return res.status(500).json({ message: "Failed to load interview room" });
+  }
+};
+
+exports.getMyInterviewJoinRequest = async (req, res) => {
+  try {
+    const accessResult = await validateInterviewRoomAccess({
+      applicationId: req.params.applicationId,
+      userId: req.user.id,
+      role: "interviewer",
+      requireStudentApproval: false
+    });
+
+    if (!accessResult.ok) {
+      return res.status(accessResult.statusCode).json({
+        message: accessResult.message,
+        joinRequest: accessResult.joinRequest || buildEmptyInterviewJoinRequest()
+      });
+    }
+
+    const app = accessResult.application;
+    return res.json({
+      applicationId: app._id,
+      joinRequest: accessResult.joinRequest || buildEmptyInterviewJoinRequest(),
+      student: {
+        _id: app.studentId?._id || null,
+        userId: app.studentId?.userId?._id || null,
+        name: app.studentId?.userId?.name || "Candidate",
+        email: app.studentId?.userId?.email || ""
+      }
+    });
+  } catch (err) {
+    console.error("getMyInterviewJoinRequest error:", err);
+    return res.status(500).json({ message: "Failed to load join request status" });
+  }
+};
+
+exports.decideMyInterviewJoinRequest = async (req, res) => {
+  try {
+    const decision = String(req.body?.decision || "").trim().toUpperCase();
+    const rejectReason = String(req.body?.reason || "").trim();
+
+    if (!["APPROVE", "REJECT"].includes(decision)) {
+      return res.status(400).json({ message: "Decision must be APPROVE or REJECT" });
+    }
+
+    const accessResult = await validateInterviewRoomAccess({
+      applicationId: req.params.applicationId,
+      userId: req.user.id,
+      role: "interviewer",
+      requireStudentApproval: false
+    });
+
+    if (!accessResult.ok) {
+      return res.status(accessResult.statusCode).json({
+        message: accessResult.message,
+        joinRequest: accessResult.joinRequest || buildEmptyInterviewJoinRequest()
+      });
+    }
+
+    const app = accessResult.application;
+    const currentRequest = getInterviewJoinRequest(app);
+    if (currentRequest.status !== "PENDING") {
+      return res.status(400).json({
+        message: "No pending join request found",
+        joinRequest: currentRequest
+      });
+    }
+
+    const now = new Date();
+    app.interviewJoinRequest = {
+      status: decision === "APPROVE" ? "APPROVED" : "REJECTED",
+      requestedBy: app?.interviewJoinRequest?.requestedBy || null,
+      requestedAt: app?.interviewJoinRequest?.requestedAt || now,
+      decisionBy: req.user.id,
+      decidedAt: now,
+      rejectReason: decision === "REJECT" ? rejectReason : ""
+    };
+    await app.save();
+
+    const studentUserId = String(app?.studentId?.userId?._id || app?.studentId?.userId || "");
+    if (studentUserId) {
+      notify({
+        userId: studentUserId,
+        type: decision === "APPROVE" ? "INTERVIEW_JOIN_APPROVED" : "INTERVIEW_JOIN_REJECTED",
+        title: decision === "APPROVE" ? "Interview Join Approved" : "Interview Join Rejected",
+        message:
+          decision === "APPROVE"
+            ? "Interviewer approved your request. You can now join the room."
+            : (rejectReason || "Interviewer rejected your join request."),
+        link: `/student/interviews/${app._id}/room`,
+        metadata: {
+          applicationId: app._id,
+          decision
+        },
+        sendMail: false
+      }).catch((notifyErr) => {
+        console.error("[NOTIFY] join request decision failed:", notifyErr.message);
+      });
+    }
+
+    return res.json({
+      message: decision === "APPROVE" ? "Join request approved" : "Join request rejected",
+      joinRequest: getInterviewJoinRequest(app)
+    });
+  } catch (err) {
+    console.error("decideMyInterviewJoinRequest error:", err);
+    return res.status(500).json({ message: "Failed to update join request" });
   }
 };
 
@@ -740,6 +864,7 @@ exports.rescheduleMyInterview = async (req, res) => {
       },
       notes: ""
     };
+    app.interviewJoinRequest = buildEmptyInterviewJoinRequest();
 
     app.interviewReschedule = {
       ...app.interviewReschedule,
