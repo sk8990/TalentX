@@ -10,10 +10,10 @@ function getDefaultForm() {
   return {
     recommendation: "YES",
     ratings: {
-      communication: 3,
-      technical: 3,
-      problemSolving: 3,
-      cultureFit: 3
+      communication: "3",
+      technical: "3",
+      problemSolving: "3",
+      cultureFit: "3"
     },
     notes: ""
   };
@@ -229,20 +229,21 @@ export default function InterviewerPanel() {
                           <label key={key} className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                             {key}
                             <input
-                              type="number"
-                              min={1}
-                              max={5}
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[1-5]"
                               value={value}
                               onChange={(event) =>
                                 updateForm(item._id, (prev) => ({
                                   ...prev,
                                   ratings: {
                                     ...prev.ratings,
-                                    [key]: Number(event.target.value)
+                                    [key]: String(event.target.value || "").replace(/[^1-5]/g, "").slice(0, 1)
                                   }
                                 }))
                               }
                               className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                              placeholder="1-5"
                             />
                           </label>
                         ))}

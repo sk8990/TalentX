@@ -4,12 +4,25 @@ const Application = require("../models/Application");
 const InterviewerProfile = require("../models/InterviewerProfile");
 const User = require("../models/User");
 const { sendEmail } = require("../services/emailService");
-const { notify } = require("../services/notificationService");
+const { notify, notifyInterviewScheduled } = require("../services/notificationService");
 const { writeAuditLog } = require("../services/auditService");
 const { validateInterviewRoomAccess } = require("../services/interviewRoomService");
 const { buildInterviewAccess, getInterviewWindow } = require("../utils/interviewAccess");
 
 const RECOMMENDATION_ENUM = ["STRONG_YES", "YES", "MAYBE", "NO", "STRONG_NO"];
+const RESCHEDULE_REASON_ENUM = ["STUDENT_NO_SHOW", "INTERVIEWER_UNAVAILABLE", "OTHER"];
+
+function parseDateInput(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+
+  const normalized = raw.includes(" ") && !raw.includes("T")
+    ? raw.replace(" ", "T")
+    : raw;
+
+  const parsed = new Date(normalized);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
 
 function normalizeEmail(value) {
   return String(value || "").trim().toLowerCase();
@@ -133,19 +146,15 @@ function categorizeInterview(app, nowTs) {
 
 function sanitizeRatings(ratingsInput) {
   const ratings = ratingsInput || {};
-  const parsed = {
-    communication: Number(ratings.communication),
-    technical: Number(ratings.technical),
-    problemSolving: Number(ratings.problemSolving),
-    cultureFit: Number(ratings.cultureFit)
-  };
+  const parsed = {};
+  const keys = ["communication", "technical", "problemSolving", "cultureFit"];
 
-  const keys = Object.keys(parsed);
   for (const key of keys) {
-    const value = parsed[key];
-    if (!Number.isFinite(value) || value < 1 || value > 5) {
+    const value = String(ratings[key] ?? "").trim();
+    if (!["1", "2", "3", "4", "5"].includes(value)) {
       return null;
     }
+    parsed[key] = value;
   }
 
   return parsed;
@@ -633,6 +642,182 @@ exports.getMyInterviewRoomAccess = async (req, res) => {
   } catch (err) {
     console.error("getMyInterviewRoomAccess error:", err);
     return res.status(500).json({ message: "Failed to load interview room" });
+  }
+};
+
+exports.rescheduleMyInterview = async (req, res) => {
+  try {
+    const reason = String(req.body?.reason || "").trim().toUpperCase();
+    const notes = String(req.body?.notes || "").trim();
+    const nextStart = parseDateInput(req.body?.newDate ?? req.body?.date);
+    const providedEnd = parseDateInput(req.body?.newEndDate ?? req.body?.endDate);
+
+    if (!RESCHEDULE_REASON_ENUM.includes(reason)) {
+      return res.status(400).json({ message: "Valid reschedule reason is required" });
+    }
+
+    if (!nextStart) {
+      return res.status(400).json({ message: "A valid new interview date/time is required" });
+    }
+
+    const nextEnd = providedEnd || new Date(nextStart.getTime() + 30 * 60 * 1000);
+    if (nextEnd.getTime() <= nextStart.getTime()) {
+      return res.status(400).json({ message: "New end time must be after new start time" });
+    }
+
+    if (nextStart.getTime() <= Date.now()) {
+      return res.status(400).json({ message: "New interview time must be in the future" });
+    }
+
+    const app = await Application.findById(req.params.applicationId)
+      .populate("jobId", "title companyName recruiterId")
+      .populate({
+        path: "studentId",
+        select: "userId",
+        populate: { path: "userId", select: "name email" }
+      })
+      .populate("interviewerAssignment.interviewerUserId", "name email");
+
+    if (!app) {
+      return res.status(404).json({ message: "Application not found" });
+    }
+
+    if (app.status !== "INTERVIEW_SCHEDULED" || !app.interview?.date) {
+      return res.status(400).json({ message: "Only scheduled interviews can be rescheduled" });
+    }
+
+    const assignedInterviewerUserId = String(
+      app?.interviewerAssignment?.interviewerUserId?._id ||
+      app?.interviewerAssignment?.interviewerUserId ||
+      ""
+    );
+
+    if (!assignedInterviewerUserId || assignedInterviewerUserId !== String(req.user.id)) {
+      return res.status(403).json({ message: "You are not assigned to this interview" });
+    }
+
+    if (app?.interviewerFeedback?.submittedAt) {
+      return res.status(400).json({ message: "Feedback already submitted. Interview cannot be rescheduled." });
+    }
+
+    const nextWindow = { start: nextStart, end: nextEnd };
+    const interviewerApps = await Application.find({
+      _id: { $ne: app._id },
+      status: "INTERVIEW_SCHEDULED",
+      "interviewerAssignment.interviewerUserId": req.user.id
+    }).select("interview");
+
+    for (const existing of interviewerApps) {
+      const existingWindow = getInterviewWindow(existing.interview);
+      if (!existingWindow) continue;
+
+      const overlaps =
+        nextWindow.start.getTime() < existingWindow.end.getTime() &&
+        existingWindow.start.getTime() < nextWindow.end.getTime();
+      if (overlaps) {
+        return res.status(400).json({ message: "New slot overlaps with another assigned interview" });
+      }
+    }
+
+    const previousDate = app.interview?.date ? new Date(app.interview.date) : null;
+    const previousEndDate = app.interview?.endDate ? new Date(app.interview.endDate) : null;
+
+    app.interview = {
+      ...app.interview.toObject?.(),
+      date: nextStart,
+      endDate: nextEnd
+    };
+
+    app.interviewerFeedback = {
+      submittedBy: null,
+      submittedAt: null,
+      recommendation: null,
+      ratings: {
+        communication: null,
+        technical: null,
+        problemSolving: null,
+        cultureFit: null
+      },
+      notes: ""
+    };
+
+    app.interviewReschedule = {
+      ...app.interviewReschedule,
+      count: Number(app?.interviewReschedule?.count || 0) + 1,
+      lastReason: reason,
+      lastNotes: notes,
+      lastRescheduledBy: req.user.id,
+      lastRescheduledAt: new Date(),
+      previousDate,
+      previousEndDate
+    };
+
+    await app.save();
+
+    const studentUser = app?.studentId?.userId;
+    if (studentUser?._id) {
+      notifyInterviewScheduled(
+        String(studentUser._id),
+        studentUser?.name || "Student",
+        app?.jobId?.title || "Interview",
+        nextStart,
+        app?.interview?.mode || "Online",
+        app?.interview?.link || ""
+      ).catch((notifyErr) => {
+        console.error("[NOTIFY] interviewer reschedule student notify failed:", notifyErr.message);
+      });
+    }
+
+    const recruiterUserId = String(app?.jobId?.recruiterId || "");
+    if (recruiterUserId) {
+      notify({
+        userId: recruiterUserId,
+        type: "INTERVIEW_RESCHEDULED",
+        title: `Interview Rescheduled: ${app?.jobId?.title || "Interview"}`,
+        message: `Interviewer rescheduled interview to ${nextStart.toLocaleString()}.`,
+        link: "/recruiter/applications",
+        metadata: {
+          applicationId: app._id,
+          reason,
+          notes,
+          previousDate,
+          newDate: nextStart
+        },
+        sendMail: false
+      }).catch((notifyErr) => {
+        console.error("[NOTIFY] interviewer reschedule recruiter notify failed:", notifyErr.message);
+      });
+    }
+
+    await writeAuditLog({
+      actorId: req.user.id,
+      actorRole: req.user.role,
+      action: "INTERVIEW_RESCHEDULED_BY_INTERVIEWER",
+      entityType: "APPLICATION",
+      entityId: app._id,
+      applicationId: app._id,
+      jobId: app?.jobId?._id || null,
+      changes: {
+        previousDate,
+        newDate: nextStart,
+        previousEndDate,
+        newEndDate: nextEnd
+      },
+      metadata: {
+        reason,
+        notes
+      }
+    });
+
+    return res.json({
+      message: "Interview rescheduled successfully",
+      applicationId: app._id,
+      interview: app.interview,
+      interviewReschedule: app.interviewReschedule
+    });
+  } catch (err) {
+    console.error("rescheduleMyInterview error:", err);
+    return res.status(500).json({ message: "Failed to reschedule interview" });
   }
 };
 

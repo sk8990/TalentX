@@ -53,7 +53,9 @@ const applicationSchema = new mongoose.Schema(
 
     assessment: {
       link: String,
-      score: Number,
+      sentAt: { type: Date, default: null },
+      scheduledAt: { type: Date, default: null },
+      score: String,
       passed: Boolean
     },
 
@@ -99,6 +101,39 @@ const applicationSchema = new mongoose.Schema(
       }
     },
 
+    interviewReschedule: {
+      count: {
+        type: Number,
+        default: 0
+      },
+      lastReason: {
+        type: String,
+        enum: ["STUDENT_NO_SHOW", "INTERVIEWER_UNAVAILABLE", "OTHER"],
+        default: null
+      },
+      lastNotes: {
+        type: String,
+        default: ""
+      },
+      lastRescheduledBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: null
+      },
+      lastRescheduledAt: {
+        type: Date,
+        default: null
+      },
+      previousDate: {
+        type: Date,
+        default: null
+      },
+      previousEndDate: {
+        type: Date,
+        default: null
+      }
+    },
+
     interviewerFeedback: {
       submittedBy: {
         type: mongoose.Schema.Types.ObjectId,
@@ -115,10 +150,10 @@ const applicationSchema = new mongoose.Schema(
         default: null
       },
       ratings: {
-        communication: { type: Number, min: 1, max: 5, default: null },
-        technical: { type: Number, min: 1, max: 5, default: null },
-        problemSolving: { type: Number, min: 1, max: 5, default: null },
-        cultureFit: { type: Number, min: 1, max: 5, default: null }
+        communication: { type: String, enum: ["1", "2", "3", "4", "5"], default: null },
+        technical: { type: String, enum: ["1", "2", "3", "4", "5"], default: null },
+        problemSolving: { type: String, enum: ["1", "2", "3", "4", "5"], default: null },
+        cultureFit: { type: String, enum: ["1", "2", "3", "4", "5"], default: null }
       },
       notes: {
         type: String,

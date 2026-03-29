@@ -85,6 +85,8 @@ export default function RecruiterApplications() {
   const [selectedJobId, setSelectedJobId] = useState("");
   const [applications, setApplications] = useState([]);
   const [assignmentDrafts, setAssignmentDrafts] = useState({});
+  const [assessmentSendingMap, setAssessmentSendingMap] = useState({});
+  const [assessmentSentMap, setAssessmentSentMap] = useState({});
   const [columnPageMap, setColumnPageMap] = useState({});
   const [stagePage, setStagePage] = useState(1);
   const [selectedStage, setSelectedStage] = useState(STATUS_COLUMNS[0]);
@@ -185,6 +187,12 @@ export default function RecruiterApplications() {
       const res = await API.get(`/application/job/${jobId}`);
       const nextApplications = res.data || [];
       setApplications(nextApplications);
+      setAssessmentSentMap(
+        nextApplications.reduce((acc, app) => {
+          acc[app._id] = ["ASSESSMENT_SENT", "ASSESSMENT_PASSED", "ASSESSMENT_FAILED", "INTERVIEW_SCHEDULED", "SELECTED"].includes(app.status);
+          return acc;
+        }, {})
+      );
       setAssignmentDrafts(
         nextApplications.reduce((acc, app) => {
           const assignedId = app?.interviewerAssignment?.interviewerUserId?._id || "";
@@ -253,14 +261,34 @@ export default function RecruiterApplications() {
   }, []);
 
   const sendAssessment = async (id) => {
+    if (assessmentSendingMap[id] || assessmentSentMap[id]) {
+      return;
+    }
+
     const values = await openInputDialog({
       title: "Send Assessment",
       confirmText: "Send",
-      fields: [{ name: "link", label: "Assessment Link", placeholder: "https://example.com/assessment", required: true }],
+      fields: [
+        { name: "link", label: "Assessment Link", placeholder: "https://example.com/assessment", required: true },
+        { name: "scheduledAt", type: "datetime-local", label: "Assessment Date & Time", required: true }
+      ],
     });
-    if (!values?.link?.trim()) return;
+    if (!values?.link?.trim() || !values?.scheduledAt?.trim()) return;
 
-    runAction(() => API.put(`/application/${id}/assessment`, { link: values.link.trim() }), "Assessment sent");
+    try {
+      setAssessmentSendingMap((prev) => ({ ...prev, [id]: true }));
+      await API.put(`/application/${id}/assessment`, {
+        link: values.link.trim(),
+        scheduledAt: values.scheduledAt.trim()
+      });
+      setAssessmentSentMap((prev) => ({ ...prev, [id]: true }));
+      toast.success("Assessment sent");
+      await fetchApplications(selectedJobId);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Action failed");
+    } finally {
+      setAssessmentSendingMap((prev) => ({ ...prev, [id]: false }));
+    }
   };
 
   const markAssessmentResult = async (id, passed) => {
@@ -683,7 +711,12 @@ export default function RecruiterApplications() {
 
                             {status === "SHORTLISTED" ? (
                               <>
-                                <ActionButton label="Send Assessment" tone="indigo" onClick={() => sendAssessment(app._id)} />
+                                <ActionButton
+                                  label={assessmentSentMap[app._id] ? "Assessment Sent" : "Send Assessment"}
+                                  tone="indigo"
+                                  onClick={() => sendAssessment(app._id)}
+                                  disabled={Boolean(assessmentSentMap[app._id] || assessmentSendingMap[app._id])}
+                                />
                                 <ActionButton label="Reject" tone="red" onClick={() => reject(app._id)} />
                               </>
                             ) : null}
@@ -991,7 +1024,7 @@ function StatusBadge({ status }) {
   );
 }
 
-function ActionButton({ label, tone, onClick }) {
+function ActionButton({ label, tone, onClick, disabled = false }) {
   const style = {
     blue: "bg-blue-600 hover:bg-blue-700",
     red: "bg-rose-600 hover:bg-rose-700",
@@ -1004,6 +1037,7 @@ function ActionButton({ label, tone, onClick }) {
     "Shortlist": CheckIcon,
     "Reject": CloseIcon,
     "Send Assessment": AssignmentIcon,
+    "Assessment Sent": AssignmentIcon,
     "Mark Passed": CheckIcon,
     "Mark Failed": CloseIcon,
     "Publish Slots": EventIcon,
@@ -1015,7 +1049,10 @@ function ActionButton({ label, tone, onClick }) {
   return (
     <button
       onClick={onClick}
-      className={`rounded-lg px-3 py-2 text-xs font-semibold text-white transition ${style[tone] || style.indigo}`}
+      disabled={disabled}
+      className={`rounded-lg px-3 py-2 text-xs font-semibold text-white transition ${
+        disabled ? "cursor-not-allowed bg-slate-300 text-slate-600" : (style[tone] || style.indigo)
+      }`}
     >
       <span className="inline-flex items-center gap-1">
         {Icon ? <Icon sx={{ fontSize: 14 }} /> : null}

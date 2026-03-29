@@ -278,9 +278,17 @@ exports.shortlistApplication = (req, res) =>
 exports.sendAssessment = async (req, res) => {
   try {
     const normalizedLink = normalizeWebLink(req.body?.link);
+    const requestedAssessmentDate = req.body?.scheduledAt ?? req.body?.assessmentDate ?? req.body?.date;
+    const parsedAssessmentDate = requestedAssessmentDate
+      ? parseDateInput(requestedAssessmentDate)
+      : null;
 
     if (!normalizedLink) {
       return res.status(400).json({ message: "Assessment link is required" });
+    }
+
+    if (requestedAssessmentDate && !parsedAssessmentDate) {
+      return res.status(400).json({ message: "Assessment date/time is invalid" });
     }
 
     const app = await Application.findById(req.params.applicationId)
@@ -298,11 +306,14 @@ exports.sendAssessment = async (req, res) => {
       return res.status(403).json({ message: "Not authorized" });
     }
 
+    const scheduledAt = parsedAssessmentDate || app?.assessment?.scheduledAt || new Date();
     const previousStatus = app.status;
     app.status = "ASSESSMENT_SENT";
     app.assessment = {
       ...app.assessment,
-      link: normalizedLink
+      link: normalizedLink,
+      sentAt: new Date(),
+      scheduledAt
     };
 
     await app.save();
@@ -317,7 +328,8 @@ exports.sendAssessment = async (req, res) => {
         link: "/student/assessments",
         metadata: {
           applicationId: app._id,
-          assessmentLink: normalizedLink
+          assessmentLink: normalizedLink,
+          scheduledAt
         }
       }).catch((err) => logNotificationError("assessment notification", err));
     }
@@ -330,7 +342,8 @@ exports.sendAssessment = async (req, res) => {
       changes: {
         from: previousStatus,
         to: app.status,
-        assessmentLink: normalizedLink
+        assessmentLink: normalizedLink,
+        scheduledAt
       }
     });
 
@@ -343,6 +356,7 @@ exports.sendAssessment = async (req, res) => {
 exports.updateAssessmentResult = async (req, res) => {
   try {
     const { result, score } = req.body;
+    const normalizedScore = String(score ?? "").trim();
 
     const app = await Application.findById(req.params.applicationId)
       .populate("jobId")
@@ -363,7 +377,7 @@ exports.updateAssessmentResult = async (req, res) => {
 
     app.assessment = {
       ...app.assessment,
-      score,
+      score: normalizedScore,
       passed: isPassed
     };
 
@@ -392,7 +406,7 @@ exports.updateAssessmentResult = async (req, res) => {
       changes: {
         from: previousStatus,
         to: app.status,
-        score,
+        score: normalizedScore,
         passed: isPassed
       }
     });
@@ -1177,7 +1191,42 @@ exports.getMyAssessments = async (req, res) => {
       .populate("jobId", "title companyName companyLogo")
       .select("jobId assessment status createdAt");
 
-    res.json(assessments);
+    const nowTs = Date.now();
+    const payload = (assessments || [])
+      .map((app) => {
+        const scheduledAt = app?.assessment?.scheduledAt || app?.createdAt || null;
+        const scheduledTs = scheduledAt ? new Date(scheduledAt).getTime() : NaN;
+        const completed = ["ASSESSMENT_PASSED", "ASSESSMENT_FAILED"].includes(app.status);
+        const pastByTime = Number.isFinite(scheduledTs) ? scheduledTs < nowTs : false;
+
+        let uiStatus = "UPCOMING";
+        if (completed) {
+          uiStatus = "COMPLETED";
+        } else if (pastByTime) {
+          uiStatus = "MISSED";
+        }
+
+        return {
+          _id: app._id,
+          jobId: app.jobId,
+          assessment: app.assessment,
+          status: app.status,
+          createdAt: app.createdAt,
+          assessmentDateTime: scheduledAt,
+          uiStatus,
+          isUpcoming: uiStatus === "UPCOMING",
+          isPast: uiStatus !== "UPCOMING",
+          canStartAssessment: uiStatus === "UPCOMING" && Boolean(app?.assessment?.link),
+          canViewResult: uiStatus === "COMPLETED"
+        };
+      })
+      .sort((a, b) => {
+        const aTs = a.assessmentDateTime ? new Date(a.assessmentDateTime).getTime() : 0;
+        const bTs = b.assessmentDateTime ? new Date(b.assessmentDateTime).getTime() : 0;
+        return aTs - bTs;
+      });
+
+    res.json(payload);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

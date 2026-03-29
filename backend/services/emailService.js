@@ -1,6 +1,21 @@
+if (process.env.NO_COLOR) {
+  delete process.env.NO_COLOR;
+}
+if (!process.env.FORCE_COLOR) {
+  process.env.FORCE_COLOR = "3";
+}
+
 const nodemailer = require("nodemailer");
 
 // Creates a transporter — uses Ethereal for dev, real SMTP for production
+
+const chalkLib = require("chalk");
+const chalk = chalkLib?.Instance ? new chalkLib.Instance({ level: 3 }) : chalkLib;
+
+function logEmailSeparator() {
+  console.log(chalk.gray("------------------------------------------------------------"));
+}
+
 let transporter;
 
 async function getTransporter() {
@@ -29,7 +44,9 @@ async function getTransporter() {
         pass: testAccount.pass,
       },
     });
-    console.log("[EMAIL] Using Ethereal test account:", testAccount.user);
+    logEmailSeparator();
+    console.log(chalk.cyan(`[EMAIL] Using Ethereal test account: ${testAccount.user}`));
+    logEmailSeparator();
   }
 
   return transporter;
@@ -41,15 +58,24 @@ async function sendEmail({ to, subject, html }) {
     const from = process.env.SMTP_FROM || "TalentX <noreply@talentx.com>";
 
     const info = await t.sendMail({ from, to, subject, html });
+    const messageId = String(info?.messageId || "N/A");
+    logEmailSeparator();
+    console.log(chalk.green.bold("Email sent successfully!"));
+    console.log(chalk.cyan(`Message ID: ${messageId}`));
 
     // In dev, log the preview URL
     if (!process.env.SMTP_HOST) {
-      console.log("[EMAIL] Preview URL:", nodemailer.getTestMessageUrl(info));
+      const previewUrl = nodemailer.getTestMessageUrl(info) || "N/A";
+      console.log(chalk.yellowBright.bold(`Preview URL: ${previewUrl}`));
     }
+    logEmailSeparator();
 
     return info;
   } catch (err) {
-    console.error("[EMAIL] Send failed:", err.message);
+    logEmailSeparator();
+    console.error(chalk.red("Email send failed"));
+    console.error(chalk.red(err?.stack || err?.message || String(err)));
+    logEmailSeparator();
     return null;
   }
 }
