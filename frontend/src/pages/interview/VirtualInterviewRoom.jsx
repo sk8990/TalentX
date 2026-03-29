@@ -124,6 +124,7 @@ export default function VirtualInterviewRoom({ role }) {
   const peerRef = useRef(null);
   const socketRef = useRef(null);
   const autoStartAttemptedRef = useRef(false);
+  const roomDataRef = useRef(null);
 
   const [roomData, setRoomData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -334,21 +335,25 @@ export default function VirtualInterviewRoom({ role }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endpoint]);
 
+  // Keep roomDataRef in sync so the session effect can read it without re-running
+  useEffect(() => { roomDataRef.current = roomData; }, [roomData]);
+
   useEffect(() => {
     if (!sessionStarted) return undefined;
     let cancelled = false;
     const startSession = async () => {
       try {
         const token = localStorage.getItem("token");
+        const currentRoomData = roomDataRef.current;
         const localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         if (cancelled) return;
         localStreamRef.current = localStream;
         if (localVideoRef.current) localVideoRef.current.srcObject = localStream;
 
-        const origin = resolveSocketOrigin(roomData?.socket?.url);
+        const origin = resolveSocketOrigin(currentRoomData?.socket?.url);
         const ioFactory = await loadSocketClient(origin);
         if (cancelled) return;
-        const socket = ioFactory(origin, { path: roomData?.socket?.path || "/socket.io", auth: { token }, transports: ["websocket", "polling"], withCredentials: true });
+        const socket = ioFactory(origin, { path: currentRoomData?.socket?.path || "/socket.io", auth: { token }, transports: ["websocket", "polling"], withCredentials: true });
         socketRef.current = socket;
         setConnecting(true);
         setConnectionState("connecting");
@@ -372,7 +377,7 @@ export default function VirtualInterviewRoom({ role }) {
           });
         });
 
-        socket.on("participant-joined", (participant) => {
+        socket.on("participant-joined", async (participant) => {
           const participantSocketId = String(participant?.socketId || "");
           if (!participantSocketId) return;
           if (remoteSocketIdRef.current && remoteSocketIdRef.current !== participantSocketId) {
@@ -380,7 +385,8 @@ export default function VirtualInterviewRoom({ role }) {
           }
           remoteSocketIdRef.current = participantSocketId;
           setRemoteName(participant?.name || "Participant");
-          setConnectionState("waiting");
+          setConnectionState("connecting");
+          await sendOfferTo(participantSocketId);
         });
         socket.on("participant-left", () => {
           closePeer();
@@ -424,7 +430,7 @@ export default function VirtualInterviewRoom({ role }) {
       cleanupSession();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionStarted, applicationId, roomData]);
+  }, [sessionStarted, applicationId]);
 
   useEffect(() => {
     if (!sessionStarted) return undefined;
