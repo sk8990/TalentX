@@ -133,6 +133,7 @@ export default function VirtualInterviewRoom({ role }) {
   const [videoEnabled, setVideoEnabled] = useState(true);
   const [checks, setChecks] = useState({ internet: "pending", camera: "pending", microphone: "pending" });
   const [checkRunning, setCheckRunning] = useState(false);
+  const [checkError, setCheckError] = useState("");
   const [violation, setViolation] = useState("");
   const [violationCount, setViolationCount] = useState(0);
   const [supportOpen, setSupportOpen] = useState(false);
@@ -194,10 +195,17 @@ export default function VirtualInterviewRoom({ role }) {
 
   const runSystemCheck = async () => {
     setCheckRunning(true);
+    setCheckError("");
     try {
       const base = { internet: navigator.onLine ? "pass" : "fail", camera: "pending", microphone: "pending" };
+      if (typeof window !== "undefined" && !window.isSecureContext) {
+        setChecks({ ...base, camera: "fail", microphone: "fail" });
+        setCheckError("Camera and microphone need HTTPS or localhost. The current LAN HTTP address is treated as insecure by the browser.");
+        return;
+      }
       if (!navigator.mediaDevices?.getUserMedia) {
         setChecks({ ...base, camera: "fail", microphone: "fail" });
+        setCheckError("Camera and microphone APIs are unavailable in this browser context.");
         return;
       }
       const probe = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -205,8 +213,16 @@ export default function VirtualInterviewRoom({ role }) {
       const microphone = probe.getAudioTracks().length ? "pass" : "fail";
       probe.getTracks().forEach((track) => track.stop());
       setChecks({ internet: base.internet, camera, microphone });
-    } catch {
+    } catch (err) {
       setChecks({ internet: navigator.onLine ? "pass" : "fail", camera: "fail", microphone: "fail" });
+      const errorName = String(err?.name || "").trim();
+      if (errorName === "NotAllowedError") {
+        setCheckError("Browser permission for camera or microphone was denied. Allow access in site permissions and retry.");
+      } else if (errorName === "NotReadableError") {
+        setCheckError("Camera or microphone is busy in another app or browser tab. Close other apps using it and retry.");
+      } else {
+        setCheckError("Camera or microphone check failed. If you are using a LAN IP over HTTP, switch to HTTPS or a secure tunnel.");
+      }
     } finally {
       setCheckRunning(false);
     }
@@ -341,23 +357,15 @@ export default function VirtualInterviewRoom({ role }) {
           });
         });
 
-        socket.on("participant-joined", async (participant) => {
-          try {
-            const participantSocketId = String(participant?.socketId || "");
-            if (!participantSocketId) return;
-            if (remoteSocketIdRef.current && remoteSocketIdRef.current !== participantSocketId) {
-              closePeer();
-            }
-            remoteSocketIdRef.current = participantSocketId;
-            setRemoteName(participant?.name || "Participant");
-            if (localStreamRef.current) {
-              await sendOfferTo(participantSocketId);
-            } else {
-              setConnectionState("waiting");
-            }
-          } catch {
-            setConnectionState("waiting");
+        socket.on("participant-joined", (participant) => {
+          const participantSocketId = String(participant?.socketId || "");
+          if (!participantSocketId) return;
+          if (remoteSocketIdRef.current && remoteSocketIdRef.current !== participantSocketId) {
+            closePeer();
           }
+          remoteSocketIdRef.current = participantSocketId;
+          setRemoteName(participant?.name || "Participant");
+          setConnectionState("waiting");
         });
         socket.on("participant-left", () => {
           closePeer();
@@ -570,6 +578,11 @@ export default function VirtualInterviewRoom({ role }) {
         <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-slate-900">System Check Before Start</h2>
           <div className="mt-4 grid gap-3 sm:grid-cols-3">{Object.entries(checks).map(([key, value]) => <div key={key} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2"><p className="text-xs font-semibold uppercase text-slate-500">{key}</p><p className={`mt-1 text-sm font-semibold ${statusBadge(value)}`}>{value.toUpperCase()}</p></div>)}</div>
+          {checkError ? (
+            <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">
+              {checkError}
+            </div>
+          ) : null}
           {role === "student" ? (
             <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Interviewer Approval</p>
