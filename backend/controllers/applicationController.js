@@ -16,10 +16,18 @@ const {
 const { buildInterviewAccess, getInterviewWindow } = require("../utils/interviewAccess");
 const {
   buildEmptyInterviewJoinRequest,
+  buildDefaultAIInterviewConfig,
+  clearAIInterview,
   clearInterviewJoinRequest,
   clearInterviewSession,
+  getInterviewPanelType,
   hasInterviewSessionEnded
 } = require("../utils/interviewLifecycle");
+const {
+  getAIInterviewConfig,
+  generateInterviewQuestionPlan,
+  evaluateInterview
+} = require("../services/aiInterviewService");
 const {
   notify,
   notifyApplicationStatus,
@@ -54,6 +62,53 @@ function normalizeInterviewMode(mode) {
   return "";
 }
 
+function normalizeInterviewPanelType(value) {
+  return String(value || "HUMAN").trim().toUpperCase() === "AI" ? "AI" : "HUMAN";
+}
+
+function normalizeAIInterviewConfigInput(value) {
+  const defaults = buildDefaultAIInterviewConfig();
+  const source = value && typeof value === "object" ? value : {};
+  const questionCount = Number(source.questionCount);
+  const durationMinutes = Number(source.durationMinutes);
+  const difficulty = String(source.difficulty || defaults.difficulty).trim().toUpperCase();
+  const focusAreas = Array.isArray(source.focusAreas)
+    ? source.focusAreas
+    : String(source.focusAreas || "")
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+  return {
+    questionCount: Number.isFinite(questionCount)
+      ? Math.min(Math.max(Math.round(questionCount), 3), 10)
+      : defaults.questionCount,
+    durationMinutes: Number.isFinite(durationMinutes)
+      ? Math.min(Math.max(Math.round(durationMinutes), 10), 60)
+      : defaults.durationMinutes,
+    difficulty: ["EASY", "MEDIUM", "HARD"].includes(difficulty) ? difficulty : defaults.difficulty,
+    focusAreas: focusAreas.slice(0, 8)
+  };
+}
+
+function buildInterviewPayload({
+  startDate,
+  endDate,
+  mode,
+  link,
+  panelType,
+  aiConfig
+}) {
+  return {
+    date: startDate,
+    endDate,
+    mode,
+    link: panelType === "AI" ? "" : link,
+    panelType,
+    aiConfig: panelType === "AI" ? aiConfig : buildDefaultAIInterviewConfig()
+  };
+}
+
 function hasInterviewerFeedback(app) {
   return Boolean(app?.interviewerFeedback?.submittedAt);
 }
@@ -72,6 +127,19 @@ function applyInterviewSessionAccess(app, access) {
     canAccessRoom: false,
     canJoin: false,
     countdownSeconds: 0
+  };
+}
+
+function resetAIInterviewArtifacts(app) {
+  clearInterviewSession(app);
+  clearAIInterview(app);
+}
+
+function clearInterviewerAssignment(app) {
+  app.interviewerAssignment = {
+    interviewerUserId: null,
+    assignedBy: null,
+    assignedAt: null
   };
 }
 
@@ -110,6 +178,73 @@ function getBackendOrigin(req) {
   }
 
   return `${req.protocol}://${req.get("host")}`;
+}
+
+async function findStudentApplicationByUser(applicationId, userId) {
+  const student = await Student.findOne({ userId });
+  if (!student) {
+    return { student: null, app: null };
+  }
+
+  const app = await Application.findOne({
+    _id: applicationId,
+    studentId: student._id
+  })
+    .populate("jobId")
+    .populate({
+      path: "studentId",
+      populate: { path: "userId", select: "name email" }
+    });
+
+  return { student, app };
+}
+
+function getAIInterviewQuestion(app, questionIndex = null) {
+  const plan = Array.isArray(app?.aiInterview?.questionPlan) ? app.aiInterview.questionPlan : [];
+  const index = Number.isInteger(questionIndex)
+    ? questionIndex
+    : Number(app?.aiInterview?.currentQuestionIndex || 0);
+
+  if (index < 0 || index >= plan.length) {
+    return null;
+  }
+
+  const item = plan[index];
+  return {
+    index,
+    totalQuestions: plan.length,
+    id: item?.id || `q${index + 1}`,
+    prompt: item?.prompt || "",
+    focusArea: item?.focusArea || "General"
+  };
+}
+
+function buildAIInterviewStudentPayload(app) {
+  const aiInterview = app?.aiInterview || {};
+  const transcript = Array.isArray(aiInterview.transcript) ? aiInterview.transcript : [];
+  const currentQuestion = getAIInterviewQuestion(app);
+
+  return {
+    status: aiInterview.status || "NOT_STARTED",
+    startedAt: aiInterview.startedAt || null,
+    endedAt: aiInterview.endedAt || null,
+    currentQuestionIndex: Number(aiInterview.currentQuestionIndex || 0),
+    totalQuestions: Array.isArray(aiInterview.questionPlan) ? aiInterview.questionPlan.length : 0,
+    currentQuestion,
+    transcriptCount: transcript.length,
+    lastError: aiInterview.lastError || ""
+  };
+}
+
+function getCompletedAIInterviewStatus(reason, hasTranscript) {
+  const normalizedReason = String(reason || "").trim().toUpperCase();
+  if (normalizedReason === "FAILED") {
+    return "FAILED";
+  }
+  if (normalizedReason === "COMPLETED") {
+    return "COMPLETED";
+  }
+  return hasTranscript ? "COMPLETED" : "ABANDONED";
 }
 
 async function writeApplicationAudit({
@@ -445,9 +580,15 @@ exports.scheduleInterview = async (req, res) => {
     const mode = normalizeInterviewMode(req.body?.mode);
     const link = normalizeWebLink(req.body?.link);
     const providedEndDate = parseDateInput(req.body?.endDate);
+    const panelType = normalizeInterviewPanelType(req.body?.panelType);
+    const aiConfig = normalizeAIInterviewConfigInput(req.body?.aiConfig);
 
     if (!startDate || !mode) {
       return res.status(400).json({ message: "Date and valid mode are required" });
+    }
+
+    if (panelType === "AI" && mode !== "Online") {
+      return res.status(400).json({ message: "AI interviews must use Online mode" });
     }
 
     const endDate = providedEndDate || new Date(startDate.getTime() + 30 * 60 * 1000);
@@ -472,15 +613,20 @@ exports.scheduleInterview = async (req, res) => {
 
     const previousStatus = app.status;
     app.status = "INTERVIEW_SCHEDULED";
-    app.interview = {
-      date: startDate,
+    app.interview = buildInterviewPayload({
+      startDate,
       endDate,
       mode,
-      link
-    };
+      link,
+      panelType,
+      aiConfig
+    });
     app.interviewSlots = [];
     clearInterviewJoinRequest(app);
-    clearInterviewSession(app);
+    resetAIInterviewArtifacts(app);
+    if (panelType === "AI") {
+      clearInterviewerAssignment(app);
+    }
 
     await app.save();
 
@@ -506,7 +652,8 @@ exports.scheduleInterview = async (req, res) => {
         to: app.status,
         date: startDate,
         endDate,
-        mode
+        mode,
+        panelType
       }
     });
 
@@ -519,6 +666,8 @@ exports.scheduleInterview = async (req, res) => {
 exports.publishInterviewSlots = async (req, res) => {
   try {
     const slots = Array.isArray(req.body?.slots) ? req.body.slots : [];
+    const panelType = normalizeInterviewPanelType(req.body?.panelType);
+    const aiConfig = normalizeAIInterviewConfigInput(req.body?.aiConfig);
 
     if (slots.length === 0) {
       return res.status(400).json({ message: "At least one interview slot is required" });
@@ -569,6 +718,10 @@ exports.publishInterviewSlots = async (req, res) => {
         return res.status(400).json({ message: `Slot ${i + 1}: start time must be in the future` });
       }
 
+      if (panelType === "AI" && mode !== "Online") {
+        return res.status(400).json({ message: `Slot ${i + 1}: AI interviews must use Online mode` });
+      }
+
       parsedSlots.push({
         start,
         end,
@@ -576,7 +729,9 @@ exports.publishInterviewSlots = async (req, res) => {
         link,
         bookedByStudent: false,
         bookedAt: null,
-        bookedBy: null
+        bookedBy: null,
+        panelType,
+        aiConfig: panelType === "AI" ? aiConfig : buildDefaultAIInterviewConfig()
       });
     }
 
@@ -594,7 +749,10 @@ exports.publishInterviewSlots = async (req, res) => {
     app.interview = undefined;
     app.interviewSlots = parsedSlots;
     clearInterviewJoinRequest(app);
-    clearInterviewSession(app);
+    resetAIInterviewArtifacts(app);
+    if (panelType === "AI") {
+      clearInterviewerAssignment(app);
+    }
     await app.save();
 
     const student = getStudentNotificationContext(app);
@@ -617,7 +775,8 @@ exports.publishInterviewSlots = async (req, res) => {
       changes: {
         from: previousStatus,
         to: app.status,
-        slotCount: parsedSlots.length
+        slotCount: parsedSlots.length,
+        panelType
       }
     });
 
@@ -671,14 +830,19 @@ exports.bookInterviewSlot = async (req, res) => {
     slot.bookedAt = new Date();
     slot.bookedBy = student._id;
     app.status = "INTERVIEW_SCHEDULED";
-    app.interview = {
-      date: slot.start,
+    app.interview = buildInterviewPayload({
+      startDate: slot.start,
       endDate: slot.end,
       mode: slot.mode,
-      link: slot.link
-    };
+      link: slot.link,
+      panelType: getInterviewPanelType(slot),
+      aiConfig: normalizeAIInterviewConfigInput(slot.aiConfig)
+    });
     clearInterviewJoinRequest(app);
-    clearInterviewSession(app);
+    resetAIInterviewArtifacts(app);
+    if (getInterviewPanelType(app.interview) === "AI") {
+      clearInterviewerAssignment(app);
+    }
 
     await app.save();
 
@@ -720,7 +884,8 @@ exports.bookInterviewSlot = async (req, res) => {
         slotId: slot._id,
         slotStart: slot.start,
         slotEnd: slot.end,
-        mode: slot.mode
+        mode: slot.mode,
+        panelType: getInterviewPanelType(app.interview)
       }
     });
 
@@ -753,8 +918,12 @@ exports.assignInterviewerToApplication = async (req, res) => {
       return res.status(403).json({ message: "Not authorized" });
     }
 
+    if (getInterviewPanelType(app.interview) === "AI") {
+      return res.status(400).json({ message: "AI interviews do not require interviewer assignment" });
+    }
+
     if (app.status !== "INTERVIEW_SCHEDULED") {
-      return res.status(400).json({ message: "Interviewer can only be unassigned from interview-scheduled applications" });
+      return res.status(400).json({ message: "Interviewer can only be assigned to interview-scheduled applications" });
     }
 
     if (app.status !== "INTERVIEW_SCHEDULED" || !app.interview?.date) {
@@ -1085,7 +1254,7 @@ exports.getMyInterviews = async (req, res) => {
       status: "INTERVIEW_SCHEDULED"
     })
       .populate("jobId", "title companyName companyLogo")
-      .select("jobId interview status createdAt interviewerAssignment interviewerFeedback interviewJoinRequest interviewSession");
+      .select("jobId interview status createdAt interviewerAssignment interviewerFeedback interviewJoinRequest interviewSession aiInterview");
 
     const payload = interviews.map((app) => {
       const access = applyInterviewSessionAccess(app, buildStudentInterviewAccess(app.interview));
@@ -1104,6 +1273,7 @@ exports.getMyInterviews = async (req, res) => {
         interviewerAssignment: app.interviewerAssignment,
         interviewerFeedback: app.interviewerFeedback,
         interviewSession: app.interviewSession,
+        aiInterview: buildAIInterviewStudentPayload(app),
         joinRequest: getInterviewJoinRequest(app),
         ...access
       };
@@ -1156,11 +1326,15 @@ exports.getMyInterviewRoom = async (req, res) => {
         date: app.interview?.date || null,
         endDate: app.interview?.endDate || null,
         mode: app.interview?.mode || "",
+        link: app.interview?.link || "",
+        panelType: getInterviewPanelType(app.interview),
+        aiConfig: getAIInterviewConfig(app.interview),
         accessWindowStart: accessResult.access.accessWindowStart,
         accessWindowEnd: accessResult.access.accessWindowEnd
       },
       interviewSession: app.interviewSession || null,
       interviewerFeedback: app.interviewerFeedback || null,
+      aiInterview: buildAIInterviewStudentPayload(app),
       access: accessResult.access,
       joinRequest: accessResult.joinRequest || buildEmptyInterviewJoinRequest(),
       socket: {
@@ -1199,6 +1373,18 @@ exports.requestMyInterviewJoinApproval = async (req, res) => {
     }
 
     const app = accessResult.application;
+    if (getInterviewPanelType(app.interview) === "AI") {
+      return res.status(200).json({
+        message: "AI interview does not require interviewer approval",
+        joinRequest: buildEmptyInterviewJoinRequest(),
+        countdownSeconds: accessResult.access?.countdownSeconds || 0,
+        canAccessRoom: accessResult.access?.canAccessRoom || false,
+        canJoin: accessResult.access?.canJoin || false,
+        accessWindowStart: accessResult.access?.accessWindowStart || null,
+        accessWindowEnd: accessResult.access?.accessWindowEnd || null
+      });
+    }
+
     const interviewerUserId = String(
       app?.interviewerAssignment?.interviewerUserId?._id ||
       app?.interviewerAssignment?.interviewerUserId ||
@@ -1282,6 +1468,16 @@ exports.getMyInterviewJoinApprovalStatus = async (req, res) => {
       return res.status(accessResult.statusCode).json(payload);
     }
 
+    if (getInterviewPanelType(accessResult.application?.interview) === "AI") {
+      return res.json({
+        message: "AI interview does not require interviewer approval",
+        joinRequest: buildEmptyInterviewJoinRequest(),
+        canJoin: accessResult.access?.canJoin || false,
+        accessWindowStart: accessResult.access?.accessWindowStart || null,
+        accessWindowEnd: accessResult.access?.accessWindowEnd || null
+      });
+    }
+
     return res.json({
       joinRequest: accessResult.joinRequest || buildEmptyInterviewJoinRequest(),
       canJoin: accessResult.access?.canJoin || false,
@@ -1291,6 +1487,296 @@ exports.getMyInterviewJoinApprovalStatus = async (req, res) => {
   } catch (err) {
     console.error("getMyInterviewJoinApprovalStatus error:", err);
     return res.status(500).json({ message: "Failed to get join approval status" });
+  }
+};
+
+exports.startMyAIInterview = async (req, res) => {
+  try {
+    const accessResult = await validateInterviewRoomAccess({
+      applicationId: req.params.applicationId,
+      userId: req.user.id,
+      role: "student",
+      requireStudentApproval: false
+    });
+
+    if (!accessResult.ok) {
+      const payload = { message: accessResult.message };
+      if (accessResult.access) {
+        payload.access = accessResult.access;
+      }
+      return res.status(accessResult.statusCode).json(payload);
+    }
+
+    const app = accessResult.application;
+    if (getInterviewPanelType(app.interview) !== "AI") {
+      return res.status(400).json({ message: "This interview uses a human interviewer panel" });
+    }
+
+    if (hasInterviewSessionEnded(app) || ["COMPLETED", "FAILED", "ABANDONED"].includes(app?.aiInterview?.status)) {
+      return res.status(400).json({ message: "This AI interview has already ended" });
+    }
+
+    if (!Array.isArray(app.aiInterview?.questionPlan) || app.aiInterview.questionPlan.length === 0) {
+      try {
+        const questionPlan = await generateInterviewQuestionPlan(app);
+        app.aiInterview.questionPlan = questionPlan;
+      } catch (planErr) {
+        app.aiInterview.lastError = planErr.message || "Failed to prepare AI interview questions";
+        await app.save();
+        throw planErr;
+      }
+    }
+
+    if (!app.aiInterview?.startedAt) {
+      app.aiInterview.startedAt = new Date();
+    }
+    if (app.aiInterview?.status !== "IN_PROGRESS") {
+      app.aiInterview.status = "IN_PROGRESS";
+      app.aiInterview.lastError = "";
+    }
+    if (!Array.isArray(app.aiInterview?.transcript) || app.aiInterview.transcript.length === 0) {
+      app.aiInterview.currentQuestionIndex = 0;
+    }
+
+    await app.save();
+
+    await writeApplicationAudit({
+      actorId: req.user.id,
+      actorRole: req.user.role,
+      action: "AI_INTERVIEW_STARTED",
+      app,
+      changes: {
+        panelType: "AI",
+        questionCount: app.aiInterview.questionPlan.length
+      }
+    });
+
+    return res.json({
+      message: "AI interview ready",
+      aiInterview: buildAIInterviewStudentPayload(app)
+    });
+  } catch (err) {
+    console.error("startMyAIInterview error:", err);
+    return res.status(500).json({ message: err.message || "Failed to start AI interview" });
+  }
+};
+
+exports.submitMyAIInterviewAnswer = async (req, res) => {
+  try {
+    const { app } = await findStudentApplicationByUser(req.params.applicationId, req.user.id);
+
+    if (!app) {
+      return res.status(404).json({ message: "Application not found" });
+    }
+
+    if (hasInterviewSessionEnded(app)) {
+      return res.status(400).json({ message: "This AI interview session has already ended" });
+    }
+
+    if (app.status !== "INTERVIEW_SCHEDULED" || getInterviewPanelType(app.interview) !== "AI") {
+      return res.status(400).json({ message: "AI interview is not available for this application" });
+    }
+
+    if (app.aiInterview?.status !== "IN_PROGRESS") {
+      return res.status(400).json({ message: "AI interview is not currently in progress" });
+    }
+
+    const answer = String(req.body?.transcript || "").trim();
+    const source = String(req.body?.source || "VOICE").trim().toUpperCase();
+    if (!answer) {
+      return res.status(400).json({ message: "Answer transcript is required" });
+    }
+
+    const currentQuestion = getAIInterviewQuestion(app);
+    if (!currentQuestion) {
+      return res.status(400).json({ message: "No active AI interview question is available" });
+    }
+
+    const transcript = Array.isArray(app.aiInterview?.transcript) ? app.aiInterview.transcript : [];
+    const existingIndex = transcript.findIndex((entry) => Number(entry?.questionIndex) === currentQuestion.index);
+    const nextEntry = {
+      questionIndex: currentQuestion.index,
+      questionId: currentQuestion.id,
+      question: currentQuestion.prompt,
+      answer,
+      source: source === "TEXT" ? "TEXT" : "VOICE",
+      answeredAt: new Date()
+    };
+
+    if (existingIndex >= 0) {
+      transcript[existingIndex] = nextEntry;
+    } else {
+      transcript.push(nextEntry);
+    }
+
+    app.aiInterview.transcript = transcript;
+    await app.save();
+
+    return res.json({
+      message: "Answer recorded",
+      aiInterview: buildAIInterviewStudentPayload(app)
+    });
+  } catch (err) {
+    console.error("submitMyAIInterviewAnswer error:", err);
+    return res.status(500).json({ message: "Failed to submit AI interview answer" });
+  }
+};
+
+exports.getNextMyAIInterviewQuestion = async (req, res) => {
+  try {
+    const { app } = await findStudentApplicationByUser(req.params.applicationId, req.user.id);
+
+    if (!app) {
+      return res.status(404).json({ message: "Application not found" });
+    }
+
+    if (hasInterviewSessionEnded(app)) {
+      return res.status(400).json({ message: "This AI interview session has already ended" });
+    }
+
+    if (app.status !== "INTERVIEW_SCHEDULED" || getInterviewPanelType(app.interview) !== "AI") {
+      return res.status(400).json({ message: "AI interview is not available for this application" });
+    }
+
+    if (app.aiInterview?.status !== "IN_PROGRESS") {
+      return res.status(400).json({ message: "AI interview is not currently in progress" });
+    }
+
+    const currentQuestion = getAIInterviewQuestion(app);
+    const transcript = Array.isArray(app.aiInterview?.transcript) ? app.aiInterview.transcript : [];
+    const answeredCurrent = Boolean(
+      currentQuestion &&
+      transcript.find((entry) => Number(entry?.questionIndex) === currentQuestion.index && String(entry?.answer || "").trim())
+    );
+
+    if (!currentQuestion || !answeredCurrent) {
+      return res.status(400).json({ message: "Submit an answer for the current question before moving ahead" });
+    }
+
+    const nextIndex = currentQuestion.index + 1;
+    if (nextIndex >= (Array.isArray(app.aiInterview?.questionPlan) ? app.aiInterview.questionPlan.length : 0)) {
+      return res.json({
+        message: "AI interview question plan completed",
+        completed: true,
+        aiInterview: buildAIInterviewStudentPayload(app)
+      });
+    }
+
+    app.aiInterview.currentQuestionIndex = nextIndex;
+    await app.save();
+
+    return res.json({
+      message: "Next AI interview question ready",
+      completed: false,
+      aiInterview: buildAIInterviewStudentPayload(app)
+    });
+  } catch (err) {
+    console.error("getNextMyAIInterviewQuestion error:", err);
+    return res.status(500).json({ message: "Failed to get next AI interview question" });
+  }
+};
+
+exports.endMyAIInterview = async (req, res) => {
+  try {
+    const { app } = await findStudentApplicationByUser(req.params.applicationId, req.user.id);
+
+    if (!app) {
+      return res.status(404).json({ message: "Application not found" });
+    }
+
+    if (app.status !== "INTERVIEW_SCHEDULED" || getInterviewPanelType(app.interview) !== "AI") {
+      return res.status(400).json({ message: "AI interview is not available for this application" });
+    }
+
+    if (hasInterviewSessionEnded(app)) {
+      return res.json({
+        message: "AI interview already ended",
+        aiInterview: buildAIInterviewStudentPayload(app)
+      });
+    }
+
+    const reason = String(req.body?.reason || "COMPLETED").trim().toUpperCase();
+    const transcript = Array.isArray(app.aiInterview?.transcript) ? app.aiInterview.transcript : [];
+    const hasTranscript = transcript.some((entry) => String(entry?.answer || "").trim());
+    let completedStatus = getCompletedAIInterviewStatus(reason, hasTranscript);
+    const endedAt = new Date();
+
+    let evaluation = null;
+    try {
+      if (hasTranscript && completedStatus !== "FAILED") {
+        evaluation = await evaluateInterview(app);
+      }
+    } catch (evalErr) {
+      app.aiInterview.lastError = evalErr.message || "Failed to evaluate AI interview";
+      evaluation = null;
+      if (/GEMINI_API_KEY/i.test(String(evalErr.message || ""))) {
+        completedStatus = "FAILED";
+      }
+    }
+
+    app.aiInterview.status = completedStatus;
+    app.aiInterview.endedAt = endedAt;
+    app.aiInterview.lastError = completedStatus === "FAILED"
+      ? (app.aiInterview.lastError || "AI interview evaluation failed")
+      : "";
+    if (evaluation) {
+      app.aiInterview.summary = evaluation.summary || "";
+      app.aiInterview.scores = evaluation.scores || app.aiInterview.scores;
+      app.aiInterview.recommendation = evaluation.recommendation || null;
+      app.aiInterview.finalReport = evaluation.finalReport || "";
+    }
+    app.interviewSession = {
+      endedAt,
+      endedBy: null
+    };
+
+    await app.save();
+
+    const recruiterId = String(app?.jobId?.recruiterId || "").trim();
+    if (recruiterId) {
+      notify({
+        userId: recruiterId,
+        type: "AI_INTERVIEW_COMPLETED",
+        title: `AI Interview ${completedStatus === "FAILED" ? "Issue" : "Completed"}: ${app.jobId?.title || "Interview"}`,
+        message: completedStatus === "FAILED"
+          ? "The AI interview ended with an evaluation issue. Recruiter review is required."
+          : "An AI interview report is ready for recruiter review.",
+        link: "/recruiter/applications",
+        metadata: {
+          applicationId: app._id,
+          status: completedStatus,
+          recommendation: app.aiInterview.recommendation || null
+        },
+        sendMail: false
+      }).catch((notifyErr) => logNotificationError("ai interview completed", notifyErr));
+    }
+
+    await writeApplicationAudit({
+      actorId: req.user.id,
+      actorRole: req.user.role,
+      action: completedStatus === "FAILED"
+        ? "AI_INTERVIEW_FAILED"
+        : completedStatus === "ABANDONED"
+          ? "AI_INTERVIEW_ABANDONED"
+          : "AI_INTERVIEW_COMPLETED",
+      app,
+      changes: {
+        reason,
+        endedAt,
+        recommendation: app.aiInterview.recommendation || null,
+        status: completedStatus
+      }
+    });
+
+    return res.json({
+      message: completedStatus === "FAILED"
+        ? "AI interview ended with an evaluation issue"
+        : "AI interview ended successfully",
+      aiInterview: buildAIInterviewStudentPayload(app)
+    });
+  } catch (err) {
+    console.error("endMyAIInterview error:", err);
+    return res.status(500).json({ message: err.message || "Failed to end AI interview" });
   }
 };
 

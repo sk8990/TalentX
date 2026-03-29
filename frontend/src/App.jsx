@@ -24,6 +24,7 @@ import InterviewerLayout from "./pages/interviewer/InterviewerLayout";
 import InterviewerPanel from "./pages/interviewer/InterviewerPanel";
 import InterviewerResetPassword from "./pages/interviewer/InterviewerResetPassword";
 import VirtualInterviewRoom from "./pages/interview/VirtualInterviewRoom";
+import StudentInterviewRoom from "./pages/interview/StudentInterviewRoom";
 import { Toaster } from "react-hot-toast";
 import About from "./pages/About";
 import { ThemeProvider } from "./utils/ThemeContext";
@@ -64,7 +65,7 @@ export default function App() {
             <Route path="jobs" element={<JobProfiles />} />
             <Route path="profile" element={<MyProfile />} />
             <Route path="interviews" element={<Interviews />} />
-            <Route path="interviews/:applicationId/room" element={<VirtualInterviewRoom role="student" />} />
+            <Route path="interviews/:applicationId/room" element={<StudentInterviewRoom />} />
             <Route path="assessments" element={<Assessments />} />
             <Route path="applications" element={<MyApplications />} />
             <Route path="support" element={<StudentSupport />} />

@@ -16,6 +16,24 @@ const interviewSlotSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Student",
       default: null
+    },
+    panelType: {
+      type: String,
+      enum: ["HUMAN", "AI"],
+      default: "HUMAN"
+    },
+    aiConfig: {
+      questionCount: { type: Number, default: 5 },
+      durationMinutes: { type: Number, default: 20 },
+      difficulty: {
+        type: String,
+        enum: ["EASY", "MEDIUM", "HARD"],
+        default: "MEDIUM"
+      },
+      focusAreas: {
+        type: [String],
+        default: []
+      }
     }
   },
   { _id: true }
@@ -63,7 +81,25 @@ const applicationSchema = new mongoose.Schema(
       date: Date,
       endDate: Date,
       mode: String,
-      link: String
+      link: String,
+      panelType: {
+        type: String,
+        enum: ["HUMAN", "AI"],
+        default: "HUMAN"
+      },
+      aiConfig: {
+        questionCount: { type: Number, default: 5 },
+        durationMinutes: { type: Number, default: 20 },
+        difficulty: {
+          type: String,
+          enum: ["EASY", "MEDIUM", "HARD"],
+          default: "MEDIUM"
+        },
+        focusAreas: {
+          type: [String],
+          default: []
+        }
+      }
     },
 
     interviewSlots: {
@@ -173,6 +209,72 @@ const applicationSchema = new mongoose.Schema(
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
         default: null
+      }
+    },
+
+    aiInterview: {
+      status: {
+        type: String,
+        enum: ["NOT_STARTED", "IN_PROGRESS", "COMPLETED", "ABANDONED", "FAILED"],
+        default: "NOT_STARTED"
+      },
+      startedAt: {
+        type: Date,
+        default: null
+      },
+      endedAt: {
+        type: Date,
+        default: null
+      },
+      questionPlan: {
+        type: [{
+          id: { type: String, default: "" },
+          prompt: { type: String, default: "" },
+          focusArea: { type: String, default: "" }
+        }],
+        default: []
+      },
+      transcript: {
+        type: [{
+          questionIndex: { type: Number, default: 0 },
+          questionId: { type: String, default: "" },
+          question: { type: String, default: "" },
+          answer: { type: String, default: "" },
+          source: {
+            type: String,
+            enum: ["VOICE", "TEXT"],
+            default: "VOICE"
+          },
+          answeredAt: { type: Date, default: null }
+        }],
+        default: []
+      },
+      currentQuestionIndex: {
+        type: Number,
+        default: 0
+      },
+      summary: {
+        type: String,
+        default: ""
+      },
+      scores: {
+        communication: { type: String, enum: ["1", "2", "3", "4", "5"], default: null },
+        technicalKnowledge: { type: String, enum: ["1", "2", "3", "4", "5"], default: null },
+        problemSolving: { type: String, enum: ["1", "2", "3", "4", "5"], default: null },
+        roleFit: { type: String, enum: ["1", "2", "3", "4", "5"], default: null }
+      },
+      recommendation: {
+        type: String,
+        enum: ["STRONG_YES", "YES", "MAYBE", "NO", "STRONG_NO"],
+        default: null
+      },
+      finalReport: {
+        type: String,
+        default: ""
+      },
+      lastError: {
+        type: String,
+        default: ""
       }
     },
 

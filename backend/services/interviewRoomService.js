@@ -48,15 +48,15 @@ async function loadInterviewApplication(applicationId) {
   }
 
   return Application.findById(normalizedId)
-    .populate("jobId", "title companyName recruiterId")
+    .populate("jobId", "title companyName recruiterId description aboutCompany")
     .populate({
       path: "studentId",
-      select: "userId branch cgpa year",
+      select: "userId branch cgpa year skills resumeSummary",
       populate: { path: "userId", select: "name email" }
     })
     .populate("interviewerAssignment.interviewerUserId", "name email")
     .select(
-      "jobId studentId interview status interviewerAssignment interviewerFeedback interviewJoinRequest interviewSession createdAt updatedAt"
+      "jobId studentId interview status assessment interviewerAssignment interviewerFeedback interviewJoinRequest interviewSession aiInterview createdAt updatedAt"
     );
 }
 
@@ -161,6 +161,14 @@ async function validateInterviewRoomAccess({
   }
 
   if (normalizedRole === "interviewer") {
+    if (String(app?.interview?.panelType || "HUMAN").trim().toUpperCase() === "AI") {
+      return {
+        ok: false,
+        statusCode: 400,
+        message: "AI interviews do not use interviewer room access"
+      };
+    }
+
     const assignedInterviewerUserId = getAssignedInterviewerUserId(app);
     if (!assignedInterviewerUserId) {
       return {

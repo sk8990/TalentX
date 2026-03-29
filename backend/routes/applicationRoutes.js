@@ -22,6 +22,10 @@ const {
   getMyInterviewRoom,
   requestMyInterviewJoinApproval,
   getMyInterviewJoinApprovalStatus,
+  startMyAIInterview,
+  submitMyAIInterviewAnswer,
+  getNextMyAIInterviewQuestion,
+  endMyAIInterview,
   getMyInterviewSlots,
   getMyAssessments,
   assignInterviewerToApplication,
@@ -58,6 +62,34 @@ router.get(
   auth,
   role("student"),
   getMyInterviewJoinApprovalStatus
+);
+
+router.post(
+  "/:applicationId/ai-interview/start",
+  auth,
+  role("student"),
+  startMyAIInterview
+);
+
+router.post(
+  "/:applicationId/ai-interview/answer",
+  auth,
+  role("student"),
+  submitMyAIInterviewAnswer
+);
+
+router.post(
+  "/:applicationId/ai-interview/next",
+  auth,
+  role("student"),
+  getNextMyAIInterviewQuestion
+);
+
+router.post(
+  "/:applicationId/ai-interview/end",
+  auth,
+  role("student"),
+  endMyAIInterview
 );
 
 router.get(

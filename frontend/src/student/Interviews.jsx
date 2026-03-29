@@ -201,6 +201,12 @@ export default function Interviews() {
             <p>Date & Time: {formatDateTime(bookingDialog.slot?.start)}</p>
             <p>Ends: {formatDateTime(bookingDialog.slot?.end)}</p>
             <p>Mode: {bookingDialog.slot?.mode || "N/A"}</p>
+            <p>Panel: {formatPanelType(bookingDialog.slot?.panelType)}</p>
+            {String(bookingDialog.slot?.panelType || "").trim().toUpperCase() === "AI" ? (
+              <p>
+                AI Config: {bookingDialog.slot?.aiConfig?.questionCount || 5} questions, {bookingDialog.slot?.aiConfig?.durationMinutes || 20} minutes, {bookingDialog.slot?.aiConfig?.difficulty || "MEDIUM"} difficulty
+              </p>
+            ) : null}
             {bookingDialog.slot?.link ? (
               <a
                 href={bookingDialog.slot.link}
@@ -260,6 +266,9 @@ function SlotOfferSection({ offers, bookingKey, onRequestBook }) {
                   <p className="text-sm font-semibold text-slate-800">{formatDateTime(slot.start)}</p>
                   <p className="mt-1 text-xs text-slate-600">Ends: {formatDateTime(slot.end)}</p>
                   <p className="mt-1 text-xs text-slate-600">Mode: {slot.mode}</p>
+                  <p className="mt-1 text-xs font-semibold text-indigo-700">
+                    Panel: {formatPanelType(slot.panelType)}
+                  </p>
                   {slot.link ? (
                     <a href={slot.link} target="_blank" rel="noopener noreferrer" className="mt-1 block break-all text-xs font-semibold text-indigo-600">
                       {slot.link}
@@ -323,6 +332,7 @@ function InterviewCard({ app, onJoin, past, nowMs }) {
   );
   const companyName = app.jobId?.companyName?.trim() || "";
   const jobTitle = app.jobId?.title || "Job Title";
+  const panelType = formatPanelType(interview?.panelType);
   const calendarUrl = buildCalendarUrl({
     title: `${jobTitle} Interview`,
     start: interview?.date,
@@ -337,6 +347,7 @@ function InterviewCard({ app, onJoin, past, nowMs }) {
         <div>
           {companyName ? <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{companyName}</p> : null}
           <h3 className="text-xl font-semibold text-slate-900">{jobTitle}</h3>
+          <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-indigo-600">{panelType}</p>
         </div>
         <span className={`rounded-full px-3 py-1 text-xs font-semibold ${scheduleMeta.badgeClass}`}>{scheduleMeta.label}</span>
       </div>
@@ -368,7 +379,7 @@ function InterviewCard({ app, onJoin, past, nowMs }) {
         >
           <span className="inline-flex items-center gap-1">
             <VideoCallIcon sx={{ fontSize: 16 }} />
-            {past ? "Interview Completed" : canJoin ? "Join Interview" : "Join Unavailable"}
+            {past ? "Interview Completed" : canJoin ? `Join ${panelType}` : "Join Unavailable"}
           </span>
         </button>
         <a
@@ -469,4 +480,8 @@ function buildCalendarUrl({ title, start, end, mode, link }) {
   });
 
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}
+
+function formatPanelType(value) {
+  return String(value || "HUMAN").trim().toUpperCase() === "AI" ? "AI Interview" : "Human Interview";
 }

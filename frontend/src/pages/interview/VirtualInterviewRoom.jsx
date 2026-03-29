@@ -114,7 +114,7 @@ function resolveSocketOrigin(socketUrl) {
   }
 }
 
-export default function VirtualInterviewRoom({ role }) {
+export default function VirtualInterviewRoom({ role, initialRoomData = null }) {
   const { applicationId } = useParams();
   const navigate = useNavigate();
   const localVideoRef = useRef(null);
@@ -126,8 +126,8 @@ export default function VirtualInterviewRoom({ role }) {
   const autoStartAttemptedRef = useRef(false);
   const roomDataRef = useRef(null);
 
-  const [roomData, setRoomData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [roomData, setRoomData] = useState(initialRoomData);
+  const [loading, setLoading] = useState(!initialRoomData);
   const [error, setError] = useState("");
   const [sessionStarted, setSessionStarted] = useState(false);
   const [connecting, setConnecting] = useState(false);
@@ -141,7 +141,7 @@ export default function VirtualInterviewRoom({ role }) {
   const [violation, setViolation] = useState("");
   const [violationCount, setViolationCount] = useState(0);
   const [supportOpen, setSupportOpen] = useState(false);
-  const [joinRequest, setJoinRequest] = useState(() => normalizeJoinRequest(null));
+  const [joinRequest, setJoinRequest] = useState(() => normalizeJoinRequest(initialRoomData?.joinRequest));
   const [requestingJoin, setRequestingJoin] = useState(false);
   const [decidingJoin, setDecidingJoin] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
@@ -315,6 +315,15 @@ export default function VirtualInterviewRoom({ role }) {
   useEffect(() => {
     let cancelled = false;
     const loadMeta = async () => {
+      if (initialRoomData) {
+        if (cancelled) return;
+        setRoomData(initialRoomData);
+        setJoinRequest(normalizeJoinRequest(initialRoomData?.joinRequest));
+        await runSystemCheck();
+        if (!cancelled) setLoading(false);
+        return;
+      }
+
       try {
         const res = await API.get(endpoint);
         if (cancelled) return;
@@ -333,7 +342,7 @@ export default function VirtualInterviewRoom({ role }) {
       cleanupSession();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [endpoint]);
+  }, [endpoint, initialRoomData]);
 
   // Keep roomDataRef in sync so the session effect can read it without re-running
   useEffect(() => { roomDataRef.current = roomData; }, [roomData]);

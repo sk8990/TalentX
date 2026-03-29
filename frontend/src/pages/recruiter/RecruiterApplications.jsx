@@ -79,6 +79,13 @@ const createEmptySlot = () => ({
   link: "",
 });
 
+const createDefaultAIConfig = () => ({
+  questionCount: "5",
+  durationMinutes: "20",
+  difficulty: "MEDIUM",
+  focusAreas: ""
+});
+
 export default function RecruiterApplications() {
   const [jobs, setJobs] = useState([]);
   const [interviewers, setInterviewers] = useState([]);
@@ -105,6 +112,8 @@ export default function RecruiterApplications() {
   const [slotDialog, setSlotDialog] = useState({
     open: false,
     applicationId: "",
+    panelType: "HUMAN",
+    aiConfig: createDefaultAIConfig(),
     slots: [createEmptySlot()],
   });
 
@@ -313,6 +322,8 @@ export default function RecruiterApplications() {
     setSlotDialog({
       open: true,
       applicationId: id,
+      panelType: "HUMAN",
+      aiConfig: createDefaultAIConfig(),
       slots: [createEmptySlot()],
     });
   };
@@ -321,6 +332,8 @@ export default function RecruiterApplications() {
     setSlotDialog({
       open: false,
       applicationId: "",
+      panelType: "HUMAN",
+      aiConfig: createDefaultAIConfig(),
       slots: [createEmptySlot()],
     });
   };
@@ -331,6 +344,20 @@ export default function RecruiterApplications() {
       slots: prev.slots.map((slot, idx) =>
         idx === index ? { ...slot, [field]: value } : slot
       ),
+    }));
+  };
+
+  const updateSlotDialogField = (field, value) => {
+    setSlotDialog((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const updateAIConfigField = (field, value) => {
+    setSlotDialog((prev) => ({
+      ...prev,
+      aiConfig: {
+        ...prev.aiConfig,
+        [field]: value
+      }
     }));
   };
 
@@ -364,9 +391,19 @@ export default function RecruiterApplications() {
         return;
       }
 
+      if (slotDialog.panelType === "AI" && slot.mode !== "Online") {
+        toast.error(`Slot ${i + 1}: AI interviews must use Online mode`);
+        return;
+      }
+
     }
 
     const payload = {
+      panelType: slotDialog.panelType,
+      aiConfig: {
+        ...slotDialog.aiConfig,
+        focusAreas: slotDialog.aiConfig.focusAreas,
+      },
       slots: slotDialog.slots.map((slot) => ({
         start: slot.start,
         end: slot.end,
@@ -613,7 +650,9 @@ export default function RecruiterApplications() {
                           </div>
 
                           {app.interview?.date ? (
-                            <p className="mt-2 text-xs text-slate-600">Interview: {new Date(app.interview.date).toLocaleString()}</p>
+                            <p className="mt-2 text-xs text-slate-600">
+                              Interview: {new Date(app.interview.date).toLocaleString()} ({formatPanelType(app.interview?.panelType)})
+                            </p>
                           ) : null}
                           {app?.interviewerAssignment?.interviewerUserId ? (
                             <p className="mt-1 text-xs text-indigo-700">
@@ -642,48 +681,102 @@ export default function RecruiterApplications() {
                             </div>
                           ) : null}
 
-                          {status === "INTERVIEW_SCHEDULED" ? (
-                            <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 p-2">
-                              <label className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                                Interviewer Assignment
-                              </label>
-                              <select
-                                value={assignmentDrafts[app._id] || ""}
-                                onChange={(event) =>
-                                  setAssignmentDrafts((prev) => ({
-                                    ...prev,
-                                    [app._id]: event.target.value,
-                                  }))
-                                }
-                                className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-xs text-slate-700"
-                              >
-                                <option value="">Select interviewer</option>
-                                {interviewers.map((interviewer) => (
-                                  <option key={interviewer.user?._id || interviewer._id} value={interviewer.user?._id || ""}>
-                                    {interviewer.user?.name || "Interviewer"} ({interviewer.interviewerCode})
-                                  </option>
-                                ))}
-                              </select>
-                              {!app?.interviewerFeedback?.submittedAt ? (
-                                <div className="mt-2 flex flex-wrap gap-2">
-                                  <button
-                                    type="button"
-                                    onClick={() => assignInterviewer(app._id)}
-                                    className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-indigo-700"
-                                  >
-                                    Assign / Reassign
-                                  </button>
-                                  {app?.interviewerAssignment?.interviewerUserId ? (
-                                    <button
-                                      type="button"
-                                      onClick={() => unassignInterviewer(app._id)}
-                                      className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-rose-700"
-                                    >
-                                      Unassign
-                                    </button>
-                                  ) : null}
+                          {app?.aiInterview?.endedAt ? (
+                            <div className="mt-2 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-3 text-xs text-cyan-900">
+                              <p className="font-semibold">AI Interview Report</p>
+                              <p className="mt-1">
+                                Status: {String(app.aiInterview.status || "COMPLETED").replaceAll("_", " ")}
+                              </p>
+                              <p className="mt-1">
+                                Recommendation: {formatRecommendation(app.aiInterview.recommendation)}
+                              </p>
+                              <p className="mt-1">
+                                Scores - Comm: {app.aiInterview?.scores?.communication ?? "-"}, Tech: {app.aiInterview?.scores?.technicalKnowledge ?? "-"}, PS: {app.aiInterview?.scores?.problemSolving ?? "-"}, Fit: {app.aiInterview?.scores?.roleFit ?? "-"}
+                              </p>
+                              {app.aiInterview.summary ? <p className="mt-1">{app.aiInterview.summary}</p> : null}
+                              {app.aiInterview.finalReport ? <p className="mt-1">{app.aiInterview.finalReport}</p> : null}
+                              {Array.isArray(app.aiInterview?.transcript) && app.aiInterview.transcript.length ? (
+                                <div className="mt-2 rounded-lg border border-cyan-100 bg-white/80 p-2">
+                                  <p className="font-semibold text-cyan-900">Transcript Preview</p>
+                                  {app.aiInterview.transcript.slice(0, 2).map((entry) => (
+                                    <div key={`${app._id}-${entry.questionIndex}`} className="mt-1">
+                                      <p className="font-medium">Q: {entry.question || "Question"}</p>
+                                      <p className="text-cyan-800">A: {entry.answer || "No answer captured"}</p>
+                                    </div>
+                                  ))}
                                 </div>
                               ) : null}
+                            </div>
+                          ) : null}
+
+                          {status === "INTERVIEW_SCHEDULED" ? (
+                            <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 p-2">
+                              {String(app?.interview?.panelType || "HUMAN").trim().toUpperCase() === "AI" ? (
+                                <>
+                                  <label className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                                    AI Interview Configuration
+                                  </label>
+                                  <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
+                                    <InfoTile label="Questions" value={app?.interview?.aiConfig?.questionCount || "5"} />
+                                    <InfoTile label="Duration" value={`${app?.interview?.aiConfig?.durationMinutes || 20} min`} />
+                                  </div>
+                                  <p className="mt-2 text-xs text-indigo-700">
+                                    Difficulty: {app?.interview?.aiConfig?.difficulty || "MEDIUM"}
+                                  </p>
+                                  {Array.isArray(app?.interview?.aiConfig?.focusAreas) && app.interview.aiConfig.focusAreas.length ? (
+                                    <p className="mt-1 text-xs text-slate-600">
+                                      Focus Areas: {app.interview.aiConfig.focusAreas.join(", ")}
+                                    </p>
+                                  ) : (
+                                    <p className="mt-1 text-xs text-slate-600">
+                                      AI interview configured. No human interviewer assignment is required.
+                                    </p>
+                                  )}
+                                </>
+                              ) : (
+                                <>
+                                  <label className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                                    Interviewer Assignment
+                                  </label>
+                                  <select
+                                    value={assignmentDrafts[app._id] || ""}
+                                    onChange={(event) =>
+                                      setAssignmentDrafts((prev) => ({
+                                        ...prev,
+                                        [app._id]: event.target.value,
+                                      }))
+                                    }
+                                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-xs text-slate-700"
+                                  >
+                                    <option value="">Select interviewer</option>
+                                    {interviewers.map((interviewer) => (
+                                      <option key={interviewer.user?._id || interviewer._id} value={interviewer.user?._id || ""}>
+                                        {interviewer.user?.name || "Interviewer"} ({interviewer.interviewerCode})
+                                      </option>
+                                    ))}
+                                  </select>
+                                  {!app?.interviewerFeedback?.submittedAt ? (
+                                    <div className="mt-2 flex flex-wrap gap-2">
+                                      <button
+                                        type="button"
+                                        onClick={() => assignInterviewer(app._id)}
+                                        className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-indigo-700"
+                                      >
+                                        Assign / Reassign
+                                      </button>
+                                      {app?.interviewerAssignment?.interviewerUserId ? (
+                                        <button
+                                          type="button"
+                                          onClick={() => unassignInterviewer(app._id)}
+                                          className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-rose-700"
+                                        >
+                                          Unassign
+                                        </button>
+                                      ) : null}
+                                    </div>
+                                  ) : null}
+                                </>
+                              )}
                             </div>
                           ) : null}
 
@@ -900,6 +993,69 @@ export default function RecruiterApplications() {
             Share multiple time options. Students will pick one available slot.
           </DialogContentText>
 
+          <div className="grid gap-3 sm:grid-cols-2">
+            <TextField
+              select
+              label="Interview Panel"
+              value={slotDialog.panelType}
+              onChange={(event) => updateSlotDialogField("panelType", event.target.value)}
+              size="small"
+              fullWidth
+              sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2, backgroundColor: "#ffffff" } }}
+            >
+              <MenuItem value="HUMAN">Human Interview</MenuItem>
+              <MenuItem value="AI">AI Interview</MenuItem>
+            </TextField>
+            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-xs text-slate-600">
+              {slotDialog.panelType === "AI"
+                ? "AI interviews use the in-app AI panel, so students do not need a human interviewer assignment."
+                : "Human interviews keep the current interviewer assignment workflow after the slot is booked."}
+            </div>
+          </div>
+
+          {slotDialog.panelType === "AI" ? (
+            <div className="grid gap-3 rounded-2xl border border-indigo-100 bg-indigo-50 p-4 sm:grid-cols-2">
+              <TextField
+                label="Question Count"
+                value={slotDialog.aiConfig.questionCount}
+                onChange={(event) => updateAIConfigField("questionCount", event.target.value.replace(/[^0-9]/g, "").slice(0, 2))}
+                size="small"
+                fullWidth
+                sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2, backgroundColor: "#ffffff" } }}
+              />
+              <TextField
+                label="Duration (minutes)"
+                value={slotDialog.aiConfig.durationMinutes}
+                onChange={(event) => updateAIConfigField("durationMinutes", event.target.value.replace(/[^0-9]/g, "").slice(0, 2))}
+                size="small"
+                fullWidth
+                sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2, backgroundColor: "#ffffff" } }}
+              />
+              <TextField
+                select
+                label="Difficulty"
+                value={slotDialog.aiConfig.difficulty}
+                onChange={(event) => updateAIConfigField("difficulty", event.target.value)}
+                size="small"
+                fullWidth
+                sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2, backgroundColor: "#ffffff" } }}
+              >
+                <MenuItem value="EASY">Easy</MenuItem>
+                <MenuItem value="MEDIUM">Medium</MenuItem>
+                <MenuItem value="HARD">Hard</MenuItem>
+              </TextField>
+              <TextField
+                label="Focus Areas"
+                value={slotDialog.aiConfig.focusAreas}
+                onChange={(event) => updateAIConfigField("focusAreas", event.target.value)}
+                placeholder="React, Node.js, Communication"
+                size="small"
+                fullWidth
+                sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2, backgroundColor: "#ffffff" } }}
+              />
+            </div>
+          ) : null}
+
           <div className="max-h-[55vh] space-y-3 overflow-y-auto pr-1">
             {slotDialog.slots.map((slot, index) => (
               <div key={`slot-${index}`} className="rounded-2xl border border-slate-200 bg-white p-3 sm:p-4">
@@ -1060,4 +1216,13 @@ function ActionButton({ label, tone, onClick, disabled = false }) {
       </span>
     </button>
   );
+}
+
+function formatPanelType(value) {
+  return String(value || "HUMAN").trim().toUpperCase() === "AI" ? "AI Interview" : "Human Interview";
+}
+
+function formatRecommendation(value) {
+  const normalized = String(value || "").trim();
+  return normalized ? normalized.replaceAll("_", " ") : "Pending";
 }
