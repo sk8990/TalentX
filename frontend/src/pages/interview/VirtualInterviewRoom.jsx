@@ -89,6 +89,28 @@ function normalizeJoinRequest(value) {
   };
 }
 
+function resolveSocketOrigin(socketUrl) {
+  const fallbackOrigin = getServerOrigin();
+  const rawSocketUrl = String(socketUrl || "").trim();
+  if (!rawSocketUrl) {
+    return fallbackOrigin;
+  }
+
+  try {
+    const parsed = new URL(rawSocketUrl);
+    if (
+      typeof window !== "undefined" &&
+      window.location.hostname !== "localhost" &&
+      ["localhost", "127.0.0.1", "::1", "[::1]"].includes(parsed.hostname)
+    ) {
+      return fallbackOrigin;
+    }
+    return parsed.origin;
+  } catch {
+    return fallbackOrigin;
+  }
+}
+
 export default function VirtualInterviewRoom({ role }) {
   const { applicationId } = useParams();
   const navigate = useNavigate();
@@ -292,7 +314,7 @@ export default function VirtualInterviewRoom({ role }) {
         localStreamRef.current = localStream;
         if (localVideoRef.current) localVideoRef.current.srcObject = localStream;
 
-        const origin = String(roomData?.socket?.url || getServerOrigin()).trim();
+        const origin = resolveSocketOrigin(roomData?.socket?.url);
         const ioFactory = await loadSocketClient(origin);
         if (cancelled) return;
         const socket = ioFactory(origin, { path: roomData?.socket?.path || "/socket.io", auth: { token }, transports: ["websocket", "polling"], withCredentials: true });

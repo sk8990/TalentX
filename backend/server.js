@@ -31,6 +31,7 @@ if (process.env.JWT_SECRET === "supersecret") {
 
 const app = express();
 const httpServer = http.createServer(app);
+const isProduction = process.env.NODE_ENV === "production";
 
 /* ===========================
    SECURITY MIDDLEWARE (S2, S3, S4, S5)
@@ -52,9 +53,25 @@ const envOrigins = String(process.env.CORS_ORIGINS || "")
   .map((item) => item.trim())
   .filter(Boolean);
 const allowedOrigins = [...new Set([...defaultOrigins, ...envOrigins])];
+
+function isAllowedOrigin(origin) {
+  if (!origin) return true;
+  if (allowedOrigins.includes(origin)) return true;
+
+  // Allow LAN/private-IP dev origins without forcing env changes on every machine.
+  if (
+    !isProduction &&
+    /^https?:\/\/(?:localhost|127\.0\.0\.1|\[::1\]|(?:\d{1,3}\.){3}\d{1,3})(?::\d+)?$/i.test(origin)
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
 app.use(cors({
   origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (isAllowedOrigin(origin)) {
       callback(null, true);
     } else {
       callback(new Error("Not allowed by CORS"));
@@ -82,7 +99,13 @@ function extractSocketToken(handshake) {
 
 const io = new Server(httpServer, {
   cors: {
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      if (isAllowedOrigin(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true
   }
 });
@@ -174,7 +197,7 @@ io.on("connection", (socket) => {
         leaveCurrentRoom();
       }
 
-      socket.join(nextRoomName);
+      await socket.join(nextRoomName);
       socket.data.roomName = nextRoomName;
       socket.data.applicationId = String(accessResult.application?._id || "");
       socket.data.participantRole = accessResult.participantRole;
@@ -292,7 +315,6 @@ const authLimiter = rateLimit({
 });
 
 // General API rate limiter
-const isProduction = process.env.NODE_ENV === "production";
 const envGeneralLimit = Number(process.env.GENERAL_RATE_LIMIT_MAX);
 const generalRateLimitMax =
   Number.isFinite(envGeneralLimit) && envGeneralLimit > 0
