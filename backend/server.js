@@ -44,22 +44,52 @@ app.use(helmet({
 const defaultOrigins = [
   "http://localhost:5173",
   "http://localhost:5174",
-  "http://localhost:3000"
+  "http://localhost:3000",
+  "https://talent-x-five.vercel.app"
 ];
+const defaultOriginPatterns = [
+  /^https:\/\/talent-x-five(?:-[a-z0-9-]+)?\.vercel\.app$/i
+];
+
+function normalizeOrigin(value) {
+  const rawValue = String(value || "").trim();
+  if (!rawValue) return "";
+
+  try {
+    return new URL(rawValue).origin.toLowerCase();
+  } catch (_err) {
+    return rawValue.replace(/\/+$/, "").toLowerCase();
+  }
+}
 const envOrigins = String(process.env.CORS_ORIGINS || "")
   .split(",")
-  .map((item) => item.trim())
+  .map(normalizeOrigin)
   .filter(Boolean);
-const allowedOrigins = [...new Set([...defaultOrigins, ...envOrigins])];
+const envOriginPatterns = String(process.env.CORS_ORIGIN_PATTERNS || "")
+  .split(",")
+  .map((item) => item.trim())
+  .filter(Boolean)
+  .flatMap((pattern) => {
+    try {
+      return [new RegExp(pattern, "i")];
+    } catch (err) {
+      console.warn(`[CORS] Ignoring invalid CORS_ORIGIN_PATTERNS entry "${pattern}": ${err.message}`);
+      return [];
+    }
+  });
+const allowedOrigins = [...new Set([...defaultOrigins.map(normalizeOrigin), ...envOrigins])];
+const allowedOriginPatterns = [...defaultOriginPatterns, ...envOriginPatterns];
 
 function isAllowedOrigin(origin) {
-  if (!origin) return true;
-  if (allowedOrigins.includes(origin)) return true;
+  const normalizedOrigin = normalizeOrigin(origin);
+  if (!normalizedOrigin) return true;
+  if (allowedOrigins.includes(normalizedOrigin)) return true;
+  if (allowedOriginPatterns.some((pattern) => pattern.test(normalizedOrigin))) return true;
 
   // Allow LAN/private-IP dev origins without forcing env changes on every machine.
   if (
     !isProduction &&
-    /^https?:\/\/(?:localhost|127\.0\.0\.1|\[::1\]|(?:\d{1,3}\.){3}\d{1,3})(?::\d+)?$/i.test(origin)
+    /^https?:\/\/(?:localhost|127\.0\.0\.1|\[::1\]|(?:\d{1,3}\.){3}\d{1,3})(?::\d+)?$/i.test(normalizedOrigin)
   ) {
     return true;
   }

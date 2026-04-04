@@ -98,7 +98,12 @@ Example:
 PORT=5000
 MONGO_URI=your_mongodb_connection
 JWT_SECRET=your_secret_key
+CORS_ORIGINS=https://talent-x-five.vercel.app
 ```
+
+For Vercel previews of the same frontend project, the backend also accepts origins matching
+`https://talent-x-five-*.vercel.app`. For any other deployed frontend hostname, add it to
+`CORS_ORIGINS` as a comma-separated list.
 
 ---
 
