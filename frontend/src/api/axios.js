@@ -1,6 +1,12 @@
 import axios from "axios";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
+const DEFAULT_SERVER_ORIGIN = "https://talentx-dls1.onrender.com";
+const SERVER_ORIGIN = String(import.meta.env.VITE_SERVER_ORIGIN || DEFAULT_SERVER_ORIGIN)
+  .trim()
+  .replace(/\/+$/, "");
+const API_BASE_URL = String(import.meta.env.VITE_API_BASE_URL || `${SERVER_ORIGIN}/api`)
+  .trim()
+  .replace(/\/+$/, "");
 
 const instance = axios.create({
   baseURL: API_BASE_URL,
@@ -30,18 +36,13 @@ instance.interceptors.response.use(
 );
 
 export function getServerOrigin() {
-  const explicitOrigin = String(import.meta.env.VITE_SERVER_ORIGIN || "").trim();
-  if (explicitOrigin) {
-    return explicitOrigin.replace(/\/+$/, "");
+  if (SERVER_ORIGIN) {
+    return SERVER_ORIGIN;
   }
 
   if (/^https?:\/\//i.test(API_BASE_URL)) {
     const normalized = API_BASE_URL.replace(/\/+$/, "");
     return normalized.replace(/\/api$/, "");
-  }
-
-  if (typeof window !== "undefined" && window.location.hostname === "localhost") {
-    return "http://localhost:5000";
   }
 
   if (typeof window !== "undefined") {

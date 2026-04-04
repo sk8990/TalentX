@@ -4,7 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
-  const proxyTarget = env.VITE_DEV_PROXY_TARGET || "http://localhost:5000";
+  const proxyTarget = env.VITE_DEV_PROXY_TARGET || "https://talentx-dls1.onrender.com";
 
   return {
     plugins: [react(), tailwindcss()],
