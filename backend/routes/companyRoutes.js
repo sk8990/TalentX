@@ -1,9 +1,10 @@
 const router = require("express").Router();
 const auth = require("../middleware/authMiddleware.js");
 const role = require("../middleware/roleMiddleware.js");
+const upload = require("../middleware/upload");
 const { createCompany, getCompanies, postJob, getAllJobs, getRecruiterJobs, updateJob, deleteJob } = require("../controllers/companyController.js");
 const { getRecruiterStats } = require("../controllers/companyController");
-const { generateJobDescription } = require("../controllers/aiController.js");
+const { generateJobDescription, parseJobDescription, parseUploadedJobDescription } = require("../controllers/aiController.js");
 
 router.post("/", auth, role("recruiter"), createCompany);
 router.get("/list", auth, role("recruiter"), getCompanies);
@@ -32,4 +33,6 @@ router.get(
 );
 
 router.post("/job/generate-description", auth, role("recruiter"), generateJobDescription);
+router.post("/job/parse-jd", auth, role("recruiter"), parseJobDescription);
+router.post("/job/parse-jd-upload", auth, role("recruiter"), upload.single("jd"), parseUploadedJobDescription);
 module.exports = router;
