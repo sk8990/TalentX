@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../../api/axios";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
@@ -7,6 +7,7 @@ import PeopleIcon from "@mui/icons-material/People";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
+import SearchIcon from "@mui/icons-material/Search";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import { FormControl, MenuItem, Select } from "@mui/material";
 import toast from "react-hot-toast";
@@ -39,8 +40,11 @@ export default function RecruiterJobs() {
   const [jdInputKey, setJdInputKey] = useState(0);
   const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
   const [isParsingJd, setIsParsingJd] = useState(false);
+  const [jobSearch, setJobSearch] = useState("");
+  const [jobCompanyFilter, setJobCompanyFilter] = useState("all");
   const navigate = useNavigate();
   const { confirm, confirmDialog } = useConfirmDialog();
+  const jobFormRef = useRef(null);
 
   const [formData, setFormData] = useState(initialForm);
 
@@ -96,6 +100,17 @@ export default function RecruiterJobs() {
     fetchJobs();
     fetchCompanies();
   }, [fetchCompanies, fetchJobs]);
+
+  useEffect(() => {
+    if (!selectedJob || !jobFormRef.current) {
+      return;
+    }
+
+    jobFormRef.current.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, [selectedJob]);
 
   const generateAI = async () => {
     if (!formData.title.trim()) {
@@ -347,6 +362,38 @@ export default function RecruiterJobs() {
 
   const isActionBusy = busy || isGeneratingDescription || isParsingJd;
 
+  const companyFilterOptions = useMemo(
+    () =>
+      [...new Set(jobs.map((job) => String(job.companyName || "").trim()).filter(Boolean))].sort((a, b) =>
+        a.localeCompare(b)
+      ),
+    [jobs]
+  );
+
+  const filteredRecruiterJobs = useMemo(() => {
+    const normalizedSearch = jobSearch.trim().toLowerCase();
+
+    return jobs.filter((job) => {
+      const companyName = String(job.companyName || "").trim();
+      const title = String(job.title || "").trim();
+
+      if (jobCompanyFilter !== "all" && companyName !== jobCompanyFilter) {
+        return false;
+      }
+
+      if (!normalizedSearch) {
+        return true;
+      }
+
+      const searchable = [title, companyName, job.description, job.aboutCompany]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      return searchable.includes(normalizedSearch);
+    });
+  }, [jobs, jobCompanyFilter, jobSearch]);
+
   const inputClass =
     "mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100";
 
@@ -421,7 +468,7 @@ export default function RecruiterJobs() {
         </div>
       </div>
 
-      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+      <div ref={jobFormRef} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <h3 className="text-xl font-semibold text-slate-900">{selectedJob ? "Edit Job" : "Post New Job"}</h3>
           {selectedJob && (
@@ -694,12 +741,59 @@ export default function RecruiterJobs() {
       </div>
 
       <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-        <h3 className="text-xl font-semibold text-slate-900">Your Jobs</h3>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h3 className="text-xl font-semibold text-slate-900">Your Jobs</h3>
+            <p className="mt-1 text-sm text-slate-500">Search your postings and filter them company-wise.</p>
+          </div>
+          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+            {filteredRecruiterJobs.length} of {jobs.length} jobs
+          </span>
+        </div>
+
+        <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_260px]">
+          <div>
+            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Search Jobs</label>
+            <div className="mt-1 flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3">
+              <SearchIcon sx={{ fontSize: 18 }} className="text-slate-500" />
+              <input
+                type="text"
+                value={jobSearch}
+                onChange={(e) => setJobSearch(e.target.value)}
+                placeholder="Search by title or company"
+                className="w-full py-3 text-sm text-slate-800 outline-none"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Filter By Company</label>
+            <FormControl fullWidth size="small">
+              <Select
+                value={jobCompanyFilter}
+                onChange={(e) => setJobCompanyFilter(e.target.value)}
+                IconComponent={KeyboardArrowDownIcon}
+                MenuProps={dropdownMenuProps}
+                sx={selectSx}
+              >
+                <MenuItem value="all">All Companies</MenuItem>
+                {companyFilterOptions.map((companyName) => (
+                  <MenuItem key={companyName} value={companyName}>
+                    {companyName}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </div>
+        </div>
 
         {!jobs.length && <p className="mt-4 text-sm text-slate-500">No jobs posted yet.</p>}
+        {!!jobs.length && !filteredRecruiterJobs.length && (
+          <p className="mt-4 text-sm text-slate-500">No jobs match your current search or company filter.</p>
+        )}
 
         <div className="mt-5 space-y-4">
-          {jobs.map((job) => (
+          {filteredRecruiterJobs.map((job) => (
             <article
               key={job._id}
               className="rounded-2xl border border-slate-200 bg-slate-50 p-5"
@@ -707,6 +801,7 @@ export default function RecruiterJobs() {
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <h4 className="text-lg font-semibold text-slate-900">{job.title}</h4>
+                  <p className="mt-1 text-sm font-medium text-slate-700">{job.companyName || "Unknown company"}</p>
                   <p className="mt-1 text-xs text-slate-500">
                     Deadline: {job.deadline ? new Date(job.deadline).toLocaleDateString() : "N/A"}
                   </p>
