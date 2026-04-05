@@ -48,7 +48,7 @@ export default function LandingPage() {
   } = landingContent;
 
   return (
-    <div className="min-h-screen bg-[#f8f9fc] text-slate-900">
+    <div className="min-h-screen overflow-clip bg-[#f8f9fc] text-slate-900">
       <Navbar navLinks={navLinks} />
 
       <main>

@@ -18,8 +18,8 @@ export default function Navbar({ navLinks }) {
     >
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
         {/* ── Brand ── */}
-        <Link to="/" className="shrink-0 max-w-[20rem]" onClick={closeDrawer}>
-          <TalentXBrand theme="light" size="sm" />
+        <Link to="/" className="min-w-0 shrink-0 max-w-[20rem]" onClick={closeDrawer}>
+          <TalentXBrand theme="light" size="sm" className="truncate" />
         </Link>
 
         {/* ── Desktop nav ── */}
@@ -39,13 +39,13 @@ export default function Navbar({ navLinks }) {
         <div className="flex items-center gap-2 sm:gap-3">
           <Link
             to="/login"
-            className="hidden rounded-full px-4 py-2 text-sm font-semibold text-slate-700 transition-colors duration-200 hover:bg-slate-100 hover:text-slate-900 sm:inline-flex sm:px-5"
+            className="hidden shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold text-slate-700 transition-colors duration-200 hover:bg-slate-100 hover:text-slate-900 sm:inline-flex sm:px-5"
           >
             Login
           </Link>
           <Link
             to="/register"
-            className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors duration-200 hover:bg-slate-700 sm:px-5"
+            className="shrink-0 whitespace-nowrap rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors duration-200 hover:bg-slate-700 sm:px-5"
           >
             Sign up
           </Link>
@@ -54,7 +54,7 @@ export default function Navbar({ navLinks }) {
           <button
             type="button"
             onClick={toggleDrawer}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-slate-700 transition-colors hover:bg-slate-100 lg:hidden"
+            className="inline-flex shrink-0 h-10 w-10 items-center justify-center rounded-xl text-slate-700 transition-colors hover:bg-slate-100 lg:hidden"
             aria-label={drawerOpen ? "Close menu" : "Open menu"}
             aria-expanded={drawerOpen}
           >

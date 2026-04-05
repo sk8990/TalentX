@@ -85,7 +85,7 @@ export default function TalentXBrand({
       <TalentXMark theme={theme} size={size} />
       <p className={`max-w-full text-balance font-medium leading-snug ${scale.text} ${palette.text} ${textClassName}`.trim()}>
         <span className={`font-black ${palette.emphasis} ${emphasisClassName}`.trim()}>TalentX</span>
-        <span>{` - An AI powered Campus Hiring Platform`}</span>
+        <span className="hidden sm:inline">{` - An AI powered Campus Hiring Platform`}</span>
       </p>
     </div>
   );

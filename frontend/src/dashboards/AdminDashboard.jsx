@@ -548,7 +548,7 @@ export default function AdminDashboard() {
                               }))
                             }
                             placeholder="Write your response"
-                            className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
+                            className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-base sm:text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
                           />
                           <button
                             onClick={() => respondToTicket(ticket._id)}
@@ -654,7 +654,7 @@ export default function AdminDashboard() {
                 <select
                   value={auditFilters.action}
                   onChange={(e) => setAuditFilters((prev) => ({ ...prev, action: e.target.value }))}
-                  className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                  className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-base sm:text-sm text-slate-700"
                 >
                   <option value="">All Actions</option>
                   {AUDIT_ACTION_OPTIONS.map((option) => (
@@ -667,7 +667,7 @@ export default function AdminDashboard() {
                 <select
                   value={auditFilters.entityType}
                   onChange={(e) => setAuditFilters((prev) => ({ ...prev, entityType: e.target.value }))}
-                  className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                  className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-base sm:text-sm text-slate-700"
                 >
                   <option value="">All Entities</option>
                   {AUDIT_ENTITY_OPTIONS.map((option) => (
@@ -680,7 +680,7 @@ export default function AdminDashboard() {
                 <select
                   value={auditFilters.actorRole}
                   onChange={(e) => setAuditFilters((prev) => ({ ...prev, actorRole: e.target.value }))}
-                  className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                  className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-base sm:text-sm text-slate-700"
                 >
                   <option value="">All Actor Roles</option>
                   {AUDIT_ROLE_OPTIONS.map((option) => (
@@ -694,14 +694,14 @@ export default function AdminDashboard() {
                   type="date"
                   value={auditFilters.from}
                   onChange={(e) => setAuditFilters((prev) => ({ ...prev, from: e.target.value }))}
-                  className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                  className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-base sm:text-sm text-slate-700"
                 />
 
                 <input
                   type="date"
                   value={auditFilters.to}
                   onChange={(e) => setAuditFilters((prev) => ({ ...prev, to: e.target.value }))}
-                  className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                  className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-base sm:text-sm text-slate-700"
                 />
               </div>
 

@@ -51,8 +51,4 @@ body {
 .landing-section {
   padding-inline: clamp(1rem, 4vw, 2rem);
 }
-
-/* Prevent horizontal overflow globally */
-#root {
-  overflow-x: hidden;
-}
+
