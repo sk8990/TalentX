@@ -62,13 +62,13 @@ export default function RecruiterSupport() {
   };
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-3xl bg-gradient-to-r from-indigo-700 via-indigo-600 to-cyan-600 px-6 py-8 text-white sm:px-8">
-        <h1 className="text-3xl font-bold">Recruiter Support</h1>
-        <p className="mt-2 text-sm text-indigo-100">Raise support issues and track admin responses.</p>
+    <div className="space-y-5 sm:space-y-6">
+      <section className="rounded-2xl bg-gradient-to-r from-indigo-700 via-indigo-600 to-cyan-600 px-5 py-6 text-white sm:rounded-3xl sm:px-8 sm:py-8">
+        <h1 className="text-2xl font-bold sm:text-3xl">Recruiter Support</h1>
+        <p className="mt-1 text-xs text-indigo-100 sm:mt-2 sm:text-sm">Raise support issues and track admin responses.</p>
       </section>
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:rounded-3xl sm:p-6">
         <button
           onClick={() => setShowForm(true)}
           className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700"
@@ -77,7 +77,7 @@ export default function RecruiterSupport() {
         </button>
       </section>
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:rounded-3xl sm:p-6">
         <h2 className="inline-flex items-center gap-2 text-lg font-semibold text-slate-900">
           <SupportAgentIcon sx={{ fontSize: 20 }} />
           My Tickets
@@ -128,8 +128,8 @@ export default function RecruiterSupport() {
       </section>
 
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4">
-          <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-3 backdrop-blur-sm sm:px-4">
+          <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl dark:border-slate-700 dark:bg-slate-800 sm:rounded-3xl sm:p-6">
             <div className="flex items-center justify-between">
               <h3 className="text-xl font-bold text-slate-900">Raise Recruiter Ticket</h3>
               <button onClick={() => setShowForm(false)} className="rounded-lg p-1 text-slate-500 hover:bg-slate-100">

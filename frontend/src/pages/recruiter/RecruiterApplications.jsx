@@ -525,12 +525,12 @@ export default function RecruiterApplications() {
 
   return (
     <>
-      <div className="space-y-8">
-      <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200 sm:p-8">
-        <h2 className="text-2xl font-bold text-slate-900">Application Pipeline</h2>
-        <p className="mt-1 text-sm text-slate-500">Filter candidates by job and progress them through each hiring stage.</p>
+      <div className="space-y-5 sm:space-y-8">
+      <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 dark:bg-slate-800 dark:ring-slate-700 sm:rounded-3xl sm:p-6 md:p-8">
+        <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 sm:text-2xl">Application Pipeline</h2>
+        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 sm:text-sm">Filter candidates by job and progress them through each hiring stage.</p>
 
-        <div className="mt-5 grid max-w-3xl grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="mt-4 grid max-w-3xl grid-cols-1 gap-3 sm:mt-5 sm:gap-4 md:grid-cols-2">
           <div>
             <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Search + Select Job</label>
             <Autocomplete
@@ -601,19 +601,19 @@ export default function RecruiterApplications() {
       </div>
 
       {!selectedJobId && (
-        <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 sm:rounded-3xl sm:p-8">
           Select a job to view candidate applications.
         </div>
       )}
 
       {selectedJobId && busy && (
-        <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center text-sm font-medium text-slate-500">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm font-medium text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 sm:rounded-3xl sm:p-8">
           Loading applications...
         </div>
       )}
 
       {selectedJobId && !busy && applications.length === 0 && (
-        <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 sm:rounded-3xl sm:p-8">
           No applications found for this job.
         </div>
       )}
@@ -656,7 +656,7 @@ export default function RecruiterApplications() {
             </div>
           ) : null}
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-3">
             {visibleStages.map((status) => {
               const items = groupedApplications[status] || [];
               const totalPages = Math.max(1, Math.ceil(items.length / COLUMN_PAGE_SIZE));

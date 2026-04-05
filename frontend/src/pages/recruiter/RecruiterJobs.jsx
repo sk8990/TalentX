@@ -457,10 +457,10 @@ export default function RecruiterJobs() {
 
   return (
     <>
-      <div className="space-y-8">
-      <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200 sm:p-8">
-        <h2 className="text-2xl font-bold text-slate-900">Manage Jobs</h2>
-        <p className="mt-1 text-sm text-slate-500">Create new openings, edit active roles, and review candidates.</p>
+      <div className="space-y-5 sm:space-y-8">
+      <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 dark:bg-slate-800 dark:ring-slate-700 sm:rounded-3xl sm:p-6 md:p-8">
+        <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 sm:text-2xl">Manage Jobs</h2>
+        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 sm:text-sm">Create new openings, edit active roles, and review candidates.</p>
         <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <OverviewCard label="Total Jobs" value={jobs.length} />
           <OverviewCard label="Applicants (listed jobs)" value={totalApplicants} />
@@ -468,7 +468,7 @@ export default function RecruiterJobs() {
         </div>
       </div>
 
-      <div ref={jobFormRef} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+      <div ref={jobFormRef} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:rounded-3xl sm:p-6 md:p-8">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <h3 className="text-xl font-semibold text-slate-900">{selectedJob ? "Edit Job" : "Post New Job"}</h3>
           {selectedJob && (
@@ -482,7 +482,7 @@ export default function RecruiterJobs() {
           )}
         </div>
 
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-5 md:grid-cols-2">
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2">
           <div className="md:col-span-2">
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 sm:p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -740,18 +740,18 @@ export default function RecruiterJobs() {
         </form>
       </div>
 
-      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:rounded-3xl sm:p-6 md:p-8">
+        <div className="flex flex-wrap items-start justify-between gap-3 sm:gap-4">
           <div>
-            <h3 className="text-xl font-semibold text-slate-900">Your Jobs</h3>
-            <p className="mt-1 text-sm text-slate-500">Search your postings and filter them company-wise.</p>
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 sm:text-xl">Your Jobs</h3>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 sm:text-sm">Search your postings and filter them company-wise.</p>
           </div>
           <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
             {filteredRecruiterJobs.length} of {jobs.length} jobs
           </span>
         </div>
 
-        <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_260px]">
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:mt-5 sm:grid-cols-[minmax(0,1fr)_240px] md:grid-cols-[minmax(0,1fr)_260px]">
           <div>
             <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Search Jobs</label>
             <div className="mt-1 flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3">
@@ -854,9 +854,9 @@ export default function RecruiterJobs() {
 
 function OverviewCard({ label, value }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="mt-3 text-2xl font-bold text-slate-900">{value}</p>
+    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-700/50 sm:rounded-2xl sm:p-4">
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
+      <p className="mt-2 text-xl font-bold text-slate-900 dark:text-slate-100 sm:mt-3 sm:text-2xl">{value}</p>
     </div>
   );
 }

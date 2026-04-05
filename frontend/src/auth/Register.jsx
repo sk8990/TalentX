@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
+import VisibilityRoundedIcon from "@mui/icons-material/VisibilityRounded";
+import VisibilityOffRoundedIcon from "@mui/icons-material/VisibilityOffRounded";
 import { FormControl, MenuItem, Select } from "@mui/material";
 import toast from "react-hot-toast";
 import API from "../api/axios";
@@ -21,6 +23,7 @@ export default function Register() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState("student");
   const [loading, setLoading] = useState(false);
 
@@ -61,7 +64,7 @@ export default function Register() {
   };
 
   const fieldClass =
-    "mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100";
+    "mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 sm:py-3 sm:text-base";
 
   const registerSelectMenuProps = {
     PaperProps: {
@@ -107,7 +110,7 @@ export default function Register() {
       borderWidth: "2px",
     },
     "& .MuiSelect-select": {
-      py: "12px",
+      py: "10px",
       px: "16px",
       fontSize: "0.875rem",
       fontWeight: 500,
@@ -123,14 +126,18 @@ export default function Register() {
 
   return (
     <motion.div
-      className="min-h-screen bg-gradient-to-br from-slate-100 via-white to-indigo-100 px-4 py-8 sm:px-6 lg:px-8"
+      className="relative flex min-h-[100dvh] items-center justify-center overflow-hidden bg-gradient-to-br from-slate-100 via-white to-indigo-50 px-4 py-6 sm:px-6 sm:py-10"
       initial={reduceMotion ? false : "hidden"}
       animate={reduceMotion ? undefined : "visible"}
       variants={authPageVariants}
     >
-      <div className="mx-auto grid w-full max-w-6xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl md:grid-cols-2">
+      {/* Background gradient blobs */}
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_80%,rgba(79,70,229,0.12),transparent_35%),radial-gradient(circle_at_70%_20%,rgba(59,130,246,0.1),transparent_32%)]" />
+
+      <div className="relative mx-auto grid w-full max-w-[72rem] grid-cols-1 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl sm:rounded-3xl lg:grid-cols-2">
+        {/* ── Sidebar (desktop) ── */}
         <motion.aside
-          className="relative hidden bg-gradient-to-br from-indigo-700 via-indigo-600 to-cyan-600 p-10 text-white md:flex md:flex-col md:justify-between"
+          className="hidden bg-gradient-to-br from-indigo-700 via-indigo-600 to-cyan-600 p-8 text-white lg:flex lg:flex-col lg:justify-between lg:p-10"
           initial={reduceMotion ? false : "hidden"}
           animate={reduceMotion ? undefined : "visible"}
           variants={authSidebarVariants}
@@ -140,18 +147,25 @@ export default function Register() {
               <TalentXBrand theme="dark" size="sm" />
             </motion.div>
 
-            <motion.h1 variants={authItemVariants} className="text-4xl font-bold leading-tight">
+            <motion.h1 variants={authItemVariants} className="text-3xl font-black leading-tight xl:text-4xl">
               Welcome to TalentX
             </motion.h1>
 
-            <motion.p variants={authItemVariants} className="mt-4 text-base leading-relaxed text-indigo-100">
+            <motion.p variants={authItemVariants} className="mt-4 text-sm leading-relaxed text-indigo-100 lg:text-base">
               A modern platform that connects students with recruiters and helps teams hire faster.
             </motion.p>
 
-            <motion.div variants={authContentVariants} className="mt-8 space-y-2 text-sm text-indigo-100">
-              <motion.p variants={authItemVariants}>Career-first onboarding</motion.p>
-              <motion.p variants={authItemVariants}>Smart applications and role matching</motion.p>
-              <motion.p variants={authItemVariants}>Progress tracking from one dashboard</motion.p>
+            <motion.div variants={authContentVariants} className="mt-6 space-y-2 text-sm text-indigo-100">
+              {["Career-first onboarding", "Smart applications and role matching", "Progress tracking from one dashboard"].map(
+                (item) => (
+                  <motion.p key={item} variants={authItemVariants} className="flex items-center gap-2">
+                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/20 text-[0.6rem]">
+                      ✓
+                    </span>
+                    {item}
+                  </motion.p>
+                )
+              )}
             </motion.div>
           </div>
 
@@ -165,24 +179,35 @@ export default function Register() {
           </motion.div>
         </motion.aside>
 
+        {/* ── Form side ── */}
         <motion.section
-          className="p-6 sm:p-10 md:p-12"
+          className="flex flex-col justify-center p-5 sm:p-8 md:p-10 lg:p-12"
           initial={reduceMotion ? false : "hidden"}
           animate={reduceMotion ? undefined : "visible"}
           variants={authContentVariants}
         >
           <div className="mx-auto w-full max-w-md">
-            <motion.h2 variants={authItemVariants} className="text-3xl font-bold text-slate-900">
+            {/* Mobile branding */}
+            <motion.div variants={authItemVariants} className="mb-5 lg:hidden">
+              <div className="inline-flex rounded-xl bg-indigo-50 px-3 py-2.5 text-indigo-900">
+                <TalentXBrand theme="light" size="sm" />
+              </div>
+            </motion.div>
+
+            <motion.h2 variants={authItemVariants} className="text-2xl font-black text-slate-900 sm:text-3xl">
               Create your account
             </motion.h2>
-            <motion.p variants={authItemVariants} className="mt-2 text-sm text-slate-500">
+            <motion.p variants={authItemVariants} className="mt-1.5 text-sm text-slate-500 sm:mt-2">
               Start your TalentX journey in a minute.
             </motion.p>
 
-            <motion.form onSubmit={handleRegister} className="mt-8 space-y-5" variants={authContentVariants}>
+            <motion.form onSubmit={handleRegister} className="mt-5 space-y-4 sm:mt-8 sm:space-y-5" variants={authContentVariants}>
               <motion.div variants={authItemVariants}>
-                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Full Name</label>
+                <label htmlFor="register-name" className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Full Name
+                </label>
                 <input
+                  id="register-name"
                   type="text"
                   placeholder="John Doe"
                   className={fieldClass}
@@ -192,8 +217,11 @@ export default function Register() {
               </motion.div>
 
               <motion.div variants={authItemVariants}>
-                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Email Address</label>
+                <label htmlFor="register-email" className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Email Address
+                </label>
                 <input
+                  id="register-email"
                   type="email"
                   placeholder="you@example.com"
                   className={fieldClass}
@@ -203,14 +231,31 @@ export default function Register() {
               </motion.div>
 
               <motion.div variants={authItemVariants}>
-                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Password</label>
-                <input
-                  type="password"
-                  placeholder="At least 8 characters"
-                  className={fieldClass}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
+                <label htmlFor="register-password" className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Password
+                </label>
+                <div className="relative">
+                  <input
+                    id="register-password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="At least 8 characters"
+                    className={`${fieldClass} pr-12`}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-3 flex items-center text-slate-400 transition-colors hover:text-slate-700"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? (
+                      <VisibilityOffRoundedIcon sx={{ fontSize: 20 }} />
+                    ) : (
+                      <VisibilityRoundedIcon sx={{ fontSize: 20 }} />
+                    )}
+                  </button>
+                </div>
               </motion.div>
 
               <motion.div variants={authItemVariants}>
@@ -235,24 +280,26 @@ export default function Register() {
                 disabled={loading}
                 whileHover={reduceMotion ? undefined : { y: -2 }}
                 whileTap={reduceMotion ? undefined : { scale: 0.99 }}
-                className="w-full rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-200 disabled:cursor-not-allowed disabled:opacity-70"
+                className="w-full rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white transition-all duration-200 hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-200 focus:outline-none focus:ring-4 focus:ring-indigo-200 disabled:cursor-not-allowed disabled:opacity-70 sm:py-3"
               >
                 {loading ? "Creating account..." : "Register"}
               </motion.button>
             </motion.form>
 
-            <motion.p variants={authItemVariants} className="mt-6 text-sm text-slate-600">
-              Already have an account?{" "}
-              <Link to={LOGIN_ROUTE} className="font-semibold text-indigo-600 hover:text-indigo-700 hover:underline">
-                Login
-              </Link>
-            </motion.p>
-            <motion.p variants={authItemVariants} className="mt-2 text-sm text-slate-600">
-              Explore the platform{" "}
-              <Link to="/" className="font-semibold text-indigo-600 hover:text-indigo-700 hover:underline">
-                TalentX Home
-              </Link>
-            </motion.p>
+            <motion.div variants={authItemVariants} className="mt-5 space-y-1.5 sm:mt-6 sm:space-y-2">
+              <p className="text-sm text-slate-600">
+                Already have an account?{" "}
+                <Link to={LOGIN_ROUTE} className="font-semibold text-indigo-600 hover:text-indigo-700 hover:underline">
+                  Login
+                </Link>
+              </p>
+              <p className="text-sm text-slate-600">
+                Explore the platform{" "}
+                <Link to="/" className="font-semibold text-indigo-600 hover:text-indigo-700 hover:underline">
+                  TalentX Home
+                </Link>
+              </p>
+            </motion.div>
           </div>
         </motion.section>
       </div>

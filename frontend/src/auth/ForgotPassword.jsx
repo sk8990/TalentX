@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import LockResetRoundedIcon from "@mui/icons-material/LockResetRounded";
+import VisibilityRoundedIcon from "@mui/icons-material/VisibilityRounded";
+import VisibilityOffRoundedIcon from "@mui/icons-material/VisibilityOffRounded";
 import toast from "react-hot-toast";
 import API from "../api/axios";
 import TalentXBrand from "../components/TalentXBrand";
@@ -18,6 +20,7 @@ export default function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [token, setToken] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const reduceMotion = useReducedMotion();
@@ -75,18 +78,23 @@ export default function ForgotPassword() {
     }
   };
 
+  const inputClass =
+    "w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 sm:py-3 sm:text-base";
+
   return (
     <motion.div
-      className="relative min-h-screen overflow-hidden bg-slate-100 px-6 py-10"
+      className="relative flex min-h-[100dvh] items-center justify-center overflow-hidden bg-slate-100 px-4 py-6 sm:px-6 sm:py-10"
       initial={reduceMotion ? false : "hidden"}
       animate={reduceMotion ? undefined : "visible"}
       variants={authPageVariants}
     >
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(79,70,229,0.22),transparent_35%),radial-gradient(circle_at_80%_10%,rgba(59,130,246,0.2),transparent_32%),radial-gradient(circle_at_60%_80%,rgba(14,165,233,0.18),transparent_36%)]" />
+      {/* Background gradient blobs */}
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(79,70,229,0.18),transparent_35%),radial-gradient(circle_at_80%_10%,rgba(59,130,246,0.15),transparent_32%),radial-gradient(circle_at_60%_80%,rgba(14,165,233,0.14),transparent_36%)]" />
 
-      <div className="relative mx-auto grid w-full max-w-6xl grid-cols-1 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl lg:grid-cols-2">
+      <div className="relative mx-auto grid w-full max-w-[72rem] grid-cols-1 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl sm:rounded-3xl lg:grid-cols-2">
+        {/* ── Sidebar (desktop) ── */}
         <motion.section
-          className="hidden bg-gradient-to-r from-[#4f2df4] via-[#3f63df] to-[#1588db] p-12 text-white lg:flex lg:flex-col lg:justify-between"
+          className="hidden bg-gradient-to-br from-[#4f2df4] via-[#3f63df] to-[#1588db] p-8 text-white lg:flex lg:flex-col lg:justify-between lg:p-12"
           initial={reduceMotion ? false : "hidden"}
           animate={reduceMotion ? undefined : "visible"}
           variants={authSidebarVariants}
@@ -96,7 +104,7 @@ export default function ForgotPassword() {
               <TalentXBrand theme="dark" size="sm" />
             </motion.div>
 
-            <motion.h2 variants={authItemVariants} className="mt-9 text-4xl font-black leading-tight">
+            <motion.h2 variants={authItemVariants} className="mt-8 text-3xl font-black leading-tight xl:text-4xl">
               Account Recovery Made Simple.
             </motion.h2>
             <motion.p variants={authItemVariants} className="mt-4 max-w-xl text-sm leading-relaxed text-indigo-100">
@@ -117,44 +125,68 @@ export default function ForgotPassword() {
           </motion.div>
         </motion.section>
 
+        {/* ── Form side ── */}
         <motion.section
-          className="p-8 md:p-12"
+          className="flex flex-col justify-center p-5 sm:p-8 md:p-10 lg:p-12"
           initial={reduceMotion ? false : "hidden"}
           animate={reduceMotion ? undefined : "visible"}
           variants={authContentVariants}
         >
-          <motion.div variants={authItemVariants} className="mb-8">
-            <div className="inline-flex items-center gap-2 rounded-xl bg-indigo-100 px-3 py-2 text-indigo-900">
+          {/* Badge */}
+          <motion.div variants={authItemVariants} className="mb-5 sm:mb-8">
+            <div className="inline-flex items-center gap-2 rounded-xl bg-indigo-50 px-3 py-2 text-indigo-900">
               <LockResetRoundedIcon sx={{ fontSize: 18 }} />
               <span className="text-sm font-black tracking-wide">Reset Password</span>
             </div>
           </motion.div>
 
-          <motion.h2 variants={authItemVariants} className="text-3xl font-black text-slate-900">
+          <motion.h2 variants={authItemVariants} className="text-2xl font-black text-slate-900 sm:text-3xl">
             Forgot Password?
           </motion.h2>
-          <motion.p variants={authItemVariants} className="mt-2 text-sm text-slate-500">
+          <motion.p variants={authItemVariants} className="mt-1.5 text-sm text-slate-500 sm:mt-2">
             {step === 1 ? "Enter your email to generate reset token." : "Use token and set your new password."}
           </motion.p>
+
+          {/* Step progress indicator */}
+          <motion.div variants={authItemVariants} className="mt-4 flex items-center gap-2 sm:mt-5">
+            <span
+              className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-colors ${
+                step >= 1 ? "bg-indigo-600 text-white" : "bg-slate-200 text-slate-500"
+              }`}
+            >
+              1
+            </span>
+            <span className={`h-0.5 w-8 rounded-full transition-colors ${step >= 2 ? "bg-indigo-600" : "bg-slate-200"}`} />
+            <span
+              className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-colors ${
+                step >= 2 ? "bg-indigo-600 text-white" : "bg-slate-200 text-slate-500"
+              }`}
+            >
+              2
+            </span>
+          </motion.div>
 
           <AnimatePresence mode="wait">
             {step === 1 ? (
               <motion.div
                 key="request-token"
-                className="mt-6 space-y-5"
+                className="mt-5 space-y-4 sm:mt-6 sm:space-y-5"
                 variants={authStepVariants}
                 initial={reduceMotion ? false : "initial"}
                 animate={reduceMotion ? undefined : "animate"}
                 exit={reduceMotion ? undefined : "exit"}
               >
                 <motion.div variants={authItemVariants}>
-                  <label className="mb-1 block text-sm font-semibold text-slate-700">Email address</label>
+                  <label htmlFor="forgot-email" className="mb-1 block text-sm font-semibold text-slate-700">
+                    Email address
+                  </label>
                   <input
+                    id="forgot-email"
                     type="email"
                     placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-800 placeholder-slate-400 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
+                    className={inputClass}
                   />
                 </motion.div>
 
@@ -164,7 +196,7 @@ export default function ForgotPassword() {
                   disabled={loading}
                   whileHover={reduceMotion ? undefined : { y: -2 }}
                   whileTap={reduceMotion ? undefined : { scale: 0.99 }}
-                  className="w-full rounded-xl bg-indigo-600 py-3 text-sm font-bold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="w-full rounded-xl bg-indigo-600 py-2.5 text-sm font-bold text-white transition-all duration-200 hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-200 disabled:cursor-not-allowed disabled:opacity-60 sm:py-3"
                 >
                   {loading ? "Generating..." : "Generate Reset Token"}
                 </motion.button>
@@ -172,31 +204,51 @@ export default function ForgotPassword() {
             ) : (
               <motion.div
                 key="reset-password"
-                className="mt-6 space-y-5"
+                className="mt-5 space-y-4 sm:mt-6 sm:space-y-5"
                 variants={authStepVariants}
                 initial={reduceMotion ? false : "initial"}
                 animate={reduceMotion ? undefined : "animate"}
                 exit={reduceMotion ? undefined : "exit"}
               >
                 <motion.div variants={authItemVariants}>
-                  <label className="mb-1 block text-sm font-semibold text-slate-700">Reset Token</label>
+                  <label htmlFor="forgot-token" className="mb-1 block text-sm font-semibold text-slate-700">
+                    Reset Token
+                  </label>
                   <input
+                    id="forgot-token"
                     value={token}
                     onChange={(e) => setToken(e.target.value)}
                     placeholder="Enter reset token"
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-800 placeholder-slate-400 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
+                    className={inputClass}
                   />
                 </motion.div>
 
                 <motion.div variants={authItemVariants}>
-                  <label className="mb-1 block text-sm font-semibold text-slate-700">New Password</label>
-                  <input
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="At least 8 characters"
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-800 placeholder-slate-400 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
-                  />
+                  <label htmlFor="forgot-new-password" className="mb-1 block text-sm font-semibold text-slate-700">
+                    New Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="forgot-new-password"
+                      type={showPassword ? "text" : "password"}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="At least 8 characters"
+                      className={`${inputClass} pr-12`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute inset-y-0 right-3 flex items-center text-slate-400 transition-colors hover:text-slate-700"
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? (
+                        <VisibilityOffRoundedIcon sx={{ fontSize: 20 }} />
+                      ) : (
+                        <VisibilityRoundedIcon sx={{ fontSize: 20 }} />
+                      )}
+                    </button>
+                  </div>
                 </motion.div>
 
                 <motion.button
@@ -205,7 +257,7 @@ export default function ForgotPassword() {
                   disabled={loading}
                   whileHover={reduceMotion ? undefined : { y: -2 }}
                   whileTap={reduceMotion ? undefined : { scale: 0.99 }}
-                  className="w-full rounded-xl bg-emerald-600 py-3 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="w-full rounded-xl bg-emerald-600 py-2.5 text-sm font-bold text-white transition-all duration-200 hover:bg-emerald-700 hover:shadow-lg hover:shadow-emerald-200 disabled:cursor-not-allowed disabled:opacity-60 sm:py-3"
                 >
                   {loading ? "Resetting..." : "Reset Password"}
                 </motion.button>
@@ -213,9 +265,9 @@ export default function ForgotPassword() {
             )}
           </AnimatePresence>
 
-          <motion.div variants={authItemVariants} className="pt-6 text-center">
+          <motion.div variants={authItemVariants} className="pt-5 text-center sm:pt-6">
             <Link to={LOGIN_ROUTE} className="text-sm font-semibold text-indigo-700 transition hover:text-indigo-900">
-              Back to Login
+              ← Back to Login
             </Link>
           </motion.div>
         </motion.section>

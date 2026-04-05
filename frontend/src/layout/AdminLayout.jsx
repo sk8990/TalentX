@@ -1,19 +1,21 @@
 import { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
-import EventNoteIcon from "@mui/icons-material/EventNote";
+import DashboardIcon from "@mui/icons-material/Dashboard";
+import SupportAgentIcon from "@mui/icons-material/SupportAgent";
 import LogoutIcon from "@mui/icons-material/Logout";
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
-import NotificationBell from "../../components/NotificationBell";
-import DarkModeToggle from "../../components/DarkModeToggle";
-import TalentXBrand from "../../components/TalentXBrand";
-import { logout } from "../../utils/logout";
+import NotificationBell from "../components/NotificationBell";
+import DarkModeToggle from "../components/DarkModeToggle";
+import TalentXBrand from "../components/TalentXBrand";
+import { logout } from "../utils/logout";
 
-export default function InterviewerLayout() {
+export default function AdminLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const links = [
-    { to: "/interviewer", label: "Interviews", icon: EventNoteIcon, end: true },
+    { to: "/admin", label: "Dashboard", icon: DashboardIcon, end: true },
+    { to: "/admin/support", label: "Support", icon: SupportAgentIcon },
   ];
 
   const navItemClass = ({ isActive }) =>

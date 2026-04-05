@@ -2,7 +2,7 @@
 .ticker-track {
   display: flex;
   align-items: center;
-  gap: 2.2rem;
+  gap: 2rem;
   width: max-content;
   white-space: nowrap;
   height: 100%;
@@ -10,10 +10,16 @@
 }
 
 .ticker-item {
-  font-size: 1.15rem;
+  font-size: 1.05rem;
   font-weight: 800;
   letter-spacing: 0.02em;
-  color: rgba(237, 242, 255, 0.98);
+  color: rgba(237, 242, 255, 0.95);
+}
+
+@media (min-width: 1280px) {
+  .ticker-item {
+    font-size: 1.15rem;
+  }
 }
 
 @keyframes ticker-slide {

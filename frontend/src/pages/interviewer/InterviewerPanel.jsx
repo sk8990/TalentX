@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import API from "../../api/axios";
-import TalentXBrand from "../../components/TalentXBrand";
 import InterviewerFeedbackForm, {
   FeedbackPreview,
   getDefaultInterviewerFeedbackForm
@@ -82,14 +81,13 @@ export default function InterviewerPanel() {
   };
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-3xl bg-gradient-to-r from-indigo-700 via-indigo-600 to-cyan-600 px-6 py-8 text-white sm:px-8">
-        <TalentXBrand theme="dark" size="sm" className="max-w-[340px]" />
-        <h1 className="text-3xl font-bold">Interviewer Panel</h1>
-        <p className="mt-2 text-sm text-indigo-100">Review your assigned interviews and submit candidate evaluation.</p>
+    <div className="space-y-5 sm:space-y-6">
+      <section className="rounded-2xl bg-gradient-to-r from-indigo-700 via-indigo-600 to-cyan-600 px-5 py-6 text-white sm:rounded-3xl sm:px-8 sm:py-8">
+        <h1 className="text-2xl font-bold sm:text-3xl">Interviewer Panel</h1>
+        <p className="mt-1 text-xs text-indigo-100 sm:mt-2 sm:text-sm">Review your assigned interviews and submit candidate evaluation.</p>
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+      <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:rounded-3xl sm:p-4">
         <div className="flex flex-wrap gap-2">
           {BUCKETS.map((bucket) => (
             <button
@@ -98,7 +96,7 @@ export default function InterviewerPanel() {
               className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
                 activeBucket === bucket
                   ? "bg-indigo-600 text-white"
-                  : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                  : "bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
               }`}
             >
               {bucket[0].toUpperCase() + bucket.slice(1)}
@@ -108,13 +106,13 @@ export default function InterviewerPanel() {
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
+        <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 sm:text-lg">{title}</h2>
         {loading ? (
-          <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 sm:rounded-3xl sm:p-8">
             Loading interviews...
           </div>
         ) : items.length === 0 ? (
-          <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 sm:rounded-3xl sm:p-8">
             No interviews found in this section.
           </div>
         ) : (
@@ -140,18 +138,18 @@ export default function InterviewerPanel() {
               );
 
               return (
-                <article key={item._id} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                <article key={item._id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:rounded-3xl sm:p-5">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                         {item.jobId?.companyName || "Company"}
                       </p>
-                      <h3 className="text-xl font-semibold text-slate-900">{item.jobId?.title || "Job Title"}</h3>
-                      <p className="mt-1 text-sm text-slate-600">
+                      <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 sm:text-xl">{item.jobId?.title || "Job Title"}</h3>
+                      <p className="mt-1 text-xs text-slate-600 dark:text-slate-400 sm:text-sm">
                         Candidate: {item.studentId?.userId?.name || "Unknown"} ({item.studentId?.userId?.email || "No email"})
                       </p>
                     </div>
-                    <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700">
+                    <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">
                       {new Date(item.interview?.date).toLocaleString()}
                     </span>
                   </div>
@@ -214,9 +212,9 @@ export default function InterviewerPanel() {
 
 function InfoItem({ label, value }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="mt-1 text-sm font-semibold text-slate-800">{value || "N/A"}</p>
+    <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 dark:border-slate-600 dark:bg-slate-700/50">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
+      <p className="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-200">{value || "N/A"}</p>
     </div>
   );
 }

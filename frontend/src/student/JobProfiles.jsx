@@ -355,26 +355,26 @@ export default function JobProfiles() {
   const selectedJobMatch = selectedJob?.match || null;
 
   return (
-    <div className="space-y-8">
-      <section className="rounded-3xl bg-gradient-to-r from-indigo-700 via-indigo-600 to-cyan-600 px-6 py-8 text-white sm:px-8">
-        <h1 className="text-3xl font-bold">Job Profiles</h1>
-        <p className="mt-2 text-sm text-indigo-100">Discover roles that match your branch and CGPA.</p>
+    <div className="space-y-5 sm:space-y-8">
+      <section className="rounded-2xl bg-gradient-to-r from-indigo-700 via-indigo-600 to-cyan-600 px-5 py-6 text-white sm:rounded-3xl sm:px-8 sm:py-8">
+        <h1 className="text-2xl font-bold sm:text-3xl">Job Profiles</h1>
+        <p className="mt-1 text-xs text-indigo-100 sm:mt-2 sm:text-sm">Discover roles that match your branch and CGPA.</p>
       </section>
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Search Jobs</label>
-        <div className="mt-2 flex items-center gap-2 rounded-xl border border-slate-300 px-3">
-          <SearchIcon sx={{ fontSize: 18 }} className="text-slate-500" />
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:rounded-3xl sm:p-6">
+        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Search Jobs</label>
+        <div className="mt-2 flex items-center gap-2 rounded-xl border border-slate-300 px-3 dark:border-slate-600 dark:bg-slate-700/50">
+          <SearchIcon sx={{ fontSize: 18 }} className="text-slate-500 dark:text-slate-400" />
           <input
             type="text"
             placeholder="Search by role or company"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full py-3 text-sm text-slate-800 outline-none"
+            className="w-full py-2.5 text-sm text-slate-800 outline-none dark:bg-transparent dark:text-slate-100 dark:placeholder-slate-400 sm:py-3"
           />
         </div>
 
-        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-4">
+        <div className="mt-3 grid grid-cols-1 gap-2 sm:mt-4 sm:grid-cols-2 sm:gap-3 lg:grid-cols-4">
           <div className="group rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md">
             <p className="mb-1 inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 transition group-hover:text-indigo-600">
               <FilterListIcon sx={{ fontSize: 14 }} />
@@ -486,7 +486,7 @@ export default function JobProfiles() {
           {activeSection === "all" ? "No jobs match your filters." : "No applied jobs match your filters."}
         </div>
       ) : (
-        <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-2">
+        <div className="grid grid-cols-1 items-start gap-4 sm:gap-5 lg:grid-cols-2">
           {filteredJobs.map((job) => {
             const eligible = isEligible(job);
             const alreadyApplied = appliedJobs.includes(job._id);
@@ -602,14 +602,14 @@ export default function JobProfiles() {
 
       {selectedJob && (
         <div
-          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/55 px-3 py-4 sm:items-center sm:px-4 sm:py-6"
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/55 px-3 py-4 backdrop-blur-sm sm:items-center sm:px-4 sm:py-6"
           onClick={() => {
             setSelectedJob(null);
             setResume(null);
           }}
         >
           <div
-            className="flex w-full max-w-3xl max-h-[calc(100vh-2rem)] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl sm:max-h-[calc(100vh-3rem)] sm:p-8"
+            className="flex w-full max-w-3xl max-h-[90dvh] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl dark:border-slate-700 dark:bg-slate-800 sm:max-h-[85dvh] sm:rounded-3xl sm:p-6 md:p-8"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-4">

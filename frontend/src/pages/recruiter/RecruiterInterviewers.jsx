@@ -120,15 +120,15 @@ export default function RecruiterInterviewers() {
   };
 
   return (
-    <div className="space-y-8">
-      <section className="rounded-3xl bg-gradient-to-r from-indigo-700 via-indigo-600 to-cyan-600 px-6 py-8 text-white sm:px-8">
-        <h1 className="text-3xl font-bold">Manage Interviewers</h1>
-        <p className="mt-2 text-sm text-indigo-100">
+    <div className="space-y-5 sm:space-y-8">
+      <section className="rounded-2xl bg-gradient-to-r from-indigo-700 via-indigo-600 to-cyan-600 px-5 py-6 text-white sm:rounded-3xl sm:px-8 sm:py-8">
+        <h1 className="text-2xl font-bold sm:text-3xl">Manage Interviewers</h1>
+        <p className="mt-1 text-xs text-indigo-100 sm:mt-2 sm:text-sm">
           Create, update, and deactivate interviewer accounts. New interviewers receive temporary credentials by email.
         </p>
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-3">
+      <section className="grid gap-3 sm:grid-cols-3 sm:gap-4">
         <Stat label="Total Interviewers" value={interviewers.length} />
         <Stat label="Active Interviewers" value={activeInterviewers.length} />
         <Stat
@@ -137,12 +137,12 @@ export default function RecruiterInterviewers() {
         />
       </section>
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-semibold text-slate-900">
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:rounded-3xl sm:p-6">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 sm:text-xl">
           {editingId ? "Edit Interviewer" : "Create Interviewer"}
         </h2>
 
-        <form onSubmit={handleSubmit} className="mt-4 grid gap-3 md:grid-cols-2">
+        <form onSubmit={handleSubmit} className="mt-4 grid gap-3 sm:grid-cols-2">
           <Input
             label="Full Name"
             value={form.name}
@@ -167,7 +167,7 @@ export default function RecruiterInterviewers() {
             onChange={(value) => setForm((prev) => ({ ...prev, expertise: value }))}
             placeholder="DSA, Java, System Design"
           />
-          <label className="md:col-span-2">
+          <label className="sm:col-span-2">
             <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Notes</span>
             <textarea
               value={form.notes}
@@ -178,7 +178,7 @@ export default function RecruiterInterviewers() {
             />
           </label>
 
-          <div className="md:col-span-2 flex flex-wrap gap-2">
+          <div className="sm:col-span-2 flex flex-wrap gap-2">
             <button
               type="submit"
               disabled={saving}
@@ -199,8 +199,8 @@ export default function RecruiterInterviewers() {
         </form>
       </section>
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-semibold text-slate-900">Interviewer List</h2>
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:rounded-3xl sm:p-6">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 sm:text-xl">Interviewer List</h2>
         {loading ? (
           <p className="mt-4 text-sm text-slate-500">Loading interviewers...</p>
         ) : interviewers.length === 0 ? (
@@ -297,9 +297,9 @@ function Input({ label, value, onChange, placeholder }) {
 
 function Stat({ label, value }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="mt-2 text-2xl font-bold text-slate-900">{value}</p>
+    <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:rounded-2xl sm:p-4">
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
+      <p className="mt-1.5 text-xl font-bold text-slate-900 dark:text-slate-100 sm:mt-2 sm:text-2xl">{value}</p>
     </div>
   );
 }

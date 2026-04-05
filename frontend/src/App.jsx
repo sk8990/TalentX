@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Outlet, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./auth/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PublicRoute from "./components/PublicRoute";
@@ -12,6 +12,7 @@ import AdminDashboard from "./dashboards/AdminDashboard";
 import StudentDashboard from "./dashboards/StudentDashboard";
 import Register from "./auth/Register";
 import ForgotPassword from "./auth/ForgotPassword";
+import AdminLayout from "./layout/AdminLayout";
 import RecruiterLayout from "./pages/recruiter/RecruiterLayout";
 import RecruiterDashboard from "./pages/recruiter/RecruiterDashboard";
 import RecruiterJobs from "./pages/recruiter/RecruiterJobs";
@@ -153,7 +154,7 @@ export default function App() {
             path="/admin"
             element={
               <ProtectedRoute role="admin">
-                <Outlet />
+              <AdminLayout />
               </ProtectedRoute>
             }
           >

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import API from "../../api/axios";
+import LockResetIcon from "@mui/icons-material/LockReset";
 
 export default function InterviewerResetPassword() {
   const navigate = useNavigate();
@@ -47,49 +48,56 @@ export default function InterviewerResetPassword() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 px-4 py-10 sm:px-8">
-      <div className="mx-auto max-w-xl rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-        <h1 className="text-2xl font-bold text-slate-900">Set New Password</h1>
-        <p className="mt-2 text-sm text-slate-500">
-          For security, you must change your temporary password before accessing the interviewer panel.
-        </p>
-
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-100 via-white to-cyan-50 px-4 py-10 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 sm:px-8">
+      <div className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:rounded-3xl sm:p-8">
+        <div className="mb-6 flex items-center gap-3">
+          <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-300">
+            <LockResetIcon sx={{ fontSize: 22 }} />
+          </span>
           <div>
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100 sm:text-2xl">Set New Password</h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400 sm:text-sm">
+              Change your temporary password to access the interviewer panel.
+            </p>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               Temporary Password
             </label>
             <input
               type="password"
               value={currentPassword}
               onChange={(event) => setCurrentPassword(event.target.value)}
-              className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
+              className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:focus:ring-indigo-900"
               placeholder="Enter temporary password"
             />
           </div>
 
           <div>
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               New Password
             </label>
             <input
               type="password"
               value={newPassword}
               onChange={(event) => setNewPassword(event.target.value)}
-              className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
+              className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:focus:ring-indigo-900"
               placeholder="Enter new password"
             />
           </div>
 
           <div>
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               Confirm New Password
             </label>
             <input
               type="password"
               value={confirmPassword}
               onChange={(event) => setConfirmPassword(event.target.value)}
-              className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
+              className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:focus:ring-indigo-900"
               placeholder="Confirm new password"
             />
           </div>

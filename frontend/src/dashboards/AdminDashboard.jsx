@@ -282,49 +282,43 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-100 p-6 sm:p-8 lg:p-10">
-        <div className="mx-auto max-w-7xl animate-pulse space-y-5">
-          <div className="h-24 rounded-3xl bg-white" />
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-28 rounded-2xl bg-white" />
-            ))}
-          </div>
-          <div className="h-96 rounded-3xl bg-white" />
+      <div className="animate-pulse space-y-5">
+        <div className="h-20 rounded-2xl bg-white dark:bg-slate-800 sm:h-24 sm:rounded-3xl" />
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 sm:gap-4">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="h-24 rounded-xl bg-white dark:bg-slate-800 sm:h-28 sm:rounded-2xl" />
+          ))}
         </div>
+        <div className="h-72 rounded-2xl bg-white dark:bg-slate-800 sm:h-96 sm:rounded-3xl" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-slate-100 p-6 sm:p-8 lg:p-10">
-        <div className="mx-auto max-w-2xl rounded-3xl border border-rose-200 bg-white p-8 text-center shadow-sm">
-          <h2 className="text-2xl font-bold text-slate-900">Admin Dashboard</h2>
-          <p className="mt-3 text-sm text-rose-600">{error}</p>
-          <button
-            onClick={fetchData}
-            className="mt-6 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700"
-          >
-            Retry
-          </button>
-        </div>
+      <div className="mx-auto max-w-2xl rounded-2xl border border-rose-200 bg-white p-6 text-center shadow-sm dark:border-rose-800 dark:bg-slate-800 sm:rounded-3xl sm:p-8">
+        <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 sm:text-2xl">Admin Dashboard</h2>
+        <p className="mt-3 text-sm text-rose-600">{error}</p>
+        <button
+          onClick={fetchData}
+          className="mt-6 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700"
+        >
+          Retry
+        </button>
       </div>
     );
   }
 
   return (
     <>
-      <div className="min-h-screen bg-gradient-to-br from-slate-100 via-white to-sky-100 p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto max-w-7xl space-y-6">
-        <header className="rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-800 to-cyan-700 p-6 text-white shadow-xl sm:p-8">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <TalentXBrand theme="dark" size="sm" className="max-w-[330px]" />
-              <h1 className="mt-2 text-3xl font-bold sm:text-4xl">Admin Dashboard</h1>
-              <p className="mt-2 max-w-xl text-sm text-slate-200">
-                Review platform health, user activity, recruiter approvals, and support operations in one place.
-              </p>
+      <div className="space-y-5 sm:space-y-6">
+      <header className="rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-800 to-cyan-700 p-5 text-white shadow-xl sm:rounded-3xl sm:p-6 md:p-8">
+        <div className="flex flex-wrap items-start justify-between gap-3 sm:gap-4">
+          <div>
+            <h1 className="text-2xl font-bold sm:text-3xl md:text-4xl">Admin Dashboard</h1>
+            <p className="mt-1 max-w-xl text-xs text-slate-200 sm:mt-2 sm:text-sm">
+              Review platform health, user activity, recruiter approvals, and support operations.
+            </p>
             </div>
             <div className="flex gap-2">
               <button
@@ -349,7 +343,7 @@ export default function AdminDashboard() {
           </div>
         </header>
 
-        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
           <StatCard label="Students" value={computedStats.students} tone="sky" icon={GroupsIcon} />
           <StatCard label="Recruiters" value={computedStats.recruiters} tone="indigo" icon={GroupAddIcon} />
           <StatCard label="Jobs" value={computedStats.jobs} tone="emerald" icon={WorkIcon} />
@@ -357,7 +351,7 @@ export default function AdminDashboard() {
           <StatCard label="Selected" value={computedStats.selected} tone="rose" icon={VerifiedUserIcon} />
         </section>
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
+        <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:rounded-3xl sm:p-4">
           <div className="flex flex-wrap gap-2">
             <TabButton active={activeTab === "recruiters"} onClick={() => setActiveTab("recruiters")}>
               Pending Recruiters ({pendingRecruiters.length})
@@ -601,7 +595,7 @@ export default function AdminDashboard() {
             title="Export Center"
             subtitle="Download platform reports in Excel format for audits, placement reports, and external analysis."
           >
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 sm:gap-4">
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <p className="text-sm font-semibold text-slate-900">Placement Export</p>
                 <p className="mt-1 text-xs text-slate-500">Selected candidates with company, role, and package.</p>
@@ -655,8 +649,8 @@ export default function AdminDashboard() {
             title="Audit Logs"
             subtitle="Track system actions across application workflow, interview slots, and bulk operations."
           >
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <div className="grid gap-3 md:grid-cols-5">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-700/50 sm:p-4">
+              <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
                 <select
                   value={auditFilters.action}
                   onChange={(e) => setAuditFilters((prev) => ({ ...prev, action: e.target.value }))}
@@ -809,7 +803,6 @@ export default function AdminDashboard() {
           </Section>
         )}
         </div>
-      </div>
       {confirmDialog}
     </>
   );
@@ -826,19 +819,19 @@ function safeJSONStringify(value) {
 
 function StatCard({ label, value, tone, icon: Icon }) {
   const toneMap = {
-    sky: "from-sky-50 to-sky-100 text-sky-700",
-    indigo: "from-indigo-50 to-indigo-100 text-indigo-700",
-    emerald: "from-emerald-50 to-emerald-100 text-emerald-700",
-    amber: "from-amber-50 to-amber-100 text-amber-700",
-    rose: "from-rose-50 to-rose-100 text-rose-700",
+    sky: "from-sky-50 to-sky-100 text-sky-700 dark:from-sky-900/30 dark:to-sky-800/30 dark:text-sky-300",
+    indigo: "from-indigo-50 to-indigo-100 text-indigo-700 dark:from-indigo-900/30 dark:to-indigo-800/30 dark:text-indigo-300",
+    emerald: "from-emerald-50 to-emerald-100 text-emerald-700 dark:from-emerald-900/30 dark:to-emerald-800/30 dark:text-emerald-300",
+    amber: "from-amber-50 to-amber-100 text-amber-700 dark:from-amber-900/30 dark:to-amber-800/30 dark:text-amber-300",
+    rose: "from-rose-50 to-rose-100 text-rose-700 dark:from-rose-900/30 dark:to-rose-800/30 dark:text-rose-300",
   };
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-      <div className={`mt-3 rounded-xl bg-gradient-to-br px-3 py-4 ${toneMap[tone] || toneMap.indigo}`}>
-        <p className="inline-flex items-center gap-2 text-2xl font-bold">
-          {Icon ? <Icon sx={{ fontSize: 22 }} /> : null}
+    <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:rounded-2xl sm:p-4">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 sm:text-xs">{label}</p>
+      <div className={`mt-2 rounded-lg bg-gradient-to-br px-3 py-3 sm:mt-3 sm:rounded-xl sm:py-4 ${toneMap[tone] || toneMap.indigo}`}>
+        <p className="inline-flex items-center gap-1.5 text-xl font-bold sm:gap-2 sm:text-2xl">
+          {Icon ? <Icon sx={{ fontSize: 20 }} /> : null}
           {value}
         </p>
       </div>
@@ -863,10 +856,10 @@ function TabButton({ active, onClick, children }) {
 
 function Section({ title, subtitle, children }) {
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-      <h3 className="text-xl font-bold text-slate-900">{title}</h3>
-      <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
-      <div className="mt-5">{children}</div>
+    <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:rounded-3xl sm:p-5 md:p-6">
+      <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 sm:text-xl">{title}</h3>
+      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 sm:text-sm">{subtitle}</p>
+      <div className="mt-4 sm:mt-5">{children}</div>
     </section>
   );
 }
@@ -921,7 +914,7 @@ function StatusBadge({ active }) {
 }
 
 function EmptyState({ message }) {
-  return <p className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">{message}</p>;
+  return <p className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-700/50 dark:text-slate-400">{message}</p>;
 }
 
 function InfoBlock({ label, value }) {

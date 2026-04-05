@@ -119,19 +119,19 @@ export default function StudentSupport() {
   };
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-3xl bg-gradient-to-r from-indigo-700 via-indigo-600 to-cyan-600 px-6 py-8 text-white sm:px-8">
-        <h1 className="text-3xl font-bold">Student Support</h1>
-        <p className="mt-2 text-sm text-indigo-100">Ask AI for quick help, then raise a support ticket with screenshot if needed.</p>
+    <div className="space-y-5 sm:space-y-6">
+      <section className="rounded-2xl bg-gradient-to-r from-indigo-700 via-indigo-600 to-cyan-600 px-5 py-6 text-white sm:rounded-3xl sm:px-8 sm:py-8">
+        <h1 className="text-2xl font-bold sm:text-3xl">Student Support</h1>
+        <p className="mt-1 text-xs text-indigo-100 sm:mt-2 sm:text-sm">Ask AI for quick help, then raise a support ticket with screenshot if needed.</p>
       </section>
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:rounded-3xl sm:p-6">
         <h2 className="inline-flex items-center gap-2 text-lg font-semibold text-slate-900">
           <SmartToyIcon sx={{ fontSize: 20 }} />
           AI Chat
         </h2>
 
-        <div className="mt-4 h-[360px] space-y-3 overflow-y-auto rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <div className="mt-4 h-[260px] space-y-3 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-700/50 sm:h-[360px] sm:rounded-2xl sm:p-4">
           {chat.length === 0 && <p className="text-sm text-slate-500">Start by asking your question.</p>}
 
           {chat.map((msg, index) => (
@@ -180,7 +180,7 @@ export default function StudentSupport() {
         </button>
       </section>
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:rounded-3xl sm:p-6">
         <h2 className="text-lg font-semibold text-slate-900">My Tickets</h2>
 
         {ticketLoading ? (
@@ -228,8 +228,8 @@ export default function StudentSupport() {
       </section>
 
       {showTicketForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4">
-          <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-3 backdrop-blur-sm sm:px-4">
+          <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl dark:border-slate-700 dark:bg-slate-800 sm:rounded-3xl sm:p-6">
             <div className="flex items-center justify-between">
               <h3 className="text-xl font-bold text-slate-900">Raise Support Ticket</h3>
               <button onClick={() => setShowTicketForm(false)} className="rounded-lg p-1 text-slate-500 hover:bg-slate-100">

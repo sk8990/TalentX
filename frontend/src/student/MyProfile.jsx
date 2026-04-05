@@ -115,20 +115,20 @@ export default function MyProfile() {
   };
 
   if (!profile) {
-    return <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-500">Loading profile...</div>;
+    return <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 sm:rounded-3xl">Loading profile...</div>;
   }
 
   const inputClass =
     "mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100";
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-3xl bg-gradient-to-r from-indigo-700 via-indigo-600 to-cyan-600 px-6 py-8 text-white sm:px-8">
-        <h1 className="text-3xl font-bold">My Profile</h1>
-        <p className="mt-2 text-sm text-indigo-100">Keep details updated for better matching and job alerts.</p>
+    <div className="space-y-5 sm:space-y-6">
+      <section className="rounded-2xl bg-gradient-to-r from-indigo-700 via-indigo-600 to-cyan-600 px-5 py-6 text-white sm:rounded-3xl sm:px-8 sm:py-8">
+        <h1 className="text-2xl font-bold sm:text-3xl">My Profile</h1>
+        <p className="mt-1 text-xs text-indigo-100 sm:mt-2 sm:text-sm">Keep details updated for better matching and job alerts.</p>
       </section>
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:rounded-3xl sm:p-6 md:p-8">
         <h2 className="text-lg font-semibold text-slate-900">Resume Auto-Fill</h2>
         <p className="mt-1 text-sm text-slate-500">Upload your resume PDF to auto-fill skills, CGPA, and preferences.</p>
 
@@ -171,7 +171,7 @@ export default function MyProfile() {
         )}
       </section>
 
-      <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:rounded-3xl">
         <div className="border-b border-slate-200 bg-slate-50 px-6 py-5 sm:px-8">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
