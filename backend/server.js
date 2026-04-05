@@ -196,6 +196,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.use("/api/auth", authLimiter, require("./routes/authRoutes"));
+app.use("/api/public", require("./routes/publicRoutes"));
 app.use("/api/student", require("./routes/studentRoutes"));
 app.use("/api/company", require("./routes/companyRoutes"));
 app.use("/api/application", require("./routes/applicationRoutes"));

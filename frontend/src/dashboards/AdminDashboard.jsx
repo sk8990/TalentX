@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import API, { getServerOrigin } from "../api/axios";
 import toast from "react-hot-toast";
 import RefreshIcon from "@mui/icons-material/Refresh";
@@ -18,7 +17,9 @@ import HistoryIcon from "@mui/icons-material/History";
 import FilterAltIcon from "@mui/icons-material/FilterAlt";
 import NavigateBeforeIcon from "@mui/icons-material/NavigateBefore";
 import NavigateNextIcon from "@mui/icons-material/NavigateNext";
+import TalentXBrand from "../components/TalentXBrand";
 import { useConfirmDialog } from "../components/useConfirmDialog";
+import { logout } from "../utils/logout";
 
 const AUDIT_ACTION_OPTIONS = [
   "APPLICATION_STATUS_UPDATED",
@@ -67,8 +68,6 @@ export default function AdminDashboard() {
   const [auditEndpoint, setAuditEndpoint] = useState(AUDIT_LOG_ENDPOINTS[0]);
   const { confirm, confirmDialog } = useConfirmDialog();
   const serverOrigin = getServerOrigin();
-
-  const navigate = useNavigate();
 
   const computedStats = useMemo(() => {
     if (!stats) {
@@ -224,11 +223,6 @@ export default function AdminDashboard() {
     fetchData();
   }, []);
 
-  const logout = () => {
-    localStorage.clear();
-    navigate("/");
-  };
-
   const toggleUser = async (id) => {
     try {
       await API.put(`/admin/users/${id}/toggle`);
@@ -326,7 +320,7 @@ export default function AdminDashboard() {
         <header className="rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-800 to-cyan-700 p-6 text-white shadow-xl sm:p-8">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-200">TalentX Console</p>
+              <TalentXBrand theme="dark" size="sm" className="max-w-[330px]" />
               <h1 className="mt-2 text-3xl font-bold sm:text-4xl">Admin Dashboard</h1>
               <p className="mt-2 max-w-xl text-sm text-slate-200">
                 Review platform health, user activity, recruiter approvals, and support operations in one place.

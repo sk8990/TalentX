@@ -1,4 +1,5 @@
 import axios from "axios";
+import { LOGIN_ROUTE, PUBLIC_ROUTES, clearStoredAuth } from "../utils/authRouting";
 
 const DEFAULT_SERVER_ORIGIN = import.meta.env.DEV
   ? "http://localhost:5000"
@@ -27,10 +28,9 @@ instance.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       const currentPath = window.location.pathname;
-      if (currentPath !== "/" && currentPath !== "/register" && currentPath !== "/forgot-password") {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        window.location.href = "/";
+      if (!PUBLIC_ROUTES.includes(currentPath)) {
+        clearStoredAuth();
+        window.location.href = LOGIN_ROUTE;
       }
     }
     return Promise.reject(error);

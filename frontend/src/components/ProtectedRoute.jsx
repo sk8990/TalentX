@@ -1,25 +1,16 @@
 import { Navigate, useLocation } from "react-router-dom";
+import { getDefaultRouteForUser, LOGIN_ROUTE, readStoredSession } from "../utils/authRouting";
 
 export default function ProtectedRoute({ children, role }) {
   const location = useLocation();
-  const token = localStorage.getItem("token");
-
-  let user = null;
-  try {
-    const raw = localStorage.getItem("user");
-    user = raw ? JSON.parse(raw) : null;
-  } catch {
-    localStorage.removeItem("user");
-    localStorage.removeItem("token");
-    return <Navigate to="/" replace />;
-  }
+  const { token, user } = readStoredSession();
 
   if (!token || !user) {
-    return <Navigate to="/" replace />;
+    return <Navigate to={LOGIN_ROUTE} replace />;
   }
 
   if (role && user.role !== role) {
-    return <Navigate to="/" replace />;
+    return <Navigate to={getDefaultRouteForUser(user)} replace />;
   }
 
   if (user.role === "interviewer") {

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import API from "../../api/axios";
+import TalentXBrand from "../../components/TalentXBrand";
 import InterviewerFeedbackForm, {
   FeedbackPreview,
   getDefaultInterviewerFeedbackForm
@@ -83,6 +84,7 @@ export default function InterviewerPanel() {
   return (
     <div className="space-y-6">
       <section className="rounded-3xl bg-gradient-to-r from-indigo-700 via-indigo-600 to-cyan-600 px-6 py-8 text-white sm:px-8">
+        <TalentXBrand theme="dark" size="sm" className="max-w-[340px]" />
         <h1 className="text-3xl font-bold">Interviewer Panel</h1>
         <p className="mt-2 text-sm text-indigo-100">Review your assigned interviews and submit candidate evaluation.</p>
       </section>

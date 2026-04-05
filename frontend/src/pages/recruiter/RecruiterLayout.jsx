@@ -1,19 +1,14 @@
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet } from "react-router-dom";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import WorkIcon from "@mui/icons-material/Work";
 import GroupsIcon from "@mui/icons-material/Groups";
 import LogoutIcon from "@mui/icons-material/Logout";
 import SupportAgentIcon from "@mui/icons-material/SupportAgent";
 import NotificationBell from "../../components/NotificationBell";
+import TalentXBrand from "../../components/TalentXBrand";
+import { logout } from "../../utils/logout";
 
 export default function RecruiterLayout() {
-  const navigate = useNavigate();
-
-  const logout = () => {
-    localStorage.clear();
-    navigate("/");
-  };
-
   const navItemClass = ({ isActive }) =>
     `group flex items-center rounded-xl px-4 py-3 text-sm font-medium transition ${
       isActive
@@ -26,15 +21,7 @@ export default function RecruiterLayout() {
       <div className="mx-auto flex w-full max-w-[1440px]">
         <aside className="sticky top-0 hidden h-screen w-72 flex-col border-r border-slate-200 bg-white px-6 py-7 lg:flex">
           <div className="mb-10 flex items-start justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-600 font-bold text-white">
-                TX
-              </div>
-              <div>
-                <h1 className="text-lg font-bold text-slate-900">TalentX</h1>
-                <p className="text-xs text-slate-500">Recruiter Workspace</p>
-              </div>
-            </div>
+            <TalentXBrand theme="light" size="sm" className="max-w-[220px]" />
             <NotificationBell />
           </div>
 
@@ -72,13 +59,7 @@ export default function RecruiterLayout() {
           <div className="border-b border-slate-200 bg-white/80 px-5 py-4 backdrop-blur-sm sm:px-8 lg:hidden">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 font-bold text-white">
-                  TX
-                </div>
-                <div>
-                  <h1 className="text-base font-bold text-slate-900">TalentX Recruiter</h1>
-                  <p className="text-xs text-slate-500">Manage jobs and candidates</p>
-                </div>
+                <TalentXBrand theme="light" size="sm" className="max-w-[220px]" />
                 <NotificationBell />
               </div>
               <button

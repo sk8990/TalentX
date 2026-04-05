@@ -11,6 +11,7 @@ import QuizIcon from "@mui/icons-material/Quiz";
 import SupportAgentIcon from "@mui/icons-material/SupportAgent";
 import LogoutIcon from "@mui/icons-material/Logout";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
+import TalentXBrand from "../components/TalentXBrand";
 
 export default function StudentLayout() {
   const links = [
@@ -43,13 +44,13 @@ export default function StudentLayout() {
       <div className="mx-auto flex w-full max-w-[1440px]">
         <aside className="sticky top-0 hidden h-screen w-72 flex-col overflow-y-auto border-r border-slate-200 bg-white px-6 py-7 dark:border-slate-700 dark:bg-slate-800 lg:flex">
           <div className="mb-8 flex items-start justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-600 text-base font-bold text-white">TX</div>
-              <div>
-                <h1 className="text-lg font-bold text-slate-900 dark:text-white">TalentX</h1>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Student Workspace</p>
-              </div>
-            </div>
+            <TalentXBrand
+              theme="light"
+              size="sm"
+              className="max-w-[210px]"
+              textClassName="dark:text-slate-300"
+              emphasisClassName="dark:text-white"
+            />
             <NotificationBell />
           </div>
 
@@ -84,13 +85,13 @@ export default function StudentLayout() {
         <main className="min-h-screen flex-1">
           <div className="border-b border-slate-200 bg-white/80 px-5 py-4 backdrop-blur-sm dark:border-slate-700 dark:bg-slate-800/80 sm:px-8 lg:hidden">
             <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 font-bold text-white">TX</div>
-                <div>
-                  <h1 className="text-base font-bold text-slate-900 dark:text-white">TalentX Student</h1>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Track your journey</p>
-                </div>
-              </div>
+              <TalentXBrand
+                theme="light"
+                size="sm"
+                className="max-w-[220px]"
+                textClassName="text-slate-500 dark:text-slate-300"
+                emphasisClassName="dark:text-white"
+              />
               <div className="flex items-center gap-2">
                 <NotificationBell />
                 <DarkModeToggle />

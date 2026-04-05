@@ -6,13 +6,14 @@ import BusinessCenterIcon from "@mui/icons-material/BusinessCenter";
 import AnalyticsIcon from "@mui/icons-material/Analytics";
 import VerifiedIcon from "@mui/icons-material/Verified";
 import GroupsIcon from "@mui/icons-material/Groups";
+import TalentXBrand from "../components/TalentXBrand";
 
 export default function About() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 via-white to-cyan-100 px-4 py-10 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl space-y-8">
         <section className="rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-800 to-cyan-700 px-6 py-10 text-white shadow-xl sm:px-10">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-200">About TalentX</p>
+          <TalentXBrand theme="dark" size="sm" className="max-w-[340px]" />
           <h1 className="mt-3 text-4xl font-bold leading-tight sm:text-5xl">A Smarter Campus Hiring Platform</h1>
           <p className="mt-4 max-w-3xl text-sm text-slate-200 sm:text-base">
             TalentX connects students, recruiters, and institutions in one workflow. Students discover relevant jobs, recruiters manage pipelines faster, and admins keep the platform healthy.

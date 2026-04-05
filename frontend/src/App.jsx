@@ -1,6 +1,7 @@
-import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Outlet, Navigate } from "react-router-dom";
 import Login from "./auth/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
+import PublicRoute from "./components/PublicRoute";
 import MyApplications from "./student/MyApplications";
 import StudentLayout from "./layout/StudentLayout";
 import JobProfiles from "./student/JobProfiles";
@@ -25,7 +26,7 @@ import InterviewerResetPassword from "./pages/interviewer/InterviewerResetPasswo
 import VirtualInterviewRoom from "./pages/interview/VirtualInterviewRoom";
 import StudentInterviewRoom from "./pages/interview/StudentInterviewRoom";
 import { Toaster } from "react-hot-toast";
-import About from "./pages/About";
+import LandingPage from "./pages/LandingPage";
 import { ThemeProvider } from "./utils/ThemeContext";
 
 export default function App() {
@@ -45,10 +46,39 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           {/* PUBLIC */}
-          <Route path="/" element={<Login />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route
+            path="/"
+            element={
+              <PublicRoute>
+                <LandingPage />
+              </PublicRoute>
+            }
+          />
+          <Route path="/about" element={<Navigate to="/" replace />} />
+          <Route
+            path="/login"
+            element={
+              <PublicRoute>
+                <Login />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/register"
+            element={
+              <PublicRoute>
+                <Register />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/forgot-password"
+            element={
+              <PublicRoute>
+                <ForgotPassword />
+              </PublicRoute>
+            }
+          />
 
           {/* STUDENT */}
           <Route

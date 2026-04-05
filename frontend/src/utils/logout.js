@@ -1,6 +1,7 @@
+import { clearStoredAuth } from "./authRouting";
+
 export const logout = () => {
-  localStorage.removeItem("token");
-  localStorage.removeItem("user");
+  clearStoredAuth();
   window.location.href = "/";
 };
 
