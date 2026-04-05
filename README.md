@@ -1,5 +1,7 @@
 # TalentX 🚀
 
+Live Link : https://talent-x-five.vercel.app/
+
 TalentX is a **MERN Stack Job Portal Platform** designed to connect job seekers with companies.
 It allows users to explore job opportunities, apply for jobs, and manage applications, while admins and recruiters can manage job postings and applicants through a dashboard.
 
