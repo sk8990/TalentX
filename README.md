@@ -123,6 +123,14 @@ npm start
 
 ---
 
+## Testing
+
+Use the repo testing guide for route coverage, smoke-test tokens, and role-based manual flows:
+
+- `TESTING.md`
+
+---
+
 ## Future Improvements
 
 * Resume upload system
