@@ -32,6 +32,7 @@ export default function InterviewerPanel() {
 
   useEffect(() => {
     fetchItems(activeBucket);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeBucket]);
 
   useEffect(() => {

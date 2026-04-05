@@ -91,6 +91,8 @@ function normalizeAIInterviewConfigInput(value) {
   };
 }
 
+const RESCHEDULE_REASON_ENUM = ["STUDENT_NO_SHOW", "INTERVIEWER_UNAVAILABLE", "OTHER"];
+
 function buildInterviewPayload({
   startDate,
   endDate,
@@ -143,6 +145,21 @@ function clearInterviewerAssignment(app) {
   };
 }
 
+function clearInterviewerFeedback(app) {
+  app.interviewerFeedback = {
+    submittedBy: null,
+    submittedAt: null,
+    recommendation: null,
+    ratings: {
+      communication: null,
+      technical: null,
+      problemSolving: null,
+      cultureFit: null
+    },
+    notes: ""
+  };
+}
+
 function getStudentNotificationContext(application) {
   const studentUser = application?.studentId?.userId;
 
@@ -169,6 +186,11 @@ function getStudentNotificationContext(application) {
 
 function logNotificationError(scope, err) {
   console.error(`[NOTIFY] ${scope} failed:`, err.message);
+}
+
+function logAIInterviewServer(req, event, details = {}) {
+  const requestId = req?.requestId || "no-request-id";
+  console.info(`[AI-INTERVIEW][${requestId}] ${event}`, details);
 }
 
 function getBackendOrigin(req) {
@@ -219,10 +241,26 @@ function getAIInterviewQuestion(app, questionIndex = null) {
   };
 }
 
+function sanitizeAITranscriptEntry(entry = {}) {
+  return {
+    questionIndex: Number(entry?.questionIndex || 0),
+    questionId: String(entry?.questionId || "").trim(),
+    question: String(entry?.question || "").trim(),
+    answer: String(entry?.answer || "").trim(),
+    source: String(entry?.source || "TEXT").trim().toUpperCase() === "VOICE" ? "VOICE" : "TEXT",
+    answeredAt: entry?.answeredAt || null
+  };
+}
+
 function buildAIInterviewStudentPayload(app) {
   const aiInterview = app?.aiInterview || {};
-  const transcript = Array.isArray(aiInterview.transcript) ? aiInterview.transcript : [];
+  const transcript = Array.isArray(aiInterview.transcript)
+    ? aiInterview.transcript
+      .map((entry) => sanitizeAITranscriptEntry(entry))
+      .sort((a, b) => a.questionIndex - b.questionIndex)
+    : [];
   const currentQuestion = getAIInterviewQuestion(app);
+  const currentEntry = transcript.find((entry) => entry.questionIndex === Number(currentQuestion?.index ?? -1)) || null;
 
   return {
     status: aiInterview.status || "NOT_STARTED",
@@ -231,6 +269,8 @@ function buildAIInterviewStudentPayload(app) {
     currentQuestionIndex: Number(aiInterview.currentQuestionIndex || 0),
     totalQuestions: Array.isArray(aiInterview.questionPlan) ? aiInterview.questionPlan.length : 0,
     currentQuestion,
+    currentAnswer: currentEntry?.answer || "",
+    transcript,
     transcriptCount: transcript.length,
     lastError: aiInterview.lastError || ""
   };
@@ -580,14 +620,14 @@ exports.scheduleInterview = async (req, res) => {
     const mode = normalizeInterviewMode(req.body?.mode);
     const link = normalizeWebLink(req.body?.link);
     const providedEndDate = parseDateInput(req.body?.endDate);
-    const panelType = normalizeInterviewPanelType(req.body?.panelType);
+    const panelType = "AI";
     const aiConfig = normalizeAIInterviewConfigInput(req.body?.aiConfig);
 
     if (!startDate || !mode) {
       return res.status(400).json({ message: "Date and valid mode are required" });
     }
 
-    if (panelType === "AI" && mode !== "Online") {
+    if (mode !== "Online") {
       return res.status(400).json({ message: "AI interviews must use Online mode" });
     }
 
@@ -624,9 +664,7 @@ exports.scheduleInterview = async (req, res) => {
     app.interviewSlots = [];
     clearInterviewJoinRequest(app);
     resetAIInterviewArtifacts(app);
-    if (panelType === "AI") {
-      clearInterviewerAssignment(app);
-    }
+    clearInterviewerAssignment(app);
 
     await app.save();
 
@@ -663,10 +701,133 @@ exports.scheduleInterview = async (req, res) => {
   }
 };
 
+exports.rescheduleInterview = async (req, res) => {
+  try {
+    const reason = String(req.body?.reason || "").trim().toUpperCase();
+    const notes = String(req.body?.notes || "").trim();
+    const nextStart = parseDateInput(req.body?.newDate ?? req.body?.date);
+    const providedEnd = parseDateInput(req.body?.newEndDate ?? req.body?.endDate);
+
+    if (!RESCHEDULE_REASON_ENUM.includes(reason)) {
+      return res.status(400).json({ message: "Valid reschedule reason is required" });
+    }
+
+    if (!nextStart) {
+      return res.status(400).json({ message: "A valid new interview date/time is required" });
+    }
+
+    const nextEnd = providedEnd || new Date(nextStart.getTime() + 30 * 60 * 1000);
+    if (nextEnd.getTime() <= nextStart.getTime()) {
+      return res.status(400).json({ message: "New end time must be after new start time" });
+    }
+
+    if (nextStart.getTime() <= Date.now()) {
+      return res.status(400).json({ message: "New interview time must be in the future" });
+    }
+
+    const app = await Application.findById(req.params.applicationId)
+      .populate("jobId", "title companyName recruiterId")
+      .populate({
+        path: "studentId",
+        select: "userId",
+        populate: { path: "userId", select: "name email" }
+      });
+
+    if (!app) {
+      return res.status(404).json({ message: "Application not found" });
+    }
+
+    if (String(app?.jobId?.recruiterId || "") !== String(req.user.id)) {
+      return res.status(403).json({ message: "Not authorized" });
+    }
+
+    if (app.status !== "INTERVIEW_SCHEDULED" || !app.interview?.date) {
+      return res.status(400).json({ message: "Only scheduled interviews can be rescheduled" });
+    }
+
+    const panelType = getInterviewPanelType(app.interview);
+    const previousDate = app.interview?.date ? new Date(app.interview.date) : null;
+    const previousEndDate = app.interview?.endDate ? new Date(app.interview.endDate) : null;
+
+    app.interview = buildInterviewPayload({
+      startDate: nextStart,
+      endDate: nextEnd,
+      mode: normalizeInterviewMode(app.interview?.mode) || "Online",
+      link: app.interview?.link || "",
+      panelType,
+      aiConfig: getAIInterviewConfig(app.interview)
+    });
+    app.interviewSlots = [];
+    clearInterviewJoinRequest(app);
+    clearInterviewSession(app);
+
+    if (panelType === "AI") {
+      clearAIInterview(app);
+      clearInterviewerAssignment(app);
+    } else {
+      clearInterviewerFeedback(app);
+    }
+
+    app.interviewReschedule = {
+      ...app.interviewReschedule,
+      count: Number(app?.interviewReschedule?.count || 0) + 1,
+      lastReason: reason,
+      lastNotes: notes,
+      lastRescheduledBy: req.user.id,
+      lastRescheduledAt: new Date(),
+      previousDate,
+      previousEndDate
+    };
+
+    await app.save();
+
+    const student = getStudentNotificationContext(app);
+    if (student) {
+      notifyInterviewScheduled(
+        student.userId,
+        student.studentName,
+        app.jobId?.title || "Job",
+        nextStart,
+        app.interview?.mode || "Online",
+        app.interview?.link || ""
+      ).catch((err) => logNotificationError("recruiter reschedule notification", err));
+    }
+
+    await writeApplicationAudit({
+      actorId: req.user.id,
+      actorRole: req.user.role,
+      action: "INTERVIEW_RESCHEDULED_BY_RECRUITER",
+      app,
+      changes: {
+        previousDate,
+        newDate: nextStart,
+        previousEndDate,
+        newEndDate: nextEnd,
+        panelType
+      },
+      metadata: {
+        reason,
+        notes,
+        resetAiInterview: panelType === "AI"
+      }
+    });
+
+    return res.json({
+      message: "Interview rescheduled successfully",
+      applicationId: app._id,
+      interview: app.interview,
+      interviewReschedule: app.interviewReschedule
+    });
+  } catch (err) {
+    console.error("rescheduleInterview error:", err);
+    return res.status(500).json({ message: "Failed to reschedule interview" });
+  }
+};
+
 exports.publishInterviewSlots = async (req, res) => {
   try {
     const slots = Array.isArray(req.body?.slots) ? req.body.slots : [];
-    const panelType = normalizeInterviewPanelType(req.body?.panelType);
+    const panelType = "AI";
     const aiConfig = normalizeAIInterviewConfigInput(req.body?.aiConfig);
 
     if (slots.length === 0) {
@@ -718,7 +879,7 @@ exports.publishInterviewSlots = async (req, res) => {
         return res.status(400).json({ message: `Slot ${i + 1}: start time must be in the future` });
       }
 
-      if (panelType === "AI" && mode !== "Online") {
+      if (mode !== "Online") {
         return res.status(400).json({ message: `Slot ${i + 1}: AI interviews must use Online mode` });
       }
 
@@ -750,9 +911,7 @@ exports.publishInterviewSlots = async (req, res) => {
     app.interviewSlots = parsedSlots;
     clearInterviewJoinRequest(app);
     resetAIInterviewArtifacts(app);
-    if (panelType === "AI") {
-      clearInterviewerAssignment(app);
-    }
+    clearInterviewerAssignment(app);
     await app.save();
 
     const student = getStudentNotificationContext(app);
@@ -840,9 +999,7 @@ exports.bookInterviewSlot = async (req, res) => {
     });
     clearInterviewJoinRequest(app);
     resetAIInterviewArtifacts(app);
-    if (getInterviewPanelType(app.interview) === "AI") {
-      clearInterviewerAssignment(app);
-    }
+    clearInterviewerAssignment(app);
 
     await app.save();
 
@@ -1509,6 +1666,12 @@ exports.startMyAIInterview = async (req, res) => {
     }
 
     const app = accessResult.application;
+    logAIInterviewServer(req, "start.requested", {
+      applicationId: String(app?._id || req.params.applicationId),
+      status: app?.status,
+      aiStatus: app?.aiInterview?.status || "NOT_STARTED",
+      questionPlanLength: Array.isArray(app?.aiInterview?.questionPlan) ? app.aiInterview.questionPlan.length : 0
+    });
     if (getInterviewPanelType(app.interview) !== "AI") {
       return res.status(400).json({ message: "This interview uses a human interviewer panel" });
     }
@@ -1557,6 +1720,10 @@ exports.startMyAIInterview = async (req, res) => {
       aiInterview: buildAIInterviewStudentPayload(app)
     });
   } catch (err) {
+    logAIInterviewServer(req, "start.error", {
+      applicationId: req.params.applicationId,
+      message: err.message
+    });
     console.error("startMyAIInterview error:", err);
     return res.status(500).json({ message: err.message || "Failed to start AI interview" });
   }
@@ -1593,6 +1760,16 @@ exports.submitMyAIInterviewAnswer = async (req, res) => {
       return res.status(400).json({ message: "No active AI interview question is available" });
     }
 
+    logAIInterviewServer(req, "answer.requested", {
+      applicationId: String(app._id),
+      currentQuestionIndex: currentQuestion.index,
+      currentQuestionId: currentQuestion.id,
+      aiStatus: app?.aiInterview?.status,
+      transcriptCountBefore: Array.isArray(app.aiInterview?.transcript) ? app.aiInterview.transcript.length : 0,
+      answerLength: answer.length,
+      source
+    });
+
     const transcript = Array.isArray(app.aiInterview?.transcript) ? app.aiInterview.transcript : [];
     const existingIndex = transcript.findIndex((entry) => Number(entry?.questionIndex) === currentQuestion.index);
     const nextEntry = {
@@ -1613,11 +1790,21 @@ exports.submitMyAIInterviewAnswer = async (req, res) => {
     app.aiInterview.transcript = transcript;
     await app.save();
 
+    logAIInterviewServer(req, "answer.recorded", {
+      applicationId: String(app._id),
+      currentQuestionIndex: currentQuestion.index,
+      transcriptCountAfter: transcript.length
+    });
+
     return res.json({
       message: "Answer recorded",
       aiInterview: buildAIInterviewStudentPayload(app)
     });
   } catch (err) {
+    logAIInterviewServer(req, "answer.error", {
+      applicationId: req.params.applicationId,
+      message: err.message
+    });
     console.error("submitMyAIInterviewAnswer error:", err);
     return res.status(500).json({ message: "Failed to submit AI interview answer" });
   }
@@ -1650,12 +1837,25 @@ exports.getNextMyAIInterviewQuestion = async (req, res) => {
       transcript.find((entry) => Number(entry?.questionIndex) === currentQuestion.index && String(entry?.answer || "").trim())
     );
 
+    logAIInterviewServer(req, "next.requested", {
+      applicationId: String(app._id),
+      currentQuestionIndex: currentQuestion?.index ?? null,
+      currentQuestionId: currentQuestion?.id || null,
+      transcriptCount: transcript.length,
+      answeredCurrent
+    });
+
     if (!currentQuestion || !answeredCurrent) {
       return res.status(400).json({ message: "Submit an answer for the current question before moving ahead" });
     }
 
     const nextIndex = currentQuestion.index + 1;
     if (nextIndex >= (Array.isArray(app.aiInterview?.questionPlan) ? app.aiInterview.questionPlan.length : 0)) {
+      logAIInterviewServer(req, "next.completed", {
+        applicationId: String(app._id),
+        nextIndex,
+        questionPlanLength: Array.isArray(app.aiInterview?.questionPlan) ? app.aiInterview.questionPlan.length : 0
+      });
       return res.json({
         message: "AI interview question plan completed",
         completed: true,
@@ -1665,6 +1865,13 @@ exports.getNextMyAIInterviewQuestion = async (req, res) => {
 
     app.aiInterview.currentQuestionIndex = nextIndex;
     await app.save();
+    const nextQuestion = getAIInterviewQuestion(app, nextIndex);
+    logAIInterviewServer(req, "next.ready", {
+      applicationId: String(app._id),
+      nextIndex,
+      nextQuestionId: nextQuestion?.id || null,
+      nextQuestionPromptLength: String(nextQuestion?.prompt || "").length
+    });
 
     return res.json({
       message: "Next AI interview question ready",
@@ -1702,6 +1909,14 @@ exports.endMyAIInterview = async (req, res) => {
     let completedStatus = getCompletedAIInterviewStatus(reason, hasTranscript);
     const endedAt = new Date();
 
+    logAIInterviewServer(req, "end.requested", {
+      applicationId: String(app._id),
+      reason,
+      hasTranscript,
+      transcriptCount: transcript.length,
+      aiStatusBefore: app?.aiInterview?.status || "NOT_STARTED"
+    });
+
     let evaluation = null;
     try {
       if (hasTranscript && completedStatus !== "FAILED") {
@@ -1710,7 +1925,7 @@ exports.endMyAIInterview = async (req, res) => {
     } catch (evalErr) {
       app.aiInterview.lastError = evalErr.message || "Failed to evaluate AI interview";
       evaluation = null;
-      if (/GEMINI_API_KEY/i.test(String(evalErr.message || ""))) {
+      if (/(GEMINI_API_KEY|GROQ_API_KEY|Set GROQ_API_KEY or GEMINI_API_KEY)/i.test(String(evalErr.message || ""))) {
         completedStatus = "FAILED";
       }
     }
@@ -1776,6 +1991,10 @@ exports.endMyAIInterview = async (req, res) => {
       aiInterview: buildAIInterviewStudentPayload(app)
     });
   } catch (err) {
+    logAIInterviewServer(req, "end.error", {
+      applicationId: req.params.applicationId,
+      message: err.message
+    });
     console.error("endMyAIInterview error:", err);
     return res.status(500).json({ message: err.message || "Failed to end AI interview" });
   }

@@ -263,7 +263,7 @@ export default function Assessments() {
             <p className="font-semibold text-slate-900">
               {resultDialog?.jobId?.title || "Assessment"} {resultDialog?.jobId?.companyName ? `- ${resultDialog.jobId.companyName}` : ""}
             </p>
-            <p>Status: {Boolean(resultDialog?.assessment?.passed) ? "Passed" : "Completed"}</p>
+            <p>Status: {resultDialog?.assessment?.passed ? "Passed" : "Completed"}</p>
             <p>Score: {resultDialog?.assessment?.score || "N/A"}</p>
             <p>Date: {formatDateTime(getAssessmentDateValue(resultDialog))}</p>
           </div>

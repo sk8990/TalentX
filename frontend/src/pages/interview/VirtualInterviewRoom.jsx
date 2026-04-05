@@ -36,6 +36,13 @@ function nowInput(minutesAhead) {
   return new Date(date.getTime() - offset).toISOString().slice(0, 16);
 }
 
+function toUtcIso(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const parsed = new Date(raw);
+  return Number.isNaN(parsed.getTime()) ? "" : parsed.toISOString();
+}
+
 function loadSocketClient(serverOrigin) {
   return new Promise((resolve, reject) => {
     if (typeof window.io === "function") return resolve(window.io);
@@ -603,11 +610,18 @@ export default function VirtualInterviewRoom({ role, initialRoomData = null }) {
   const submitReschedule = async () => {
     try {
       setReschedule((prev) => ({ ...prev, submitting: true }));
+      const newDate = toUtcIso(reschedule.newDate);
+      const newEndDate = toUtcIso(reschedule.newEndDate);
+      if (!newDate || !newEndDate) {
+        toast.error("New interview time is invalid");
+        setReschedule((prev) => ({ ...prev, submitting: false }));
+        return;
+      }
       await API.post(`/interviewer/interviews/${applicationId}/reschedule`, {
         reason: reschedule.reason,
         notes: reschedule.notes,
-        newDate: reschedule.newDate,
-        newEndDate: reschedule.newEndDate
+        newDate,
+        newEndDate
       });
       toast.success("Interview rescheduled");
       await leaveRoom();

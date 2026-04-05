@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 export const RECOMMENDATION_OPTIONS = ["STRONG_YES", "YES", "MAYBE", "NO", "STRONG_NO"];
 
 export function getDefaultInterviewerFeedbackForm() {

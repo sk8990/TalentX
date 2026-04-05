@@ -80,7 +80,7 @@ export default function RecruiterDashboard() {
       <div className="rounded-3xl bg-gradient-to-r from-indigo-700 via-indigo-600 to-cyan-600 px-6 py-8 text-white sm:px-8">
         <h1 className="text-3xl font-bold">Recruiter Dashboard</h1>
         <p className="mt-2 max-w-xl text-sm text-indigo-100">
-          Track jobs, monitor candidate flow, and move your hiring pipeline faster.
+          Track jobs, monitor candidate flow, and review AI-led interview outcomes in one workspace.
         </p>
       </div>
 
@@ -92,7 +92,7 @@ export default function RecruiterDashboard() {
 
       <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="text-xl font-semibold text-slate-900">Quick Actions</h2>
-        <p className="mt-1 text-sm text-slate-500">Go directly to core recruiter workflows.</p>
+        <p className="mt-1 text-sm text-slate-500">Jump into job posting, candidate review, and AI interview management.</p>
         <div className="mt-5 flex flex-wrap gap-3">
           <Link
             to="/recruiter/jobs"
@@ -105,14 +105,7 @@ export default function RecruiterDashboard() {
             to="/recruiter/applications"
             className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
           >
-            Manage Applications
-          </Link>
-
-          <Link
-            to="/recruiter/interviewers"
-            className="rounded-xl bg-cyan-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-800"
-          >
-            Manage Interviewers
+            Review AI Interviews
           </Link>
 
           <Link

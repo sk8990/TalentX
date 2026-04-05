@@ -11,6 +11,7 @@ const {
   sendAssessment,
   updateAssessmentResult,
   scheduleInterview,
+  rescheduleInterview,
   publishInterviewSlots,
   bookInterviewSlot,
   selectCandidate,
@@ -116,6 +117,8 @@ router.put("/:applicationId/assessment", auth, role("recruiter"), sendAssessment
 router.put("/:applicationId/assessment/result", auth, role("recruiter"), updateAssessmentResult);
 
 router.put("/:applicationId/interview", auth, role("recruiter"), scheduleInterview);
+
+router.put("/:applicationId/interview/reschedule", auth, role("recruiter"), rescheduleInterview);
 
 router.put("/:applicationId/interview/slots", auth, role("recruiter"), publishInterviewSlots);
 

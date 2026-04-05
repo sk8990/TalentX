@@ -2,7 +2,6 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import WorkIcon from "@mui/icons-material/Work";
 import GroupsIcon from "@mui/icons-material/Groups";
-import PersonAddAltIcon from "@mui/icons-material/PersonAddAlt";
 import LogoutIcon from "@mui/icons-material/Logout";
 import SupportAgentIcon from "@mui/icons-material/SupportAgent";
 import NotificationBell from "../../components/NotificationBell";
@@ -52,10 +51,6 @@ export default function RecruiterLayout() {
               <GroupsIcon sx={{ fontSize: 18 }} />
               Applications
             </NavLink>
-            <NavLink to="/recruiter/interviewers" className={navItemClass}>
-              <PersonAddAltIcon sx={{ fontSize: 18 }} />
-              Interviewers
-            </NavLink>
             <NavLink to="/recruiter/support" className={navItemClass}>
               <SupportAgentIcon sx={{ fontSize: 18 }} />
               Support
@@ -96,7 +91,7 @@ export default function RecruiterLayout() {
                 </span>
               </button>
             </div>
-            <nav className="mt-4 grid grid-cols-5 gap-2">
+            <nav className="mt-4 grid grid-cols-4 gap-2">
               <NavLink to="/recruiter/dashboard" className={navItemClass}>
                 Dashboard
               </NavLink>
@@ -105,9 +100,6 @@ export default function RecruiterLayout() {
               </NavLink>
               <NavLink to="/recruiter/applications" className={navItemClass}>
                 Applications
-              </NavLink>
-              <NavLink to="/recruiter/interviewers" className={navItemClass}>
-                Interviewers
               </NavLink>
               <NavLink to="/recruiter/support" className={navItemClass}>
                 Support

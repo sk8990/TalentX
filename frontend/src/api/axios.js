@@ -1,6 +1,8 @@
 import axios from "axios";
 
-const DEFAULT_SERVER_ORIGIN = "https://talentx-dls1.onrender.com";
+const DEFAULT_SERVER_ORIGIN = import.meta.env.DEV
+  ? "http://localhost:5000"
+  : "https://talentx-dls1.onrender.com";
 const SERVER_ORIGIN = String(import.meta.env.VITE_SERVER_ORIGIN || DEFAULT_SERVER_ORIGIN)
   .trim()
   .replace(/\/+$/, "");

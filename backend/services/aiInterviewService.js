@@ -1,3 +1,4 @@
+const axios = require("axios");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const {
   buildDefaultAIInterviewConfig,
@@ -5,6 +6,33 @@ const {
 } = require("../utils/interviewLifecycle");
 
 const RECOMMENDATIONS = ["STRONG_YES", "YES", "MAYBE", "NO", "STRONG_NO"];
+const GROQ_STRICT_SCHEMA_MODELS = new Set(["openai/gpt-oss-20b", "openai/gpt-oss-120b"]);
+
+function logAIInterviewService(event, details = {}) {
+  console.info(`[AI-INTERVIEW-SVC] ${event}`, details);
+}
+
+function getAIInterviewProvider() {
+  const explicitProvider = String(process.env.AI_INTERVIEW_PROVIDER || "").trim().toUpperCase();
+  if (["GROQ", "GEMINI"].includes(explicitProvider)) {
+    return explicitProvider;
+  }
+
+  if (String(process.env.GROQ_API_KEY || "").trim()) {
+    return "GROQ";
+  }
+
+  if (String(process.env.GEMINI_API_KEY || "").trim()) {
+    return "GEMINI";
+  }
+
+  throw new Error("Set GROQ_API_KEY or GEMINI_API_KEY for AI interviewer");
+}
+
+function isAIInterviewConfigError(error) {
+  const message = String(error?.message || error || "").trim();
+  return /(GEMINI_API_KEY|GROQ_API_KEY|AI_INTERVIEW_PROVIDER|Set GROQ_API_KEY or GEMINI_API_KEY)/i.test(message);
+}
 
 function getGeminiModel() {
   const apiKey = String(process.env.GEMINI_API_KEY || "").trim();
@@ -13,8 +41,25 @@ function getGeminiModel() {
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const modelName = String(process.env.GEMINI_MODEL || "gemini-2.5-flash").trim();
+  const modelName = String(
+    process.env.GEMINI_INTERVIEW_MODEL || process.env.GEMINI_MODEL || "gemini-2.5-flash"
+  ).trim();
   return genAI.getGenerativeModel({ model: modelName });
+}
+
+function getGroqConfig() {
+  const apiKey = String(process.env.GROQ_API_KEY || "").trim();
+  if (!apiKey) {
+    throw new Error("GROQ_API_KEY is required for AI interviewer");
+  }
+
+  return {
+    apiKey,
+    modelName: String(
+      process.env.GROQ_INTERVIEW_MODEL || process.env.GROQ_MODEL || "openai/gpt-oss-20b"
+    ).trim(),
+    endpoint: String(process.env.GROQ_API_URL || "https://api.groq.com/openai/v1/chat/completions").trim()
+  };
 }
 
 function parseJsonFromText(text) {
@@ -160,13 +205,166 @@ function buildFallbackEvaluation(application) {
   };
 }
 
-async function generateStructuredContent(prompt) {
+function buildQuestionPlanSchema(questionCount) {
+  return {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      questions: {
+        type: "array",
+        minItems: questionCount,
+        maxItems: questionCount,
+        items: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            id: { type: "string" },
+            prompt: { type: "string" },
+            focusArea: { type: "string" }
+          },
+          required: ["id", "prompt", "focusArea"]
+        }
+      }
+    },
+    required: ["questions"]
+  };
+}
+
+function buildInterviewEvaluationSchema() {
+  return {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      summary: { type: "string" },
+      scores: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          communication: { type: "string", enum: ["1", "2", "3", "4", "5"] },
+          technicalKnowledge: { type: "string", enum: ["1", "2", "3", "4", "5"] },
+          problemSolving: { type: "string", enum: ["1", "2", "3", "4", "5"] },
+          roleFit: { type: "string", enum: ["1", "2", "3", "4", "5"] }
+        },
+        required: ["communication", "technicalKnowledge", "problemSolving", "roleFit"]
+      },
+      recommendation: { type: "string", enum: RECOMMENDATIONS },
+      finalReport: { type: "string" }
+    },
+    required: ["summary", "scores", "recommendation", "finalReport"]
+  };
+}
+
+async function generateGeminiStructuredContent(prompt) {
   const model = getGeminiModel();
+  logAIInterviewService("provider.request", {
+    provider: "GEMINI",
+    promptLength: String(prompt || "").length
+  });
   const result = await model.generateContent(prompt);
   const response = await result.response;
   const text = response.text();
   const parsed = parseJsonFromText(text);
+  logAIInterviewService("provider.response", {
+    provider: "GEMINI",
+    textLength: String(text || "").length,
+    parsed: Boolean(parsed)
+  });
   return { text, parsed };
+}
+
+function getGroqResponseFormat(modelName, schemaName, schema) {
+  if (!schemaName || !schema) {
+    return { type: "json_object" };
+  }
+
+  if (GROQ_STRICT_SCHEMA_MODELS.has(String(modelName || "").trim())) {
+    return {
+      type: "json_schema",
+      json_schema: {
+        name: schemaName,
+        strict: true,
+        schema
+      }
+    };
+  }
+
+  return { type: "json_object" };
+}
+
+function extractGroqTextContent(content) {
+  if (typeof content === "string") {
+    return content;
+  }
+
+  if (Array.isArray(content)) {
+    return content
+      .map((part) => String(part?.text || part?.content || "").trim())
+      .filter(Boolean)
+      .join("\n");
+  }
+
+  return "";
+}
+
+async function generateGroqStructuredContent({ prompt, schemaName, schema }) {
+  const { apiKey, modelName, endpoint } = getGroqConfig();
+  logAIInterviewService("provider.request", {
+    provider: "GROQ",
+    modelName,
+    schemaName: schemaName || "",
+    promptLength: String(prompt || "").length
+  });
+  const response = await axios.post(
+    endpoint,
+    {
+      model: modelName,
+      temperature: 0.2,
+      max_tokens: 1600,
+      messages: [
+        {
+          role: "system",
+          content: "You are the TalentX AI interviewer backend. Return only valid JSON. Do not use markdown, code fences, or commentary."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      response_format: getGroqResponseFormat(modelName, schemaName, schema)
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      timeout: Number(process.env.AI_INTERVIEW_TIMEOUT_MS || 60000)
+    }
+  );
+
+  const text = extractGroqTextContent(response?.data?.choices?.[0]?.message?.content);
+  const parsed = parseJsonFromText(text);
+  logAIInterviewService("provider.response", {
+    provider: "GROQ",
+    modelName,
+    schemaName: schemaName || "",
+    textLength: String(text || "").length,
+    parsed: Boolean(parsed)
+  });
+  return { text, parsed };
+}
+
+async function generateStructuredContent({ prompt, schemaName, schema }) {
+  const provider = getAIInterviewProvider();
+  logAIInterviewService("provider.selected", {
+    provider,
+    schemaName: schemaName || ""
+  });
+
+  if (provider === "GROQ") {
+    return generateGroqStructuredContent({ prompt, schemaName, schema });
+  }
+
+  return generateGeminiStructuredContent(prompt);
 }
 
 async function generateInterviewQuestionPlan(application) {
@@ -209,8 +407,19 @@ Job context:
 - About company: ${context.aboutCompany || "N/A"}
 `;
 
-  const { parsed } = await generateStructuredContent(prompt);
-  return normalizeQuestionPlan(parsed, context);
+  try {
+    const { parsed } = await generateStructuredContent({
+      prompt,
+      schemaName: "interview_question_plan",
+      schema: buildQuestionPlanSchema(context.config.questionCount)
+    });
+    return normalizeQuestionPlan(parsed, context);
+  } catch (err) {
+    if (isAIInterviewConfigError(err)) {
+      throw err;
+    }
+    return buildFallbackQuestionPlan(context);
+  }
 }
 
 async function evaluateInterview(application) {
@@ -258,12 +467,16 @@ Resume summary: ${context.resumeSummary || "N/A"}
 Question plan:
 ${questionPlan.map((item, index) => `${index + 1}. ${item.prompt} [${item.focusArea}]`).join("\n")}
 
-Transcript:
+  Transcript:
 ${transcriptText || "No transcript captured."}
 `;
 
   try {
-    const { parsed } = await generateStructuredContent(prompt);
+    const { parsed } = await generateStructuredContent({
+      prompt,
+      schemaName: "interview_evaluation",
+      schema: buildInterviewEvaluationSchema()
+    });
     if (!parsed || typeof parsed !== "object") {
       return buildFallbackEvaluation(application);
     }
@@ -281,7 +494,7 @@ ${transcriptText || "No transcript captured."}
       finalReport: String(parsed.finalReport || parsed.summary || "").trim()
     };
   } catch (err) {
-    if (/GEMINI_API_KEY/i.test(String(err.message || ""))) {
+    if (isAIInterviewConfigError(err)) {
       throw err;
     }
     return buildFallbackEvaluation(application);

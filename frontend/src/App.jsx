@@ -19,7 +19,6 @@ import StudentFAQ from "./student/StudentFAQ";
 import AdminSupport from "./admin/AdminSupport";
 import RecruiterApplications from "./pages/recruiter/RecruiterApplications";
 import RecruiterSupport from "./pages/recruiter/RecruiterSupport";
-import RecruiterInterviewers from "./pages/recruiter/RecruiterInterviewers";
 import InterviewerLayout from "./pages/interviewer/InterviewerLayout";
 import InterviewerPanel from "./pages/interviewer/InterviewerPanel";
 import InterviewerResetPassword from "./pages/interviewer/InterviewerResetPassword";
@@ -65,12 +64,20 @@ export default function App() {
             <Route path="jobs" element={<JobProfiles />} />
             <Route path="profile" element={<MyProfile />} />
             <Route path="interviews" element={<Interviews />} />
-            <Route path="interviews/:applicationId/room" element={<StudentInterviewRoom />} />
             <Route path="assessments" element={<Assessments />} />
             <Route path="applications" element={<MyApplications />} />
             <Route path="support" element={<StudentSupport />} />
             <Route path="faq" element={<StudentFAQ />} />
           </Route>
+
+          <Route
+            path="/student/interviews/:applicationId/room"
+            element={
+              <ProtectedRoute role="student">
+                <StudentInterviewRoom />
+              </ProtectedRoute>
+            }
+          />
 
           {/* RECRUITER */}
           <Route
@@ -85,7 +92,6 @@ export default function App() {
             <Route path="dashboard" element={<RecruiterDashboard />} />
             <Route path="jobs" element={<RecruiterJobs />} />
             <Route path="applications" element={<RecruiterApplications />} />
-            <Route path="interviewers" element={<RecruiterInterviewers />} />
             <Route path="support" element={<RecruiterSupport />} />
           </Route>
 

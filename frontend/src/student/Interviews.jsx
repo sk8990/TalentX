@@ -7,6 +7,18 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle } from "@mui/material";
 import toast from "react-hot-toast";
 
+async function requestFullscreenIfPossible() {
+  const target = document.documentElement;
+  const fn = target.requestFullscreen || target.webkitRequestFullscreen;
+  if (!fn) return;
+
+  try {
+    await fn.call(target);
+  } catch {
+    // Fullscreen can be denied by the browser; navigation should still continue.
+  }
+}
+
 export default function Interviews() {
   const navigate = useNavigate();
   const [interviews, setInterviews] = useState([]);
@@ -107,11 +119,13 @@ export default function Interviews() {
     closeBookingDialog();
   };
 
-  const joinInterview = (applicationId) => {
+  const joinInterview = async (applicationId) => {
     if (!applicationId) {
       toast.error("Interview room is unavailable");
       return;
     }
+
+    await requestFullscreenIfPossible();
     navigate(`/student/interviews/${applicationId}/room`);
   };
 
@@ -326,9 +340,10 @@ function InterviewCard({ app, onJoin, past, nowMs }) {
   const isOnline = String(interview?.mode || "").trim().toLowerCase() === "online";
   const canAccessRoom = Boolean(isOnline && inRoomWindow);
   const canJoin = canAccessRoom;
+  const interviewStartValue = interview?.date || 0;
   const countdown = Math.max(
     0,
-    Math.floor((new Date(interview?.date || Date.now()).getTime() - nowMs) / 1000)
+    Math.floor((new Date(interviewStartValue).getTime() - nowMs) / 1000)
   );
   const companyName = app.jobId?.companyName?.trim() || "";
   const jobTitle = app.jobId?.title || "Job Title";
@@ -483,5 +498,5 @@ function buildCalendarUrl({ title, start, end, mode, link }) {
 }
 
 function formatPanelType(value) {
-  return String(value || "HUMAN").trim().toUpperCase() === "AI" ? "AI Interview" : "Human Interview";
+  return String(value || "HUMAN").trim().toUpperCase() === "AI" ? "AI Interview Panel" : "Human Interview";
 }
