@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import API from "../api/axios";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import WorkIcon from "@mui/icons-material/Work";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
@@ -11,6 +12,9 @@ import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import RecommendIcon from "@mui/icons-material/Recommend";
 import NavigateBeforeIcon from "@mui/icons-material/NavigateBefore";
 import NavigateNextIcon from "@mui/icons-material/NavigateNext";
+import BadgeOutlinedIcon from "@mui/icons-material/BadgeOutlined";
+import LaunchRoundedIcon from "@mui/icons-material/LaunchRounded";
+import { clearStoredOnboardingInstanceId } from "../onboarding/session";
 
 const statusColors = {
   APPLIED: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
@@ -18,7 +22,7 @@ const statusColors = {
   ASSESSMENT_SENT: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300",
   ASSESSMENT_PASSED: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
   ASSESSMENT_FAILED: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
-  INTERVIEW_SCHEDULED: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
+  INTERVIEW_SCHEDULED: "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300",
   SELECTED: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
   REJECTED: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300",
 };
@@ -27,6 +31,7 @@ export default function StudentDashboard() {
   const [data, setData] = useState(null);
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [launchingOnboarding, setLaunchingOnboarding] = useState(false);
   const [timelinePage, setTimelinePage] = useState(1);
   const [recommendationPage, setRecommendationPage] = useState(1);
   const navigate = useNavigate();
@@ -82,23 +87,39 @@ export default function StudentDashboard() {
   const visibleRecommendations = recommendations.slice(recommendationStart, recommendationStart + RECOMMENDATION_PAGE_SIZE);
 
   const statCards = [
-    { label: "Applied", value: stats.totalApplied, icon: WorkIcon, color: "from-blue-500 to-blue-600" },
-    { label: "Shortlisted", value: stats.shortlisted, icon: AssignmentIcon, color: "from-indigo-500 to-indigo-600" },
-    { label: "Interviews", value: stats.interviewScheduled, icon: EventIcon, color: "from-purple-500 to-purple-600" },
-    { label: "Selected", value: stats.selected, icon: CheckCircleIcon, color: "from-emerald-500 to-emerald-600" },
-    { label: "Rejected", value: stats.rejected, icon: CancelIcon, color: "from-rose-500 to-rose-600" },
-    { label: "Assessments", value: stats.assessmentPending, icon: TrendingUpIcon, color: "from-amber-500 to-amber-600" },
+    { label: "Applied", value: stats.totalApplied, icon: WorkIcon, tone: "bg-blue-50 text-blue-700" },
+    { label: "Shortlisted", value: stats.shortlisted, icon: AssignmentIcon, tone: "bg-indigo-50 text-indigo-700" },
+    { label: "Interviews", value: stats.interviewScheduled, icon: EventIcon, tone: "bg-sky-50 text-sky-700" },
+    { label: "Selected", value: stats.selected, icon: CheckCircleIcon, tone: "bg-emerald-50 text-emerald-700" },
+    { label: "Rejected", value: stats.rejected, icon: CancelIcon, tone: "bg-rose-50 text-rose-700" },
+    { label: "Assessments", value: stats.assessmentPending, icon: TrendingUpIcon, tone: "bg-amber-50 text-amber-700" },
   ];
+
+  const launchOnboarding = async () => {
+    setLaunchingOnboarding(true);
+    try {
+      clearStoredOnboardingInstanceId();
+      const response = await API.post("/onboarding/init");
+      navigate(response.data?.redirectUrl || "/onboarding");
+    } catch (err) {
+      console.error("Onboarding init error:", err);
+      toast.error(err.response?.data?.message || "Unable to launch onboarding right now");
+    } finally {
+      setLaunchingOnboarding(false);
+    }
+  };
 
   return (
     <div className="space-y-6 sm:space-y-8">
       {/* Header */}
-      <section className="rounded-2xl bg-gradient-to-r from-indigo-700 via-indigo-600 to-cyan-600 px-5 py-6 text-white sm:rounded-3xl sm:px-8 sm:py-8">
+      <section className="tx-page-header px-5 py-6 sm:px-8 sm:py-8">
         <div className="flex items-center gap-3">
-          <DashboardIcon sx={{ fontSize: 24 }} className="sm:!text-[28px]" />
+          <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-[#eef3ff] text-[#243b95]">
+            <DashboardIcon sx={{ fontSize: 24 }} className="sm:!text-[28px]" />
+          </span>
           <div>
-            <h1 className="text-2xl font-bold sm:text-3xl">Dashboard</h1>
-            <p className="mt-1 text-xs text-indigo-100 sm:text-sm">
+            <h1 className="text-2xl font-bold text-slate-950 sm:text-3xl">Dashboard</h1>
+            <p className="mt-1 text-xs text-slate-500 sm:text-sm">
               Welcome back, {data.student?.userId?.name || "Student"}! Here&apos;s your placement overview.
             </p>
           </div>
@@ -110,20 +131,82 @@ export default function StudentDashboard() {
         {statCards.map((card) => (
           <div
             key={card.label}
-            className={`rounded-xl bg-gradient-to-br ${card.color} p-3.5 text-white shadow-lg transition hover:scale-105 sm:rounded-2xl sm:p-4`}
+            className="tx-card p-3.5 transition hover:-translate-y-0.5 hover:shadow-[var(--tx-shadow-card)] sm:p-4"
           >
-            <card.icon sx={{ fontSize: 18 }} className="sm:!text-[20px]" />
-            <p className="mt-1.5 text-xl font-bold sm:mt-2 sm:text-2xl">{card.value}</p>
-            <p className="text-[0.65rem] font-medium opacity-90 sm:text-xs">{card.label}</p>
+            <span className={`inline-flex h-9 w-9 items-center justify-center rounded-xl ${card.tone}`}>
+              <card.icon sx={{ fontSize: 18 }} className="sm:!text-[20px]" />
+            </span>
+            <p className="mt-3 text-xl font-bold text-slate-950 sm:text-2xl">{card.value}</p>
+            <p className="text-[0.65rem] font-medium text-slate-500 sm:text-xs">{card.label}</p>
           </div>
         ))}
       </section>
+
+      {data.offers?.length > 0 && (
+        <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h2 className="flex items-center gap-2 text-xl font-semibold text-slate-950">
+                <BadgeOutlinedIcon sx={{ fontSize: 22 }} className="text-indigo-600" />
+                Onboarding Ready
+              </h2>
+              <p className="mt-2 text-sm text-slate-500">
+                Launch the onboarding portal for your active offers. If you have multiple offers, TalentX will let you choose the company first.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={launchOnboarding}
+              disabled={launchingOnboarding}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <LaunchRoundedIcon sx={{ fontSize: 18 }} />
+              {launchingOnboarding ? "Launching..." : "Open Onboarding Portal"}
+            </button>
+          </div>
+
+          <div className="mt-5 grid gap-4 xl:grid-cols-3">
+            {data.offers.map((offerItem) => (
+              <div key={offerItem._id} className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-center gap-3">
+                  {offerItem.jobId?.companyLogo && (
+                    <img
+                      src={offerItem.jobId.companyLogo}
+                      alt={offerItem.jobId?.companyName}
+                      className="h-12 w-12 rounded-2xl border border-slate-200 bg-white object-cover"
+                    />
+                  )}
+                  <div className="min-w-0">
+                    <p className="truncate text-lg font-semibold text-slate-900">{offerItem.jobId?.title || "Offer"}</p>
+                    <p className="truncate text-sm text-slate-500">{offerItem.jobId?.companyName || "Company"}</p>
+                  </div>
+                </div>
+
+                <div className="mt-4 space-y-2 text-sm text-slate-600">
+                  <p>Salary: {offerItem.offer?.salary || "Not available"}</p>
+                  <p>Location: {offerItem.offer?.location || "Not available"}</p>
+                  <p>Joining Date: {offerItem.offer?.joiningDate ? new Date(offerItem.offer.joiningDate).toLocaleDateString() : "Not available"}</p>
+                </div>
+
+                <span className={`mt-4 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+                  offerItem.offer?.status === "ACCEPTED"
+                    ? "bg-emerald-100 text-emerald-700"
+                    : "bg-amber-100 text-amber-700"
+                }`}>
+                  Offer {offerItem.offer?.status || "PENDING"}
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <div className="grid grid-cols-1 gap-5 sm:gap-6 lg:grid-cols-2">
         {/* Upcoming Interviews */}
         <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:rounded-2xl sm:p-6">
           <h2 className="mb-3 flex items-center gap-2 text-base font-bold text-slate-900 dark:text-slate-100 sm:mb-4 sm:text-lg">
-            <EventIcon sx={{ fontSize: 20 }} className="text-purple-600" />
+            <EventIcon sx={{ fontSize: 20 }} className="text-[#243b95]" />
             Upcoming Interviews
           </h2>
           {upcomingInterviews.length === 0 ? (
@@ -141,7 +224,7 @@ export default function StudentDashboard() {
                   <p className="text-xs text-slate-500 dark:text-slate-400">
                     {item.jobId?.companyName} • {item.interview?.mode}
                   </p>
-                  <p className="mt-1 text-sm font-medium text-purple-700 dark:text-purple-400">
+                  <p className="mt-1 text-sm font-medium text-[#243b95]">
                     {new Date(item.interview?.date).toLocaleString()}
                   </p>
                   {item.interview?.link && (
@@ -282,7 +365,7 @@ export default function StudentDashboard() {
                     <span>Updated: {new Date(app.updatedAt).toLocaleDateString()}</span>
                   </div>
                   {app.interview?.date && (
-                    <p className="mt-1 text-xs text-purple-600 dark:text-purple-400">
+                    <p className="mt-1 text-xs text-[#243b95]">
                       Interview: {new Date(app.interview.date).toLocaleString()} ({app.interview.mode})
                     </p>
                   )}

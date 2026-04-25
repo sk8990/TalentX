@@ -82,9 +82,9 @@ export default function InterviewerPanel() {
 
   return (
     <div className="space-y-5 sm:space-y-6">
-      <section className="rounded-2xl bg-gradient-to-r from-indigo-700 via-indigo-600 to-cyan-600 px-5 py-6 text-white sm:rounded-3xl sm:px-8 sm:py-8">
-        <h1 className="text-2xl font-bold sm:text-3xl">Interviewer Panel</h1>
-        <p className="mt-1 text-xs text-indigo-100 sm:mt-2 sm:text-sm">Review your assigned interviews and submit candidate evaluation.</p>
+      <section className="tx-page-header px-5 py-6 sm:px-8 sm:py-8">
+        <h1 className="text-2xl font-bold text-slate-950 sm:text-3xl">Interviewer Panel</h1>
+        <p className="mt-1 text-xs text-slate-500 sm:mt-2 sm:text-sm">Review your assigned interviews and submit candidate evaluation.</p>
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:rounded-3xl sm:p-4">
@@ -95,8 +95,8 @@ export default function InterviewerPanel() {
               onClick={() => setActiveBucket(bucket)}
               className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
                 activeBucket === bucket
-                  ? "bg-indigo-600 text-white"
-                  : "bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
+                  ? "bg-[#243b95] text-white"
+                  : "bg-slate-100 text-slate-700 hover:bg-[#eef3ff] hover:text-[#243b95] dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
               }`}
             >
               {bucket[0].toUpperCase() + bucket.slice(1)}

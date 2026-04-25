@@ -209,6 +209,46 @@ const emailTemplates = {
       `,
     };
   },
+
+  onboardingDocumentsApproved(studentName, companyName) {
+    return {
+      subject: `Onboarding Documents Approved - ${companyName}`,
+      html: `
+        <div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 32px;">
+          <div style="background: linear-gradient(135deg, #10b981, #059669); border-radius: 16px; padding: 32px; color: white;">
+            <h1 style="margin: 0;">Documents Approved! ✅</h1>
+          </div>
+          <div style="padding: 24px 0;">
+            <p>Hi <strong>${studentName}</strong>,</p>
+            <p>Great news! Your onboarding documents for <strong>${companyName}</strong> have been reviewed and approved.</p>
+            <p>You can now log in to the TalentX portal to proceed with your pre-joining steps.</p>
+          </div>
+        </div>
+      `,
+    };
+  },
+
+  onboardingDocumentsRejected(studentName, companyName, rejectionReason) {
+    return {
+      subject: `Action Required: Onboarding Documents - ${companyName}`,
+      html: `
+        <div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 32px;">
+          <div style="background: linear-gradient(135deg, #ef4444, #b91c1c); border-radius: 16px; padding: 32px; color: white;">
+            <h1 style="margin: 0;">Action Required ⚠️</h1>
+          </div>
+          <div style="padding: 24px 0;">
+            <p>Hi <strong>${studentName}</strong>,</p>
+            <p>There is an issue with the onboarding documents you submitted for <strong>${companyName}</strong>.</p>
+            <p><strong>Reviewer Notes:</strong></p>
+            <blockquote style="border-left: 4px solid #ef4444; padding-left: 16px; margin-left: 0; color: #475569;">
+              ${rejectionReason}
+            </blockquote>
+            <p>Please log in to the TalentX portal to resubmit the corrected documents.</p>
+          </div>
+        </div>
+      `,
+    };
+  },
 };
 
 module.exports = { sendEmail, emailTemplates };

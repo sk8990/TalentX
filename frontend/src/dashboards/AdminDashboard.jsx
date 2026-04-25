@@ -312,18 +312,18 @@ export default function AdminDashboard() {
   return (
     <>
       <div className="space-y-5 sm:space-y-6">
-      <header className="rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-800 to-cyan-700 p-5 text-white shadow-xl sm:rounded-3xl sm:p-6 md:p-8">
+      <header className="tx-page-header p-5 sm:p-6 md:p-8">
         <div className="flex flex-wrap items-start justify-between gap-3 sm:gap-4">
           <div>
-            <h1 className="text-2xl font-bold sm:text-3xl md:text-4xl">Admin Dashboard</h1>
-            <p className="mt-1 max-w-xl text-xs text-slate-200 sm:mt-2 sm:text-sm">
+            <h1 className="text-2xl font-bold text-slate-950 sm:text-3xl md:text-4xl">Admin Dashboard</h1>
+            <p className="mt-1 max-w-xl text-xs text-slate-500 sm:mt-2 sm:text-sm">
               Review platform health, user activity, recruiter approvals, and support operations.
             </p>
             </div>
             <div className="flex gap-2">
               <button
                 onClick={fetchData}
-                className="rounded-xl border border-white/30 bg-white/10 px-4 py-2 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20"
+                className="tx-button-secondary px-4 py-2 text-sm"
               >
                 <span className="inline-flex items-center gap-1">
                   <RefreshIcon sx={{ fontSize: 16 }} />
@@ -819,17 +819,17 @@ function safeJSONStringify(value) {
 
 function StatCard({ label, value, tone, icon: Icon }) {
   const toneMap = {
-    sky: "from-sky-50 to-sky-100 text-sky-700 dark:from-sky-900/30 dark:to-sky-800/30 dark:text-sky-300",
-    indigo: "from-indigo-50 to-indigo-100 text-indigo-700 dark:from-indigo-900/30 dark:to-indigo-800/30 dark:text-indigo-300",
-    emerald: "from-emerald-50 to-emerald-100 text-emerald-700 dark:from-emerald-900/30 dark:to-emerald-800/30 dark:text-emerald-300",
-    amber: "from-amber-50 to-amber-100 text-amber-700 dark:from-amber-900/30 dark:to-amber-800/30 dark:text-amber-300",
-    rose: "from-rose-50 to-rose-100 text-rose-700 dark:from-rose-900/30 dark:to-rose-800/30 dark:text-rose-300",
+    sky: "bg-sky-50 text-sky-700",
+    indigo: "bg-indigo-50 text-indigo-700",
+    emerald: "bg-emerald-50 text-emerald-700",
+    amber: "bg-amber-50 text-amber-700",
+    rose: "bg-rose-50 text-rose-700",
   };
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:rounded-2xl sm:p-4">
+    <div className="tx-card p-3 sm:p-4">
       <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 sm:text-xs">{label}</p>
-      <div className={`mt-2 rounded-lg bg-gradient-to-br px-3 py-3 sm:mt-3 sm:rounded-xl sm:py-4 ${toneMap[tone] || toneMap.indigo}`}>
+      <div className={`mt-2 rounded-lg px-3 py-3 sm:mt-3 sm:rounded-xl sm:py-4 ${toneMap[tone] || toneMap.indigo}`}>
         <p className="inline-flex items-center gap-1.5 text-xl font-bold sm:gap-2 sm:text-2xl">
           {Icon ? <Icon sx={{ fontSize: 20 }} /> : null}
           {value}
@@ -845,8 +845,8 @@ function TabButton({ active, onClick, children }) {
       onClick={onClick}
       className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
         active
-          ? "bg-indigo-600 text-white"
-          : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+          ? "bg-[#243b95] text-white"
+          : "bg-slate-100 text-slate-700 hover:bg-[#eef3ff] hover:text-[#243b95]"
       }`}
     >
       {children}

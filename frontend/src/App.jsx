@@ -21,6 +21,7 @@ import StudentFAQ from "./student/StudentFAQ";
 import AdminSupport from "./admin/AdminSupport";
 import RecruiterApplications from "./pages/recruiter/RecruiterApplications";
 import RecruiterSupport from "./pages/recruiter/RecruiterSupport";
+import RecruiterOnboardingReviews from "./pages/recruiter/RecruiterOnboardingReviews";
 import InterviewerLayout from "./pages/interviewer/InterviewerLayout";
 import InterviewerPanel from "./pages/interviewer/InterviewerPanel";
 import InterviewerResetPassword from "./pages/interviewer/InterviewerResetPassword";
@@ -29,6 +30,7 @@ import StudentInterviewRoom from "./pages/interview/StudentInterviewRoom";
 import { Toaster } from "react-hot-toast";
 import LandingPage from "./pages/LandingPage";
 import { ThemeProvider } from "./utils/ThemeContext";
+import OnboardingPortal from "./onboarding/OnboardingPortal";
 
 export default function App() {
   return (
@@ -80,6 +82,7 @@ export default function App() {
               </PublicRoute>
             }
           />
+          <Route path="/onboarding" element={<OnboardingPortal />} />
 
           {/* STUDENT */}
           <Route
@@ -123,6 +126,7 @@ export default function App() {
             <Route path="dashboard" element={<RecruiterDashboard />} />
             <Route path="jobs" element={<RecruiterJobs />} />
             <Route path="applications" element={<RecruiterApplications />} />
+            <Route path="onboarding" element={<RecruiterOnboardingReviews />} />
             <Route path="support" element={<RecruiterSupport />} />
           </Route>
 

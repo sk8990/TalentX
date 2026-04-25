@@ -64,7 +64,7 @@ export default function Register() {
   };
 
   const fieldClass =
-    "mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 sm:py-3 sm:text-base";
+    "mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-[#243b95] focus:ring-4 focus:ring-[#eef3ff] sm:py-3 sm:text-base";
 
   const registerSelectMenuProps = {
     PaperProps: {
@@ -103,10 +103,10 @@ export default function Register() {
       borderRadius: "0.75rem",
     },
     "&:hover .MuiOutlinedInput-notchedOutline": {
-      borderColor: "#a5b4fc",
+      borderColor: "#314db8",
     },
     "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-      borderColor: "#6366f1",
+      borderColor: "#243b95",
       borderWidth: "2px",
     },
     "& .MuiSelect-select": {
@@ -126,18 +126,18 @@ export default function Register() {
 
   return (
     <motion.div
-      className="relative flex min-h-[100dvh] items-center justify-center overflow-hidden bg-gradient-to-br from-slate-100 via-white to-indigo-50 px-4 py-6 sm:px-6 sm:py-10"
+      className="relative flex min-h-[100dvh] items-center justify-center overflow-hidden bg-[#f4f6fb] px-4 py-6 sm:px-6 sm:py-10"
       initial={reduceMotion ? false : "hidden"}
       animate={reduceMotion ? undefined : "visible"}
       variants={authPageVariants}
     >
       {/* Background gradient blobs */}
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_80%,rgba(79,70,229,0.12),transparent_35%),radial-gradient(circle_at_70%_20%,rgba(59,130,246,0.1),transparent_32%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_80%,rgba(36,59,149,0.12),transparent_35%),radial-gradient(circle_at_70%_20%,rgba(14,165,233,0.10),transparent_32%)]" />
 
       <div className="relative mx-auto grid w-full max-w-[72rem] grid-cols-1 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl sm:rounded-3xl lg:grid-cols-2">
         {/* ── Sidebar (desktop) ── */}
         <motion.aside
-          className="hidden bg-gradient-to-br from-indigo-700 via-indigo-600 to-cyan-600 p-8 text-white lg:flex lg:flex-col lg:justify-between lg:p-10"
+          className="hidden bg-gradient-to-br from-[#243b95] via-[#314db8] to-[#1d2f80] p-8 text-white lg:flex lg:flex-col lg:justify-between lg:p-10"
           initial={reduceMotion ? false : "hidden"}
           animate={reduceMotion ? undefined : "visible"}
           variants={authSidebarVariants}
@@ -189,7 +189,7 @@ export default function Register() {
           <div className="mx-auto w-full max-w-md">
             {/* Mobile branding */}
             <motion.div variants={authItemVariants} className="mb-5 lg:hidden">
-              <div className="inline-flex rounded-xl bg-indigo-50 px-3 py-2.5 text-indigo-900">
+              <div className="inline-flex rounded-xl bg-[#eef3ff] px-3 py-2.5 text-[#243b95]">
                 <TalentXBrand theme="light" size="sm" />
               </div>
             </motion.div>
@@ -280,7 +280,7 @@ export default function Register() {
                 disabled={loading}
                 whileHover={reduceMotion ? undefined : { y: -2 }}
                 whileTap={reduceMotion ? undefined : { scale: 0.99 }}
-                className="w-full rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white transition-all duration-200 hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-200 focus:outline-none focus:ring-4 focus:ring-indigo-200 disabled:cursor-not-allowed disabled:opacity-70 sm:py-3"
+                className="w-full rounded-xl bg-[#243b95] px-4 py-2.5 text-sm font-bold text-white transition-all duration-200 hover:bg-[#1d2f80] hover:shadow-lg hover:shadow-[#243b95]/20 focus:outline-none focus:ring-4 focus:ring-[#eef3ff] disabled:cursor-not-allowed disabled:opacity-70 sm:py-3"
               >
                 {loading ? "Creating account..." : "Register"}
               </motion.button>
@@ -289,13 +289,13 @@ export default function Register() {
             <motion.div variants={authItemVariants} className="mt-5 space-y-1.5 sm:mt-6 sm:space-y-2">
               <p className="text-sm text-slate-600">
                 Already have an account?{" "}
-                <Link to={LOGIN_ROUTE} className="font-semibold text-indigo-600 hover:text-indigo-700 hover:underline">
+                <Link to={LOGIN_ROUTE} className="font-semibold text-[#243b95] hover:text-[#1d2f80] hover:underline">
                   Login
                 </Link>
               </p>
               <p className="text-sm text-slate-600">
                 Explore the platform{" "}
-                <Link to="/" className="font-semibold text-indigo-600 hover:text-indigo-700 hover:underline">
+                <Link to="/" className="font-semibold text-[#243b95] hover:text-[#1d2f80] hover:underline">
                   TalentX Home
                 </Link>
               </p>

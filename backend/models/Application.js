@@ -117,7 +117,8 @@ const applicationSchema = new mongoose.Schema(
         enum: ["PENDING", "ACCEPTED", "DECLINED"],
         default: "PENDING"
       },
-      pdfPath: String
+      pdfPath: String,
+      acceptedAt: Date
     },
 
     interviewerAssignment: {

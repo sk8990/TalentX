@@ -68,7 +68,7 @@ export default function ApplyJobModal({ jobId, onClose }) {
           <button
             onClick={submitApplication}
             disabled={loading}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg"
+            className="rounded-lg bg-[#243b95] px-4 py-2 text-white transition hover:bg-[#1d2f80]"
           >
             {loading ? "Submitting..." : "Apply"}
           </button>

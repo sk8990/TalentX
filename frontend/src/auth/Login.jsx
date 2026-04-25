@@ -57,18 +57,18 @@ export default function Login() {
 
   return (
     <motion.div
-      className="relative flex min-h-[100dvh] items-center justify-center overflow-hidden bg-slate-100 px-4 py-6 sm:px-6 sm:py-10"
+      className="relative flex min-h-[100dvh] items-center justify-center overflow-hidden bg-[#f4f6fb] px-4 py-6 sm:px-6 sm:py-10"
       initial={reduceMotion ? false : "hidden"}
       animate={reduceMotion ? undefined : "visible"}
       variants={authPageVariants}
     >
       {/* Background gradient blobs */}
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(79,70,229,0.18),transparent_35%),radial-gradient(circle_at_80%_10%,rgba(59,130,246,0.15),transparent_32%),radial-gradient(circle_at_60%_80%,rgba(14,165,233,0.14),transparent_36%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(36,59,149,0.14),transparent_35%),radial-gradient(circle_at_80%_10%,rgba(49,77,184,0.12),transparent_32%),radial-gradient(circle_at_60%_80%,rgba(14,165,233,0.10),transparent_36%)]" />
 
       <div className="relative mx-auto grid w-full max-w-[72rem] grid-cols-1 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl sm:rounded-3xl lg:grid-cols-2">
         {/* ── Sidebar (desktop) ── */}
         <motion.section
-          className="hidden bg-gradient-to-br from-[#4f2df4] via-[#3f63df] to-[#1588db] p-8 text-white lg:flex lg:flex-col lg:justify-between lg:p-12"
+          className="hidden bg-gradient-to-br from-[#243b95] via-[#314db8] to-[#1d2f80] p-8 text-white lg:flex lg:flex-col lg:justify-between lg:p-12"
           initial={reduceMotion ? false : "hidden"}
           animate={reduceMotion ? undefined : "visible"}
           variants={authSidebarVariants}
@@ -132,7 +132,7 @@ export default function Login() {
         >
           {/* Mobile branding */}
           <motion.div variants={authItemVariants} className="mb-6 lg:hidden">
-            <div className="inline-flex rounded-xl bg-indigo-50 px-3 py-2.5 text-indigo-900">
+            <div className="inline-flex rounded-xl bg-[#eef3ff] px-3 py-2.5 text-[#243b95]">
               <TalentXBrand theme="light" size="sm" />
             </div>
           </motion.div>
@@ -166,7 +166,7 @@ export default function Login() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 placeholder="you@example.com"
-                className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 sm:py-3 sm:text-base"
+                className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none transition focus:border-[#243b95] focus:ring-4 focus:ring-[#eef3ff] sm:py-3 sm:text-base"
               />
             </motion.div>
 
@@ -182,7 +182,7 @@ export default function Login() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   placeholder="At least 8 characters"
-                  className="w-full rounded-xl border border-slate-300 px-4 py-2.5 pr-12 text-sm text-slate-800 placeholder-slate-400 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 sm:py-3 sm:text-base"
+                  className="w-full rounded-xl border border-slate-300 px-4 py-2.5 pr-12 text-sm text-slate-800 placeholder-slate-400 outline-none transition focus:border-[#243b95] focus:ring-4 focus:ring-[#eef3ff] sm:py-3 sm:text-base"
                 />
                 <button
                   type="button"
@@ -204,7 +204,7 @@ export default function Login() {
                 <input type="checkbox" className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
                 Remember me
               </label>
-              <Link to="/forgot-password" className="text-sm font-semibold text-indigo-700 hover:text-indigo-900">
+              <Link to="/forgot-password" className="text-sm font-semibold text-[#243b95] hover:text-[#1d2f80]">
                 Forgot password?
               </Link>
             </motion.div>
@@ -215,7 +215,7 @@ export default function Login() {
               disabled={isLoading}
               whileHover={reduceMotion ? undefined : { y: -2 }}
               whileTap={reduceMotion ? undefined : { scale: 0.99 }}
-              className="w-full rounded-xl bg-indigo-600 py-2.5 text-sm font-bold text-white transition-all duration-200 hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-200 disabled:cursor-not-allowed disabled:opacity-60 sm:py-3"
+              className="w-full rounded-xl bg-[#243b95] py-2.5 text-sm font-bold text-white transition-all duration-200 hover:bg-[#1d2f80] hover:shadow-lg hover:shadow-[#243b95]/20 disabled:cursor-not-allowed disabled:opacity-60 sm:py-3"
             >
               {isLoading ? "Signing in..." : "Sign in to TalentX"}
             </motion.button>
@@ -224,13 +224,13 @@ export default function Login() {
           <motion.div variants={authItemVariants} className="mt-5 space-y-1.5 sm:mt-6 sm:space-y-2">
             <p className="text-sm text-slate-600">
               Don't have an account?{" "}
-              <Link to="/register" className="font-semibold text-indigo-700 hover:text-indigo-900">
+              <Link to="/register" className="font-semibold text-[#243b95] hover:text-[#1d2f80]">
                 Create one
               </Link>
             </p>
             <p className="text-sm text-slate-600">
               Explore the platform{" "}
-              <Link to="/" className="font-semibold text-indigo-700 hover:text-indigo-900">
+              <Link to="/" className="font-semibold text-[#243b95] hover:text-[#1d2f80]">
                 TalentX Home
               </Link>
             </p>

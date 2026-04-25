@@ -119,7 +119,7 @@ export default function MyApplications() {
 
   return (
     <div className="space-y-5 sm:space-y-6">
-      <section className="rounded-2xl bg-gradient-to-r from-indigo-700 via-indigo-600 to-cyan-600 px-5 py-6 text-white sm:rounded-3xl sm:px-8 sm:py-8">
+      <section className="tx-page-header px-5 py-6 sm:px-8 sm:py-8">
         <h1 className="text-2xl font-bold sm:text-3xl">My Applications</h1>
         <p className="mt-1 text-xs text-indigo-100 sm:mt-2 sm:text-sm">Track status changes and respond to offers from recruiters.</p>
       </section>

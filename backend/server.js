@@ -209,6 +209,8 @@ app.use("/api/offer", require("./routes/offerRoutes"));
 app.use("/api/notifications", require("./routes/notificationRoutes"));
 app.use("/api/export", require("./routes/exportRoutes"));
 app.use("/api/bulk", require("./routes/bulkRoutes"));
+app.use("/api/onboarding", require("./routes/onboardingRoutes"));
+app.use("/api/documents", require("./routes/documentRoutes"));
 
 /* ===========================
    STATIC FILES

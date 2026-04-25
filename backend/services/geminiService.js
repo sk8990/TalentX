@@ -291,6 +291,8 @@ Rules:
 }
 
 module.exports = {
+  generateTextWithGemini,
+  parseJsonFromModelText,
   generateJobDescription,
   parseJobDescription,
   parseJobDescriptionPdf,

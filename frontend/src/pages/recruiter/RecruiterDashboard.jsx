@@ -77,9 +77,9 @@ export default function RecruiterDashboard() {
 
   return (
     <div className="space-y-5 sm:space-y-8">
-      <div className="rounded-2xl bg-gradient-to-r from-indigo-700 via-indigo-600 to-cyan-600 px-5 py-6 text-white sm:rounded-3xl sm:px-8 sm:py-8">
-        <h1 className="text-2xl font-bold sm:text-3xl">Recruiter Dashboard</h1>
-        <p className="mt-1 max-w-xl text-xs text-indigo-100 sm:mt-2 sm:text-sm">
+      <div className="tx-page-header px-5 py-6 sm:px-8 sm:py-8">
+        <h1 className="text-2xl font-bold text-slate-950 sm:text-3xl">Recruiter Dashboard</h1>
+        <p className="mt-1 max-w-xl text-xs text-slate-500 sm:mt-2 sm:text-sm">
           Track jobs, monitor candidate flow, and review AI-led interview outcomes in one workspace.
         </p>
       </div>
@@ -96,14 +96,14 @@ export default function RecruiterDashboard() {
         <div className="mt-5 flex flex-wrap gap-3">
           <Link
             to="/recruiter/jobs"
-            className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700"
+            className="tx-button-primary px-5 py-2.5 text-sm"
           >
             Manage Jobs
           </Link>
 
           <Link
             to="/recruiter/applications"
-            className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
+            className="tx-button-secondary px-5 py-2.5 text-sm"
           >
             Review AI Interviews
           </Link>
@@ -122,15 +122,15 @@ export default function RecruiterDashboard() {
 
 function StatCard({ label, value, tone, icon: Icon }) {
   const toneMap = {
-    indigo: "from-indigo-50 to-indigo-100 text-indigo-700 dark:from-indigo-900/30 dark:to-indigo-800/30 dark:text-indigo-300",
-    sky: "from-sky-50 to-sky-100 text-sky-700 dark:from-sky-900/30 dark:to-sky-800/30 dark:text-sky-300",
-    emerald: "from-emerald-50 to-emerald-100 text-emerald-700 dark:from-emerald-900/30 dark:to-emerald-800/30 dark:text-emerald-300",
+    indigo: "bg-indigo-50 text-indigo-700",
+    sky: "bg-sky-50 text-sky-700",
+    emerald: "bg-emerald-50 text-emerald-700",
   };
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:rounded-2xl sm:p-5">
+    <div className="tx-card p-4 sm:p-5">
       <p className="text-xs font-medium text-slate-500 dark:text-slate-400 sm:text-sm">{label}</p>
-      <div className={`mt-3 rounded-xl bg-gradient-to-br px-3 py-4 sm:mt-4 sm:rounded-2xl sm:px-4 sm:py-5 ${toneMap[tone] || toneMap.indigo}`}>
+      <div className={`mt-3 rounded-xl px-3 py-4 sm:mt-4 sm:rounded-2xl sm:px-4 sm:py-5 ${toneMap[tone] || toneMap.indigo}`}>
         <p className="inline-flex items-center gap-2 text-2xl font-bold sm:text-3xl">
           {Icon ? <Icon sx={{ fontSize: 24 }} /> : null}
           {toSafeNumber(value, 0)}

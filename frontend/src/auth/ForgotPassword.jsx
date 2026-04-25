@@ -79,22 +79,22 @@ export default function ForgotPassword() {
   };
 
   const inputClass =
-    "w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 sm:py-3 sm:text-base";
+    "w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none transition focus:border-[#243b95] focus:ring-4 focus:ring-[#eef3ff] sm:py-3 sm:text-base";
 
   return (
     <motion.div
-      className="relative flex min-h-[100dvh] items-center justify-center overflow-hidden bg-slate-100 px-4 py-6 sm:px-6 sm:py-10"
+      className="relative flex min-h-[100dvh] items-center justify-center overflow-hidden bg-[#f4f6fb] px-4 py-6 sm:px-6 sm:py-10"
       initial={reduceMotion ? false : "hidden"}
       animate={reduceMotion ? undefined : "visible"}
       variants={authPageVariants}
     >
       {/* Background gradient blobs */}
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(79,70,229,0.18),transparent_35%),radial-gradient(circle_at_80%_10%,rgba(59,130,246,0.15),transparent_32%),radial-gradient(circle_at_60%_80%,rgba(14,165,233,0.14),transparent_36%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(36,59,149,0.14),transparent_35%),radial-gradient(circle_at_80%_10%,rgba(49,77,184,0.12),transparent_32%),radial-gradient(circle_at_60%_80%,rgba(14,165,233,0.10),transparent_36%)]" />
 
       <div className="relative mx-auto grid w-full max-w-[72rem] grid-cols-1 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl sm:rounded-3xl lg:grid-cols-2">
         {/* ── Sidebar (desktop) ── */}
         <motion.section
-          className="hidden bg-gradient-to-br from-[#4f2df4] via-[#3f63df] to-[#1588db] p-8 text-white lg:flex lg:flex-col lg:justify-between lg:p-12"
+          className="hidden bg-gradient-to-br from-[#243b95] via-[#314db8] to-[#1d2f80] p-8 text-white lg:flex lg:flex-col lg:justify-between lg:p-12"
           initial={reduceMotion ? false : "hidden"}
           animate={reduceMotion ? undefined : "visible"}
           variants={authSidebarVariants}
@@ -134,7 +134,7 @@ export default function ForgotPassword() {
         >
           {/* Badge */}
           <motion.div variants={authItemVariants} className="mb-5 sm:mb-8">
-            <div className="inline-flex items-center gap-2 rounded-xl bg-indigo-50 px-3 py-2 text-indigo-900">
+            <div className="inline-flex items-center gap-2 rounded-xl bg-[#eef3ff] px-3 py-2 text-[#243b95]">
               <LockResetRoundedIcon sx={{ fontSize: 18 }} />
               <span className="text-sm font-black tracking-wide">Reset Password</span>
             </div>
@@ -151,15 +151,15 @@ export default function ForgotPassword() {
           <motion.div variants={authItemVariants} className="mt-4 flex items-center gap-2 sm:mt-5">
             <span
               className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-colors ${
-                step >= 1 ? "bg-indigo-600 text-white" : "bg-slate-200 text-slate-500"
+                step >= 1 ? "bg-[#243b95] text-white" : "bg-slate-200 text-slate-500"
               }`}
             >
               1
             </span>
-            <span className={`h-0.5 w-8 rounded-full transition-colors ${step >= 2 ? "bg-indigo-600" : "bg-slate-200"}`} />
+            <span className={`h-0.5 w-8 rounded-full transition-colors ${step >= 2 ? "bg-[#243b95]" : "bg-slate-200"}`} />
             <span
               className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-colors ${
-                step >= 2 ? "bg-indigo-600 text-white" : "bg-slate-200 text-slate-500"
+                step >= 2 ? "bg-[#243b95] text-white" : "bg-slate-200 text-slate-500"
               }`}
             >
               2
@@ -196,7 +196,7 @@ export default function ForgotPassword() {
                   disabled={loading}
                   whileHover={reduceMotion ? undefined : { y: -2 }}
                   whileTap={reduceMotion ? undefined : { scale: 0.99 }}
-                  className="w-full rounded-xl bg-indigo-600 py-2.5 text-sm font-bold text-white transition-all duration-200 hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-200 disabled:cursor-not-allowed disabled:opacity-60 sm:py-3"
+                  className="w-full rounded-xl bg-[#243b95] py-2.5 text-sm font-bold text-white transition-all duration-200 hover:bg-[#1d2f80] hover:shadow-lg hover:shadow-[#243b95]/20 disabled:cursor-not-allowed disabled:opacity-60 sm:py-3"
                 >
                   {loading ? "Generating..." : "Generate Reset Token"}
                 </motion.button>
@@ -266,7 +266,7 @@ export default function ForgotPassword() {
           </AnimatePresence>
 
           <motion.div variants={authItemVariants} className="pt-5 text-center sm:pt-6">
-            <Link to={LOGIN_ROUTE} className="text-sm font-semibold text-indigo-700 transition hover:text-indigo-900">
+            <Link to={LOGIN_ROUTE} className="text-sm font-semibold text-[#243b95] transition hover:text-[#1d2f80]">
               ← Back to Login
             </Link>
           </motion.div>

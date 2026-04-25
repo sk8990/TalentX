@@ -1,5 +1,26 @@
-@import "tailwindcss";
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap");
+@import "tailwindcss";
+
+:root {
+  --tx-bg: #f4f6fb;
+  --tx-bg-soft: #f6f8fc;
+  --tx-surface: #ffffff;
+  --tx-primary: #243b95;
+  --tx-primary-dark: #1d2f80;
+  --tx-primary-mid: #314db8;
+  --tx-accent: #4f46e5;
+  --tx-accent-blue: #0ea5e9;
+  --tx-text: #0f172a;
+  --tx-secondary: #475569;
+  --tx-muted: #64748b;
+  --tx-border: #e2e8f0;
+  --tx-border-strong: #dbe2ef;
+  --tx-success: #10b981;
+  --tx-warning: #f59e0b;
+  --tx-danger: #ef4444;
+  --tx-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --tx-shadow-card: 0 12px 34px rgba(15, 23, 42, 0.08);
+}
 
 /* ── Design tokens ── */
 @theme {
@@ -25,6 +46,8 @@ html {
 
 body {
   font-family: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  background: var(--tx-bg);
+  color: var(--tx-text);
 }
 
 /* Dark mode base styles */
@@ -51,4 +74,173 @@ body {
 .landing-section {
   padding-inline: clamp(1rem, 4vw, 2rem);
 }
-
+
+.tx-page,
+.tx-app-shell {
+  min-height: 100vh;
+  background: var(--tx-bg);
+  color: var(--tx-text);
+}
+
+.tx-card {
+  border: 1px solid var(--tx-border);
+  border-radius: 1.375rem;
+  background: var(--tx-surface);
+  box-shadow: var(--tx-shadow-sm);
+}
+
+.tx-card-muted {
+  border: 1px solid var(--tx-border);
+  border-radius: 1.125rem;
+  background: #f8fafc;
+}
+
+.tx-page-header {
+  border: 1px solid var(--tx-border);
+  border-radius: 1.375rem;
+  background: var(--tx-surface);
+  box-shadow: var(--tx-shadow-sm);
+}
+
+.tx-page-header h1,
+.tx-page-header h2 {
+  color: var(--tx-text);
+}
+
+.tx-page-header p,
+.tx-page-header .text-indigo-100,
+.tx-page-header .text-slate-200 {
+  color: var(--tx-muted) !important;
+}
+
+.tx-section-title {
+  color: var(--tx-text);
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.tx-button-primary,
+.tx-button-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 1rem;
+  font-weight: 700;
+  transition: background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.tx-button-primary {
+  background: var(--tx-primary);
+  color: #ffffff;
+}
+
+.tx-button-primary:hover {
+  background: var(--tx-primary-dark);
+  box-shadow: 0 10px 24px rgba(36, 59, 149, 0.18);
+}
+
+.tx-button-secondary {
+  border: 1px solid var(--tx-border-strong);
+  background: var(--tx-surface);
+  color: var(--tx-primary);
+}
+
+.tx-button-secondary:hover {
+  border-color: rgba(36, 59, 149, 0.28);
+  background: #eef3ff;
+}
+
+.tx-status-success,
+.tx-status-warning,
+.tx-status-danger,
+.tx-status-info,
+.tx-status-muted {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.tx-status-success {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.tx-status-warning {
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.tx-status-danger {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.tx-status-info {
+  background: #eef2ff;
+  color: var(--tx-primary);
+}
+
+.tx-status-muted {
+  background: #f1f5f9;
+  color: var(--tx-muted);
+}
+
+.tx-app-shell aside {
+  box-shadow: 1px 0 0 rgba(226, 232, 240, 0.7);
+}
+
+.tx-app-shell main {
+  background: var(--tx-bg);
+}
+
+.tx-app-shell .bg-gradient-to-r.from-indigo-700.via-indigo-600.to-cyan-600,
+.tx-app-shell .bg-gradient-to-r.from-slate-900.via-indigo-800.to-cyan-700 {
+  border: 1px solid var(--tx-border) !important;
+  background: var(--tx-surface) !important;
+  color: var(--tx-text) !important;
+  box-shadow: var(--tx-shadow-sm) !important;
+}
+
+.tx-app-shell .bg-gradient-to-r.from-indigo-700.via-indigo-600.to-cyan-600 h1,
+.tx-app-shell .bg-gradient-to-r.from-indigo-700.via-indigo-600.to-cyan-600 h2,
+.tx-app-shell .bg-gradient-to-r.from-slate-900.via-indigo-800.to-cyan-700 h1,
+.tx-app-shell .bg-gradient-to-r.from-slate-900.via-indigo-800.to-cyan-700 h2 {
+  color: var(--tx-text) !important;
+}
+
+.tx-app-shell .bg-gradient-to-r.from-indigo-700.via-indigo-600.to-cyan-600 p,
+.tx-app-shell .bg-gradient-to-r.from-slate-900.via-indigo-800.to-cyan-700 p {
+  color: var(--tx-muted) !important;
+}
+
+.tx-app-shell .bg-indigo-600 {
+  background-color: var(--tx-primary) !important;
+}
+
+.tx-app-shell .hover\:bg-indigo-700:hover {
+  background-color: var(--tx-primary-dark) !important;
+}
+
+.tx-app-shell .bg-indigo-50 {
+  background-color: #eef3ff !important;
+}
+
+.tx-app-shell .text-indigo-600,
+.tx-app-shell .text-indigo-700,
+.tx-app-shell .text-purple-600,
+.tx-app-shell .text-purple-700 {
+  color: var(--tx-primary) !important;
+}
+
+.tx-app-shell .bg-purple-100 {
+  background-color: #eef3ff !important;
+}
+
+.tx-app-shell .border-indigo-200 {
+  border-color: var(--tx-border-strong) !important;
+}
+
