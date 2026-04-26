@@ -12,6 +12,7 @@ import {
 } from "@mui/material";
 import toast from "react-hot-toast";
 import API from "../api/axios";
+import ScreenLoader from "../components/ScreenLoader";
 
 const TABS = ["upcoming", "past"];
 
@@ -147,9 +148,10 @@ export default function Assessments() {
 
   if (loading) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 sm:rounded-3xl">
-        Loading assessments...
-      </div>
+      <ScreenLoader
+        message="Loading assessments..."
+        subtext="Preparing your upcoming and completed assessment rounds."
+      />
     );
   }
 

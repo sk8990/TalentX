@@ -8,6 +8,7 @@ import { FormControl, MenuItem, Select } from "@mui/material";
 import toast from "react-hot-toast";
 import API from "../api/axios";
 import TalentXBrand from "../components/TalentXBrand";
+import ScreenLoader from "../components/ScreenLoader";
 import { LOGIN_ROUTE } from "../utils/authRouting";
 import {
   authContentVariants,
@@ -123,6 +124,17 @@ export default function Register() {
       right: 10,
     },
   };
+
+  if (loading) {
+    return (
+      <ScreenLoader
+        fullScreen
+        showBrand
+        message="Creating your account..."
+        subtext="Setting up your TalentX access."
+      />
+    );
+  }
 
   return (
     <motion.div

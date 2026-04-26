@@ -7,8 +7,12 @@ import HeroSection from "./HeroSection";
 import StatsBar from "./StatsBar";
 import FeaturesSection from "./FeaturesSection";
 import HowItWorks from "./HowItWorks";
+import ProductPreviewSection from "./ProductPreviewSection";
+import PricingSection from "./PricingSection";
+import BlogSection from "./BlogSection";
 import TrustSection from "./TrustSection";
 import TestimonialsSection from "./TestimonialsSection";
+import FAQSection from "./FAQSection";
 import CtaSection from "./CtaSection";
 import Footer from "./Footer";
 
@@ -40,6 +44,10 @@ export default function LandingPage() {
     impactStats,
     features,
     howItWorks,
+    productPreview,
+    pricingPlans,
+    blogPosts,
+    faqs,
     trust,
     testimonial,
     finalCta,
@@ -56,8 +64,12 @@ export default function LandingPage() {
         <StatsBar stats={impactStats} />
         <FeaturesSection features={features} />
         <HowItWorks steps={howItWorks} />
+        <ProductPreviewSection productPreview={productPreview} />
+        <PricingSection pricingPlans={pricingPlans} />
+        <BlogSection blogPosts={blogPosts} />
         <TrustSection trust={trust} logoDevToken={logoDevToken} />
         <TestimonialsSection testimonial={testimonial} />
+        <FAQSection faqs={faqs} />
         <CtaSection finalCta={finalCta} />
       </main>
 

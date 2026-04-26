@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import TrendingUpRoundedIcon from "@mui/icons-material/TrendingUpRounded";
 import SchoolRoundedIcon from "@mui/icons-material/SchoolRounded";
@@ -9,6 +9,7 @@ import VisibilityOffRoundedIcon from "@mui/icons-material/VisibilityOffRounded";
 import API from "../api/axios";
 import "./Login.css";
 import TalentXBrand from "../components/TalentXBrand";
+import ScreenLoader from "../components/ScreenLoader";
 import { getDefaultRouteForUser } from "../utils/authRouting";
 import {
   authContentVariants,
@@ -27,6 +28,7 @@ export default function Login() {
   const highlights = ["Hire Smarter", "Learn Faster", "Grow Careers", "Build Teams"];
 
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -47,6 +49,20 @@ export default function Login() {
 
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
+
+      const selectedPlan =
+        new URLSearchParams(location.search).get("selectedPlan") ||
+        localStorage.getItem("talentx_selected_plan");
+
+      if (
+        user.role === "recruiter" &&
+        ["recruiter_starter", "recruiter_pro"].includes(selectedPlan)
+      ) {
+        localStorage.setItem("talentx_selected_plan", selectedPlan);
+        navigate(`/?selectedPlan=${encodeURIComponent(selectedPlan)}#pricing`);
+        return;
+      }
+
       navigate(getDefaultRouteForUser(user));
     } catch (err) {
       setError(err.response?.data?.message || "Login failed. Please try again.");
@@ -54,6 +70,17 @@ export default function Login() {
       setIsLoading(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <ScreenLoader
+        fullScreen
+        showBrand
+        message="Signing you in..."
+        subtext="Preparing your TalentX workspace."
+      />
+    );
+  }
 
   return (
     <motion.div

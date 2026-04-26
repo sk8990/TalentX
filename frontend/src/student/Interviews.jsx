@@ -6,6 +6,7 @@ import EventAvailableIcon from "@mui/icons-material/EventAvailable";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle } from "@mui/material";
 import toast from "react-hot-toast";
+import ScreenLoader from "../components/ScreenLoader";
 
 async function requestFullscreenIfPossible() {
   const target = document.documentElement;
@@ -148,7 +149,12 @@ export default function Interviews() {
   });
 
   if (loading) {
-    return <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 sm:rounded-3xl">Loading interviews...</div>;
+    return (
+      <ScreenLoader
+        message="Loading interviews..."
+        subtext="Fetching your scheduled rounds and slot options."
+      />
+    );
   }
 
   return (

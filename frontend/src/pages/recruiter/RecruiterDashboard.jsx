@@ -5,6 +5,7 @@ import WorkIcon from "@mui/icons-material/Work";
 import DescriptionIcon from "@mui/icons-material/Description";
 import VerifiedIcon from "@mui/icons-material/Verified";
 import toast from "react-hot-toast";
+import ScreenLoader from "../../components/ScreenLoader";
 
 function toSafeNumber(value, fallback = 0) {
   const num = Number(value);
@@ -69,9 +70,10 @@ export default function RecruiterDashboard() {
 
   if (loading) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center rounded-2xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800 sm:rounded-3xl">
-        <p className="animate-pulse text-sm font-medium text-slate-500 dark:text-slate-400">Loading dashboard...</p>
-      </div>
+      <ScreenLoader
+        message="Loading recruiter dashboard..."
+        subtext="Fetching your jobs, applications, and candidate progress."
+      />
     );
   }
 

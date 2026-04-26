@@ -18,6 +18,7 @@ import FilterAltIcon from "@mui/icons-material/FilterAlt";
 import NavigateBeforeIcon from "@mui/icons-material/NavigateBefore";
 import NavigateNextIcon from "@mui/icons-material/NavigateNext";
 import TalentXBrand from "../components/TalentXBrand";
+import ScreenLoader from "../components/ScreenLoader";
 import { useConfirmDialog } from "../components/useConfirmDialog";
 import { logout } from "../utils/logout";
 
@@ -282,15 +283,10 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="animate-pulse space-y-5">
-        <div className="h-20 rounded-2xl bg-white dark:bg-slate-800 sm:h-24 sm:rounded-3xl" />
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 sm:gap-4">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-24 rounded-xl bg-white dark:bg-slate-800 sm:h-28 sm:rounded-2xl" />
-          ))}
-        </div>
-        <div className="h-72 rounded-2xl bg-white dark:bg-slate-800 sm:h-96 sm:rounded-3xl" />
-      </div>
+      <ScreenLoader
+        message="Loading admin dashboard..."
+        subtext="Preparing platform stats, approvals, tickets, and audit data."
+      />
     );
   }
 

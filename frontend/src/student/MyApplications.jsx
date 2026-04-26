@@ -4,6 +4,7 @@ import DownloadIcon from "@mui/icons-material/Download";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
 import toast from "react-hot-toast";
+import ScreenLoader from "../components/ScreenLoader";
 
 const statusStyle = {
   APPLIED: "bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200",
@@ -116,7 +117,12 @@ export default function MyApplications() {
   };
 
   if (loading) {
-    return <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 sm:rounded-3xl">Loading applications...</div>;
+    return (
+      <ScreenLoader
+        message="Loading applications..."
+        subtext="Checking your latest application updates and offers."
+      />
+    );
   }
 
   if (apps.length === 0) {

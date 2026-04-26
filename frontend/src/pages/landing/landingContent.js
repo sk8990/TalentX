@@ -11,22 +11,28 @@ import PersonAddRoundedIcon from "@mui/icons-material/PersonAddRounded";
 import AccountCircleRoundedIcon from "@mui/icons-material/AccountCircleRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import EmojiEventsRoundedIcon from "@mui/icons-material/EmojiEventsRounded";
+import DashboardRoundedIcon from "@mui/icons-material/DashboardRounded";
+import GroupsRoundedIcon from "@mui/icons-material/GroupsRounded";
+import AssignmentTurnedInRoundedIcon from "@mui/icons-material/AssignmentTurnedInRounded";
+import RecordVoiceOverRoundedIcon from "@mui/icons-material/RecordVoiceOverRounded";
 
 export const landingContent = {
   navLinks: [
     { label: "Features", href: "#features" },
     { label: "How It Works", href: "#how-it-works" },
+    { label: "Pricing", href: "#pricing" },
+    { label: "Blog", href: "#blog" },
     { label: "Trust", href: "#trust" },
     { label: "Stories", href: "#stories" },
-    { label: "Contact", href: "#cta" },
+    { label: "Contact", href: "#contact" },
   ],
   hero: {
     eyebrow: "Campus Hiring Platform",
     title: "Where Talent Meets Opportunity",
     description:
       "TalentX helps students launch careers, enables employers to hire faster, and gives universities a modern placement workflow from outreach to offer tracking.",
-    primaryCta: { label: "Get Started", to: "/register" },
-    secondaryCta: { label: "Login", to: "/login" },
+    primaryCta: { label: "Start Free", to: "/register" },
+    secondaryCta: { label: "Watch Demo", href: "#product-preview" },
     highlights: [
       "Student-first onboarding",
       "Recruiter workflow visibility",
@@ -78,7 +84,7 @@ export const landingContent = {
       title: "Digitise campus placements online",
       description:
         "Give placement cells a cleaner way to manage employer outreach, student readiness, interview scheduling, and campus-wide communication.",
-      cta: { label: "Talk to TalentX", href: "#cta" },
+      cta: { label: "Talk to TalentX", href: "#contact" },
       icon: ApartmentRoundedIcon,
       tone: "sky",
     },
@@ -117,6 +123,170 @@ export const landingContent = {
       title: "Get Hired",
       description: "Attend interviews, receive offers, and launch your career — all through TalentX.",
       icon: EmojiEventsRoundedIcon,
+    },
+  ],
+  productPreview: [
+    {
+      title: "Student Dashboard",
+      description: "Track applications, interviews, offers, and onboarding progress.",
+      icon: DashboardRoundedIcon,
+    },
+    {
+      title: "Recruiter Pipeline",
+      description: "Manage jobs, candidates, assessments, interviews, and offers.",
+      icon: GroupsRoundedIcon,
+    },
+    {
+      title: "Onboarding Portal",
+      description: "Accept offers, upload documents, and complete joining steps.",
+      icon: AssignmentTurnedInRoundedIcon,
+    },
+    {
+      title: "Interview Panel",
+      description: "Run AI or human interviews with feedback and status tracking.",
+      icon: RecordVoiceOverRoundedIcon,
+    },
+  ],
+  pricingPlans: [
+    {
+      name: "Student Free",
+      key: "student_free",
+      price: "₹0",
+      billingText: "forever",
+      badge: "Best for students",
+      features: [
+        "Student profile",
+        "Job applications",
+        "Application tracking",
+        "Assessment access",
+        "Interview tracking",
+        "Offer acceptance",
+        "Onboarding portal",
+      ],
+      cta: "Get Started",
+      action: "signup",
+    },
+    {
+      name: "Recruiter Starter",
+      key: "recruiter_starter",
+      price: "₹999",
+      billingText: "per month",
+      badge: "For small hiring teams",
+      features: [
+        "5 active jobs",
+        "100 applicants per month",
+        "Basic applicant tracking",
+        "Interview scheduling",
+        "Offer generation",
+      ],
+      cta: "Start Hiring",
+      action: "payment",
+      amount: 99900,
+    },
+    {
+      name: "Recruiter Pro",
+      key: "recruiter_pro",
+      price: "₹4,999",
+      billingText: "per month",
+      badge: "Most Popular",
+      features: [
+        "Unlimited jobs",
+        "AI JD generation",
+        "AI candidate matching",
+        "Assessment panel",
+        "Human interview panel",
+        "Offer and onboarding management",
+        "Priority support",
+      ],
+      cta: "Upgrade to Pro",
+      action: "payment",
+      amount: 499900,
+      highlighted: true,
+    },
+    {
+      name: "University / Enterprise",
+      key: "enterprise",
+      price: "Custom",
+      billingText: "contact sales",
+      badge: "For placement teams",
+      features: [
+        "Admin dashboard",
+        "Multi-company placement management",
+        "Bulk student management",
+        "Reports and analytics",
+        "Custom onboarding workflows",
+        "Dedicated support",
+      ],
+      cta: "Contact Sales",
+      action: "contact",
+    },
+  ],
+  blogPosts: [
+    {
+      title: "How AI is changing campus recruitment",
+      slug: "ai-campus-recruitment",
+      category: "Hiring",
+      readTime: "5 min read",
+      description: "Learn how AI can speed up matching, screening, and interview preparation.",
+    },
+    {
+      title: "How students can prepare for AI interviews",
+      slug: "student-ai-interviews",
+      category: "Students",
+      readTime: "4 min read",
+      description: "Tips for building confidence before AI-assisted interview rounds.",
+    },
+    {
+      title: "Building a smooth offer-to-onboarding journey",
+      slug: "offer-to-onboarding",
+      category: "Onboarding",
+      readTime: "6 min read",
+      description: "How digital onboarding reduces confusion after selection.",
+    },
+    {
+      title: "What recruiters should track during campus hiring",
+      slug: "recruiter-hiring-metrics",
+      category: "Recruiters",
+      readTime: "5 min read",
+      description: "Key metrics for improving shortlisting, interviews, and offers.",
+    },
+    {
+      title: "Why placement teams need centralized dashboards",
+      slug: "placement-dashboard",
+      category: "Universities",
+      readTime: "4 min read",
+      description: "How placement cells can reduce manual work and improve visibility.",
+    },
+  ],
+  faqs: [
+    {
+      question: "Is TalentX free for students?",
+      answer:
+        "Yes, students can create profiles, apply to jobs, track applications, attend assessments/interviews, and complete onboarding for free.",
+    },
+    {
+      question: "Can recruiters generate offer letters?",
+      answer: "Yes, recruiters can generate offer letters and manage acceptance and onboarding.",
+    },
+    {
+      question: "Does TalentX support AI interviews?",
+      answer:
+        "Yes, TalentX supports AI interview workflows and can also support human interview panels.",
+    },
+    {
+      question: "Can colleges manage multiple companies?",
+      answer:
+        "Yes, placement teams can manage recruiters, jobs, applications, approvals, and student progress.",
+    },
+    {
+      question: "Can students upload onboarding documents?",
+      answer:
+        "Yes, students can upload required documents for verification during onboarding.",
+    },
+    {
+      question: "Can recruiters manage paid plans?",
+      answer:
+        "Yes, paid recruiter plans can be activated through Razorpay Test Mode payment integration.",
     },
   ],
   trust: {
@@ -169,7 +339,7 @@ export const landingContent = {
     description:
       "Launch with a landing-first experience, then route each audience into the right TalentX workspace.",
     primaryCta: { label: "Create Account", to: "/register" },
-    secondaryCta: { label: "Login", to: "/login" },
+    secondaryCta: { label: "View Pricing", href: "#pricing" },
   },
   footer: {
     summary:
@@ -180,6 +350,8 @@ export const landingContent = {
         links: [
           { label: "Features", href: "#features" },
           { label: "How It Works", href: "#how-it-works" },
+          { label: "Pricing", href: "#pricing" },
+          { label: "Blog", href: "#blog" },
           { label: "Trust", href: "#trust" },
           { label: "Stories", href: "#stories" },
         ],
@@ -196,7 +368,7 @@ export const landingContent = {
         title: "Why TalentX",
         links: [
           { label: "Shared workflow", href: "#trust" },
-          { label: "Placement support", href: "#cta" },
+          { label: "Placement support", href: "#contact" },
           { label: "Role-based access", href: "#hero" },
         ],
       },

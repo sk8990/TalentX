@@ -23,12 +23,12 @@ export default function Navbar({ navLinks }) {
         </Link>
 
         {/* ── Desktop nav ── */}
-        <nav className="hidden items-center gap-8 lg:flex" aria-label="Main navigation">
+        <nav className="hidden items-center gap-4 xl:gap-7 lg:flex" aria-label="Main navigation">
           {navLinks.map((link) => (
             <a
               key={link.label}
               href={link.href}
-              className="text-[0.8125rem] font-semibold uppercase tracking-[0.08em] text-slate-600 transition-colors duration-200 hover:text-slate-900"
+              className="text-[0.75rem] font-semibold uppercase tracking-[0.08em] text-slate-600 transition-colors duration-200 hover:text-slate-900 xl:text-[0.8125rem]"
             >
               {link.label}
             </a>

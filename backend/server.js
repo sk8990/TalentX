@@ -227,6 +227,7 @@ app.use("/api/export", require("./routes/exportRoutes"));
 app.use("/api/bulk", require("./routes/bulkRoutes"));
 app.use("/api/onboarding", require("./routes/onboardingRoutes"));
 app.use("/api/documents", require("./routes/documentRoutes"));
+app.use("/api/payments", require("./routes/paymentRoutes"));
 
 /* ===========================
    STATIC FILES

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import API from "../../api/axios";
+import ScreenLoader from "../../components/ScreenLoader";
 import InterviewerFeedbackForm, {
   FeedbackPreview,
   getDefaultInterviewerFeedbackForm
@@ -108,9 +109,11 @@ export default function InterviewerPanel() {
       <section className="space-y-4">
         <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 sm:text-lg">{title}</h2>
         {loading ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 sm:rounded-3xl sm:p-8">
-            Loading interviews...
-          </div>
+          <ScreenLoader
+            message="Loading interviews..."
+            subtext="Fetching assigned interviews and feedback status."
+            className="min-h-[22rem]"
+          />
         ) : items.length === 0 ? (
           <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 sm:rounded-3xl sm:p-8">
             No interviews found in this section.

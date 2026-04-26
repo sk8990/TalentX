@@ -22,6 +22,7 @@ import {
   MenuItem,
   TextField,
 } from "@mui/material";
+import ScreenLoader from "../../components/ScreenLoader";
 
 const API_BASE_URL = API.defaults.baseURL || "";
 const SERVER_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, "");
@@ -710,9 +711,11 @@ export default function RecruiterApplications() {
       )}
 
       {selectedJobId && busy && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm font-medium text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 sm:rounded-3xl sm:p-8">
-          Loading applications...
-        </div>
+        <ScreenLoader
+          message="Loading applications..."
+          subtext="Preparing candidate stages and interview actions."
+          className="min-h-[22rem]"
+        />
       )}
 
       {selectedJobId && !busy && applications.length === 0 && (

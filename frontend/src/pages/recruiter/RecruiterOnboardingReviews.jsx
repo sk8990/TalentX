@@ -11,6 +11,7 @@ import TaskAltRoundedIcon from "@mui/icons-material/TaskAltRounded";
 import PendingActionsRoundedIcon from "@mui/icons-material/PendingActionsRounded";
 import API from "../../api/axios";
 import { buildServerAssetUrl } from "../../onboarding/api";
+import ScreenLoader from "../../components/ScreenLoader";
 
 // Phase 4.1: Stats card for the analytics bar
 function StatCard({ icon, label, value, bgColor, textColor }) {
@@ -170,9 +171,10 @@ export default function RecruiterOnboardingReviews() {
 
   if (loading) {
     return (
-      <div className="flex min-h-[320px] items-center justify-center rounded-[28px] border border-slate-200 bg-white shadow-sm">
-        <div className="text-sm font-medium text-slate-500">Loading onboarding review queue...</div>
-      </div>
+      <ScreenLoader
+        message="Loading onboarding reviews..."
+        subtext="Collecting submitted documents and review queue details."
+      />
     );
   }
 

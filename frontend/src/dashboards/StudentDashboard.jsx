@@ -15,6 +15,7 @@ import NavigateNextIcon from "@mui/icons-material/NavigateNext";
 import BadgeOutlinedIcon from "@mui/icons-material/BadgeOutlined";
 import LaunchRoundedIcon from "@mui/icons-material/LaunchRounded";
 import { clearStoredOnboardingInstanceId } from "../onboarding/session";
+import ScreenLoader from "../components/ScreenLoader";
 
 const statusColors = {
   APPLIED: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
@@ -59,9 +60,10 @@ export default function StudentDashboard() {
 
   if (loading) {
     return (
-      <div className="flex min-h-[400px] items-center justify-center">
-        <div className="text-sm text-slate-500 dark:text-slate-400">Loading dashboard...</div>
-      </div>
+      <ScreenLoader
+        message="Loading student dashboard..."
+        subtext="Bringing your applications, interviews, and offers together."
+      />
     );
   }
 

@@ -16,9 +16,9 @@ export default function TrustSection({ trust, logoDevToken }) {
       variants={revealContainer}
     >
       <div className="mx-auto max-w-7xl rounded-2xl border border-slate-200 bg-white px-4 py-6 shadow-sm sm:rounded-[2rem] sm:px-6 sm:py-8 lg:px-10 lg:py-10">
-        <div className="grid gap-6 lg:grid-cols-[16rem_minmax(0,1fr)] lg:gap-8 xl:grid-cols-[20rem_minmax(0,1fr)]">
-          {/* Left column — section intro */}
-          <motion.div variants={revealItem} className="space-y-3 sm:space-y-5">
+        <div className="flex flex-col gap-10 lg:gap-14">
+          {/* Top row — section intro */}
+          <motion.div variants={revealItem} className="mx-auto max-w-3xl space-y-3 text-center sm:space-y-5">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500 sm:text-sm">
               {trust.eyebrow}
             </p>
@@ -30,8 +30,8 @@ export default function TrustSection({ trust, logoDevToken }) {
             </p>
           </motion.div>
 
-          {/* Right column — logos + pillars */}
-          <div className="space-y-6 sm:space-y-8">
+          {/* Bottom row — logos + pillars */}
+          <div className="space-y-8 lg:space-y-12">
             {/* College logos grid */}
             <motion.div
               variants={revealItem}
@@ -104,11 +104,11 @@ function CollegeLogoCard({ college, logoDevToken, index, reduceMotion }) {
         )}
       </span>
 
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-bold tracking-tight text-slate-950 sm:text-[1.05rem]">
           {college.name}
         </p>
-        <p className="text-[0.625rem] font-medium uppercase tracking-[0.22em] text-slate-400 sm:text-xs sm:tracking-[0.26em]">
+        <p className="truncate text-[0.625rem] font-medium uppercase tracking-[0.22em] text-slate-400 sm:text-xs sm:tracking-[0.26em]">
           {college.city}
         </p>
       </div>

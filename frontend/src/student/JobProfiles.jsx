@@ -9,6 +9,7 @@ import FilterListIcon from "@mui/icons-material/FilterList";
 import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
 import { FormControl, MenuItem, Select } from "@mui/material";
 import toast from "react-hot-toast";
+import ScreenLoader from "../components/ScreenLoader";
 
 let jobProfilesBootstrapInFlight = null;
 
@@ -334,9 +335,10 @@ export default function JobProfiles() {
 
   if (loading) {
     return (
-      <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center text-sm font-medium text-slate-500">
-        Loading jobs...
-      </div>
+      <ScreenLoader
+        message="Loading job profiles..."
+        subtext="Finding active openings and your application status."
+      />
     );
   }
 

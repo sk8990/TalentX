@@ -40,20 +40,20 @@ export default function HeroSection({ hero, heroPanels, accentIcons }) {
 
           {/* CTA buttons */}
           <motion.div variants={revealItem} className="mt-6 flex flex-wrap gap-3 sm:mt-8">
-            <Link
-              to={hero.primaryCta.to}
+            <ActionLink
+              action={hero.primaryCta}
               className="inline-flex items-center gap-2 rounded-full bg-amber-400 px-6 py-3 text-sm font-bold text-slate-950 transition-all duration-200 hover:bg-amber-300 hover:shadow-lg hover:shadow-amber-400/25 sm:px-7 sm:text-base"
             >
               {hero.primaryCta.label}
               <ArrowOutwardRoundedIcon sx={{ fontSize: 18 }} />
-            </Link>
-            <Link
-              to={hero.secondaryCta.to}
+            </ActionLink>
+            <ActionLink
+              action={hero.secondaryCta}
               className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition-all duration-200 hover:border-slate-400 hover:bg-slate-50 sm:px-6 sm:text-base"
             >
               <PlayArrowRoundedIcon sx={{ fontSize: 18 }} />
               {hero.secondaryCta.label}
-            </Link>
+            </ActionLink>
           </motion.div>
 
           {/* Highlight pills */}
@@ -139,6 +139,22 @@ export default function HeroSection({ hero, heroPanels, accentIcons }) {
         </motion.div>
       </div>
     </section>
+  );
+}
+
+function ActionLink({ action, className, children }) {
+  if (action.to) {
+    return (
+      <Link to={action.to} className={className}>
+        {children}
+      </Link>
+    );
+  }
+
+  return (
+    <a href={action.href} className={className}>
+      {children}
+    </a>
   );
 }
 

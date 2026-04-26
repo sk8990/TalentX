@@ -8,7 +8,7 @@ export default function CtaSection({ finalCta }) {
 
   return (
     <motion.section
-      id="cta"
+      id="contact"
       aria-label="Call to action"
       className="landing-section pb-10 pt-2 sm:pb-14 sm:pt-4 lg:pb-20"
       initial={reduceMotion ? false : "hidden"}
@@ -36,22 +36,38 @@ export default function CtaSection({ finalCta }) {
 
           {/* Buttons */}
           <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
-            <Link
-              to={finalCta.primaryCta.to}
+            <ActionLink
+              action={finalCta.primaryCta}
               className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-bold text-slate-900 transition-all duration-200 hover:bg-slate-200 hover:shadow-lg"
             >
               {finalCta.primaryCta.label}
               <ArrowOutwardRoundedIcon sx={{ fontSize: 18 }} />
-            </Link>
-            <Link
-              to={finalCta.secondaryCta.to}
+            </ActionLink>
+            <ActionLink
+              action={finalCta.secondaryCta}
               className="inline-flex items-center justify-center gap-2 rounded-full border border-white/20 bg-white/10 px-6 py-3 text-sm font-semibold text-white transition-all duration-200 hover:bg-white/15"
             >
               {finalCta.secondaryCta.label}
-            </Link>
+            </ActionLink>
           </div>
         </div>
       </motion.div>
     </motion.section>
+  );
+}
+
+function ActionLink({ action, className, children }) {
+  if (action.to) {
+    return (
+      <Link to={action.to} className={className}>
+        {children}
+      </Link>
+    );
+  }
+
+  return (
+    <a href={action.href} className={className}>
+      {children}
+    </a>
   );
 }

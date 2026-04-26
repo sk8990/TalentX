@@ -29,6 +29,7 @@ import {
   persistOnboardingToken
 } from "./session";
 import { readStoredSession } from "../utils/authRouting";
+import ScreenLoader from "../components/ScreenLoader";
 import { readStepFormValues, buildPortalSearch } from "./constants";
 import StatusBanner from "./StatusBanner";
 import SelectorScreen from "./SelectorScreen";
@@ -1193,12 +1194,12 @@ export default function OnboardingPortal() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f6f8fc] px-4">
-        <div className="max-w-md rounded-[28px] border border-slate-200 bg-white p-8 text-center shadow-sm">
-          <div className="mx-auto mb-5 h-10 w-10 animate-spin rounded-full border-4 border-indigo-100 border-t-indigo-600"></div>
-          <h1 className="text-xl font-semibold tracking-tight text-slate-950">Loading your onboarding offers...</h1>
-        </div>
-      </div>
+      <ScreenLoader
+        fullScreen
+        showBrand
+        message="Loading your onboarding offers..."
+        subtext="Preparing your offer, joining steps, and document checklist."
+      />
     );
   }
 

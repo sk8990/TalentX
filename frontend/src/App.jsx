@@ -29,6 +29,8 @@ import VirtualInterviewRoom from "./pages/interview/VirtualInterviewRoom";
 import StudentInterviewRoom from "./pages/interview/StudentInterviewRoom";
 import { Toaster } from "react-hot-toast";
 import LandingPage from "./pages/LandingPage";
+import BillingSuccess from "./pages/BillingSuccess";
+import BlogPlaceholder from "./pages/BlogPlaceholder";
 import { ThemeProvider } from "./utils/ThemeContext";
 import OnboardingPortal from "./onboarding/OnboardingPortal";
 
@@ -51,13 +53,10 @@ export default function App() {
           {/* PUBLIC */}
           <Route
             path="/"
-            element={
-              <PublicRoute>
-                <LandingPage />
-              </PublicRoute>
-            }
+            element={<LandingPage />}
           />
           <Route path="/about" element={<Navigate to="/" replace />} />
+          <Route path="/blog/:slug" element={<BlogPlaceholder />} />
           <Route
             path="/login"
             element={
@@ -83,6 +82,14 @@ export default function App() {
             }
           />
           <Route path="/onboarding" element={<OnboardingPortal />} />
+          <Route
+            path="/billing/success"
+            element={
+              <ProtectedRoute role="recruiter">
+                <BillingSuccess />
+              </ProtectedRoute>
+            }
+          />
 
           {/* STUDENT */}
           <Route
