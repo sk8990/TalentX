@@ -1,4 +1,5 @@
 import StepIndicator from "./StepIndicator";
+import { buildOverallStatusLabel } from "./constants";
 
 export default function StepperSidebar({
   steps,
@@ -6,13 +7,16 @@ export default function StepperSidebar({
   completedCount,
   totalCount,
   deadline,
+  instanceStatus,
   onSelectStep
 }) {
+  const statusLabel = buildOverallStatusLabel(instanceStatus);
+
   return (
-    <aside className="w-full lg:max-w-[295px]">
-      <div className="overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-sm">
+    <aside className="w-full shrink-0 lg:max-w-[295px]">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm sm:rounded-[26px]">
         <div className="bg-[linear-gradient(90deg,#243b95_0%,#314db8_100%)] px-5 py-4 text-white">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-indigo-100">Your Path of Joining</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-indigo-100">{statusLabel}</p>
         </div>
 
         <div className="p-5">

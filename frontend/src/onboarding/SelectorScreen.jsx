@@ -77,7 +77,7 @@ export default function SelectorScreen({ data, onSelectCompany }) {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[linear-gradient(160deg,#eef2ff_0%,#f4f5f8_38%,#eef3ff_100%)] px-4 py-10">
+    <div className="flex min-h-screen items-center justify-center bg-[linear-gradient(160deg,#eef2ff_0%,#f4f5f8_38%,#eef3ff_100%)] px-3 py-6 sm:px-4 sm:py-10">
       <div className="w-full max-w-6xl">
         <div className="mb-6 flex justify-start">
           <button
@@ -90,25 +90,14 @@ export default function SelectorScreen({ data, onSelectCompany }) {
           </button>
         </div>
 
-        <div className="text-center">
-          <div className="flex items-center justify-center gap-3">
-            <TalentXMark theme="light" size="lg" className="shadow-sm" />
-            <p className="text-[24px] font-semibold tracking-tight text-slate-950">TalentX Onboarding Portal</p>
-          </div>
-          <h1 className="mt-6 text-4xl font-semibold tracking-tight text-slate-950">Select Company to Continue</h1>
-          <p className="mt-3 text-[18px] text-slate-600">
-            You have multiple offers. Choose a company to continue onboarding.
-          </p>
-        </div>
-
         {companies.length === 0 ? (
           <div className="mx-auto mt-12 max-w-xl rounded-[18px] border border-slate-200 bg-white px-8 py-10 text-center shadow-sm">
             <span className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
               <BusinessCenterRoundedIcon sx={{ fontSize: 28 }} />
             </span>
-            <h2 className="mt-5 text-2xl font-semibold text-slate-950">No companies available yet</h2>
+            <h2 className="mt-5 text-2xl font-semibold text-slate-950">No onboarding offers are available yet.</h2>
             <p className="mt-3 text-sm leading-6 text-slate-600">
-              Your onboarding companies will appear here after a recruiter selects you and generates an offer letter.
+              Once a company generates your offer, it will appear here.
             </p>
             <button
               type="button"
@@ -119,73 +108,92 @@ export default function SelectorScreen({ data, onSelectCompany }) {
             </button>
           </div>
         ) : (
-          <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {companies.map((company, index) => {
-            const theme = cardThemes[index % cardThemes.length];
-            const progress = getProgressFromCompany(company);
-            const logoUrl = buildCompanyLogoUrl(company);
-            const hasLogo = Boolean(logoUrl) && !logoFailedByCompany[company.id];
+          <>
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-3">
+                <TalentXMark theme="light" size="lg" className="shadow-sm" />
+                <p className="text-[24px] font-semibold tracking-tight text-slate-950">TalentX Onboarding Portal</p>
+              </div>
+              <h1 className="mt-4 text-2xl font-semibold tracking-tight text-slate-950 sm:mt-6 sm:text-4xl">
+                {companies.length === 1 ? "Continue Your Onboarding" : "Select Company to Continue"}
+              </h1>
+              <p className="mt-2 text-base text-slate-600 sm:mt-3 sm:text-lg">
+                {companies.length === 1
+                  ? "You have one offer. Continue onboarding with this company."
+                  : "You have multiple offers. Choose a company to continue onboarding."}
+              </p>
+            </div>
 
-            return (
-              <article
-                key={company.id}
-                className="flex h-full flex-col rounded-[14px] border border-slate-300 bg-white p-6 shadow-[0_1px_1px_rgba(15,23,42,0.04)] transition-transform duration-200 hover:-translate-y-0.5"
-              >
-                <div className="flex items-center justify-center">
-                  <span className="inline-flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-                    {hasLogo ? (
-                      <img
-                        src={logoUrl}
-                        alt={`${company.companyName} logo`}
-                        className="h-10 w-10 object-contain"
-                        referrerPolicy="origin"
-                        onError={() => setLogoFailedByCompany((current) => ({ ...current, [company.id]: true }))}
-                      />
-                    ) : (
-                      <span className={`text-base font-semibold ${theme.iconWrap} ${theme.iconText} rounded-lg px-2 py-1`}>
-                        {getInitials(company.companyName)}
-                      </span>
-                    )}
-                  </span>
-                </div>
+            <div className={`mt-8 grid grid-cols-1 gap-4 sm:mt-12 sm:gap-6 ${companies.length === 1 ? "mx-auto max-w-md" : "sm:grid-cols-2 xl:grid-cols-3"}`}>
+              {companies.map((company, index) => {
+                const theme = cardThemes[index % cardThemes.length];
+                const progress = getProgressFromCompany(company);
+                const logoUrl = buildCompanyLogoUrl(company);
+                const hasLogo = Boolean(logoUrl) && !logoFailedByCompany[company.id];
+                const companyName = company.companyName || "Company";
+                const jobRole = company.jobRole || "Offered Role";
 
-                <div className="mt-5 text-center">
-                  <h2 className="text-3xl font-semibold tracking-tight text-slate-900">{company.companyName}</h2>
-                  <p className="mt-2 inline-flex items-center gap-1.5 text-base text-slate-700">
-                    <BusinessCenterRoundedIcon sx={{ fontSize: 18 }} />
-                    {company.jobRole}
-                  </p>
-                </div>
-
-                <div className="mt-auto pt-5">
-                  <div>
-                    <div className="flex items-center justify-between text-sm text-slate-700">
-                      <span>Onboarding Progress</span>
-                      <span>{`${progress.completed}/${progress.total}`}</span>
-                    </div>
-                    <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200">
-                      <div className={`h-full rounded-full ${theme.bar}`} style={{ width: `${progress.percentage}%` }} />
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => onSelectCompany(company.id)}
-                    className={`mt-6 w-full rounded-[10px] px-4 py-3 text-lg font-semibold text-white transition ${theme.button}`}
+                return (
+                  <article
+                    key={company.id}
+                    className="flex h-full flex-col rounded-[14px] border border-slate-300 bg-white p-4 shadow-[0_1px_1px_rgba(15,23,42,0.04)] transition-transform duration-200 hover:-translate-y-0.5 sm:p-6"
                   >
-                    Continue Onboarding
-                  </button>
-                </div>
-              </article>
-            );
-            })}
-          </div>
-        )}
+                    <div className="flex items-center justify-center">
+                      <span className="inline-flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                        {hasLogo ? (
+                          <img
+                            src={logoUrl}
+                            alt={`${companyName} logo`}
+                            className="h-10 w-10 object-contain"
+                            referrerPolicy="origin"
+                            onError={() => setLogoFailedByCompany((current) => ({ ...current, [company.id]: true }))}
+                          />
+                        ) : (
+                          <span className={`text-base font-semibold ${theme.iconWrap} ${theme.iconText} rounded-lg px-2 py-1`}>
+                            {getInitials(companyName)}
+                          </span>
+                        )}
+                      </span>
+                    </div>
 
-        {companies.length > 0 && (
-          <p className="mt-8 text-center text-base text-slate-600">
-            You can switch between companies anytime from the dashboard
-          </p>
+                    <div className="mt-5 text-center">
+                      <h2 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">{companyName}</h2>
+                      <p className="mt-2 inline-flex items-center gap-1.5 text-base text-slate-700">
+                        <BusinessCenterRoundedIcon sx={{ fontSize: 18 }} />
+                        {jobRole}
+                      </p>
+                    </div>
+
+                    <div className="mt-auto pt-5">
+                      <div>
+                        <div className="flex items-center justify-between text-sm text-slate-700">
+                          <span>Onboarding Progress</span>
+                          <span>{`${progress.completed}/${progress.total}`}</span>
+                        </div>
+                        <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200">
+                          <div className={`h-full rounded-full ${theme.bar}`} style={{ width: `${progress.percentage}%` }} />
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => onSelectCompany(company.id)}
+                        className={`mt-6 w-full rounded-[10px] px-4 py-3 text-lg font-semibold text-white transition ${theme.button}`}
+                      >
+                        Continue Onboarding
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+
+            {companies.length > 1 && (
+              <p className="mt-8 text-center text-base text-slate-600">
+                You can switch between companies anytime from the dashboard
+              </p>
+            )}
+          </>
         )}
       </div>
     </div>

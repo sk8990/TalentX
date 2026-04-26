@@ -39,6 +39,9 @@ export function buildPortalSearch(instanceId) {
 export function buildOverallStatusLabel(status) {
   if (status === "ready_for_day_one") return "Ready For Day 1";
   if (status === "completed") return "Onboarding Completed";
+  if (status === "not_started") return "Not Started Yet";
+  if (status === "declined") return "Offer Declined";
+  if (status === "archived") return "Archived";
   return "Onboarding in Progress";
 }
 

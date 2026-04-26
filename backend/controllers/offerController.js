@@ -1,8 +1,8 @@
-const axios = require("axios");
 const PDFDocument = require("pdfkit");
 const fs = require("fs");
 const path = require("path");
 const Application = require("../models/Application");
+const { generateTextWithGemini } = require("../services/geminiService");
 
 function generatePdfFromText(filePath, text) {
   return new Promise((resolve, reject) => {
@@ -65,20 +65,13 @@ Location: ${location}
 Make it professional and official.
 `;
 
-    const aiResponse = await axios.post(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
-      {
-        contents: [{ parts: [{ text: prompt }] }]
-      },
-      {
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": process.env.GEMINI_API_KEY
-        }
-      }
-    );
-
-    const offerText = aiResponse.data.candidates?.[0]?.content?.parts?.[0]?.text || "Offer letter content unavailable.";
+    let offerText;
+    try {
+      offerText = await generateTextWithGemini(prompt);
+    } catch (aiErr) {
+      console.error("AI offer letter generation failed:", aiErr.message);
+      offerText = "Offer letter content unavailable.";
+    }
 
     const offerDir = path.join(__dirname, "../offers");
     if (!fs.existsSync(offerDir)) {

@@ -84,6 +84,7 @@ export default function MyApplications() {
   const serverOrigin = getServerOrigin();
   const [apps, setApps] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [respondingId, setRespondingId] = useState("");
 
   const fetchApps = async () => {
     try {
@@ -101,11 +102,16 @@ export default function MyApplications() {
   }, []);
 
   const respondToOffer = async (id, decision) => {
+    if (respondingId) return;
     try {
+      setRespondingId(id);
       await API.put(`/application/${id}/offer/respond`, { decision });
+      toast.success(decision === "ACCEPTED" ? "Offer accepted! Congratulations!" : "Offer declined.");
       fetchApps();
-    } catch {
-      toast.error("Failed to respond to offer");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to respond to offer");
+    } finally {
+      setRespondingId("");
     }
   };
 
@@ -124,88 +130,122 @@ export default function MyApplications() {
         <p className="mt-1 text-xs text-indigo-100 sm:mt-2 sm:text-sm">Track status changes and respond to offers from recruiters.</p>
       </section>
 
-      {apps.map((app) => (
-        <article key={app._id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:rounded-3xl sm:p-6">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <h2 className="truncate text-base font-semibold text-slate-900 dark:text-slate-100 sm:text-lg">{app.jobId?.title || "Job"}</h2>
-              <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Application ID {app._id.slice(-6)}</p>
-            </div>
-            <span className={`shrink-0 rounded-full px-2.5 py-1 text-[0.65rem] font-semibold sm:px-3 sm:text-xs ${statusStyle[app.status] || "bg-slate-100 text-slate-700"}`}>
-              {app.status.replaceAll("_", " ")}
-            </span>
-          </div>
+      {apps.map((app) => {
+        const job = (app.jobId && typeof app.jobId === "object") ? app.jobId : {};
+        const title = job.title || "Job";
+        const companyName = job.companyName || "Company";
+        const companyDomain = job.companyDomain || "";
+        const explicitLogo = job.companyLogo;
+        const logoUrl = explicitLogo || (companyDomain ? `https://img.logo.dev/${companyDomain}?token=pk_fk1Hh_ndTkqCweLf2jauug` : "");
 
-          <Timeline currentStatus={app.status} />
-
-          {app.status === "INTERVIEW_SCHEDULED" && (
-            <div className="mt-3 rounded-xl bg-indigo-50 px-3 py-2 text-xs text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300 sm:mt-4 sm:px-4 sm:text-sm">
-              Interview scheduled. Check the Interviews section.
-            </div>
-          )}
-
-          {app.status === "SELECTED" && app.offer && (
-            <div className="mt-4 rounded-xl border border-indigo-200 bg-indigo-50 p-4 dark:border-indigo-800 dark:bg-indigo-900/20 sm:mt-5 sm:rounded-2xl sm:p-5">
-              <h3 className="text-sm font-semibold text-indigo-800 dark:text-indigo-300 sm:text-base">Offer Details</h3>
-              <div className="mt-2 grid gap-3 text-sm sm:mt-3 sm:grid-cols-2 sm:gap-4">
-                <div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Salary</p>
-                  <p className="font-semibold text-slate-900 dark:text-slate-100">{app.offer.salary}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Joining Date</p>
-                  <p className="font-semibold text-slate-900 dark:text-slate-100">{new Date(app.offer.joiningDate).toDateString()}</p>
+        return (
+          <article key={app._id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:rounded-3xl sm:p-6">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                {logoUrl ? (
+                  <img
+                    src={logoUrl}
+                    alt={companyName}
+                    className="h-10 w-10 shrink-0 rounded-xl border border-slate-200 bg-white object-contain p-1"
+                    onError={(e) => {
+                      e.target.style.display = "none";
+                      if (e.target.nextElementSibling) {
+                        e.target.nextElementSibling.style.display = "flex";
+                      }
+                    }}
+                  />
+                ) : null}
+                <span
+                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-xs font-bold text-indigo-600"
+                  style={{ display: logoUrl ? "none" : "flex" }}
+                >
+                  {companyName.charAt(0).toUpperCase()}
+                </span>
+                <div className="min-w-0">
+                  <h2 className="truncate text-base font-semibold text-slate-900 dark:text-slate-100 sm:text-lg">{title}</h2>
+                  <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                    {companyName} • ID {app._id.slice(-6)}
+                  </p>
                 </div>
               </div>
-
-              {app.offer.pdfPath && (
-                <a
-                  href={`${serverOrigin}${app.offer.pdfPath}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-3 inline-block rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700 sm:mt-4 sm:text-sm"
-                >
-                  <span className="inline-flex items-center gap-1">
-                    <DownloadIcon sx={{ fontSize: 16 }} />
-                    Download Offer Letter
-                  </span>
-                </a>
-              )}
-
-              {app.offer.status === "PENDING" && (
-                <div className="mt-3 flex gap-2 sm:mt-4 sm:gap-3">
-                  <button
-                    onClick={() => respondToOffer(app._id, "ACCEPTED")}
-                    className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 sm:px-4 sm:py-2 sm:text-sm"
-                  >
-                    <span className="inline-flex items-center gap-1">
-                      <CheckCircleIcon sx={{ fontSize: 16 }} />
-                      Accept
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => respondToOffer(app._id, "DECLINED")}
-                    className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-700 sm:px-4 sm:py-2 sm:text-sm"
-                  >
-                    <span className="inline-flex items-center gap-1">
-                      <CancelIcon sx={{ fontSize: 16 }} />
-                      Decline
-                    </span>
-                  </button>
-                </div>
-              )}
-
-              {app.offer.status === "ACCEPTED" && (
-                <div className="mt-3 rounded-lg bg-emerald-100 px-3 py-2 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 sm:mt-4 sm:px-4 sm:text-sm">Offer accepted. Congratulations.</div>
-              )}
-
-              {app.offer.status === "DECLINED" && (
-                <div className="mt-3 rounded-lg bg-rose-100 px-3 py-2 text-xs font-semibold text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 sm:mt-4 sm:px-4 sm:text-sm">Offer declined.</div>
-              )}
+              <span className={`shrink-0 rounded-full px-2.5 py-1 text-[0.65rem] font-semibold sm:px-3 sm:text-xs ${statusStyle[app.status] || "bg-slate-100 text-slate-700"}`}>
+                {app.status.replaceAll("_", " ")}
+              </span>
             </div>
-          )}
-        </article>
-      ))}
+
+            <Timeline currentStatus={app.status} />
+
+            {app.status === "INTERVIEW_SCHEDULED" && (
+              <div className="mt-3 rounded-xl bg-indigo-50 px-3 py-2 text-xs text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300 sm:mt-4 sm:px-4 sm:text-sm">
+                Interview scheduled. Check the Interviews section.
+              </div>
+            )}
+
+            {app.status === "SELECTED" && app.offer && (
+              <div className="mt-4 rounded-xl border border-indigo-200 bg-indigo-50 p-4 dark:border-indigo-800 dark:bg-indigo-900/20 sm:mt-5 sm:rounded-2xl sm:p-5">
+                <h3 className="text-sm font-semibold text-indigo-800 dark:text-indigo-300 sm:text-base">Offer Details</h3>
+                <div className="mt-2 grid gap-3 text-sm sm:mt-3 sm:grid-cols-2 sm:gap-4">
+                  <div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Salary</p>
+                    <p className="font-semibold text-slate-900 dark:text-slate-100">{app.offer.salary}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Joining Date</p>
+                    <p className="font-semibold text-slate-900 dark:text-slate-100">{new Date(app.offer.joiningDate).toDateString()}</p>
+                  </div>
+                </div>
+
+                {app.offer.pdfPath && (
+                  <a
+                    href={`${serverOrigin}${app.offer.pdfPath}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 inline-block rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700 sm:mt-4 sm:text-sm"
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      <DownloadIcon sx={{ fontSize: 16 }} />
+                      Download Offer Letter
+                    </span>
+                  </a>
+                )}
+
+                {app.offer.status === "PENDING" && (
+                  <div className="mt-3 flex gap-2 sm:mt-4 sm:gap-3">
+                    <button
+                      onClick={() => respondToOffer(app._id, "ACCEPTED")}
+                      disabled={respondingId === app._id}
+                      className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60 sm:px-4 sm:py-2 sm:text-sm"
+                    >
+                      <span className="inline-flex items-center gap-1">
+                        <CheckCircleIcon sx={{ fontSize: 16 }} />
+                        {respondingId === app._id ? "Processing..." : "Accept"}
+                      </span>
+                    </button>
+                    <button
+                      onClick={() => respondToOffer(app._id, "DECLINED")}
+                      disabled={respondingId === app._id}
+                      className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60 sm:px-4 sm:py-2 sm:text-sm"
+                    >
+                      <span className="inline-flex items-center gap-1">
+                        <CancelIcon sx={{ fontSize: 16 }} />
+                        Decline
+                      </span>
+                    </button>
+                  </div>
+                )}
+
+                {app.offer.status === "ACCEPTED" && (
+                  <div className="mt-3 rounded-lg bg-emerald-100 px-3 py-2 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 sm:mt-4 sm:px-4 sm:text-sm">Offer accepted. Congratulations.</div>
+                )}
+
+                {app.offer.status === "DECLINED" && (
+                  <div className="mt-3 rounded-lg bg-rose-100 px-3 py-2 text-xs font-semibold text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 sm:mt-4 sm:px-4 sm:text-sm">Offer declined.</div>
+                )}
+              </div>
+            )}
+          </article>
+        );
+      })}
     </div>
   );
 }

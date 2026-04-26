@@ -19,7 +19,7 @@ export default function StepContentRenderer({ activeStep, onBack, children }) {
         </button>
       </div>
 
-      <div className="p-5 sm:p-7 lg:p-8">{children}</div>
+      <div className="p-4 sm:p-5 md:p-7 lg:p-8">{children}</div>
     </section>
   );
 }

@@ -31,7 +31,7 @@ export default function DashboardCards({ activeCardKey, onOpenCard, onBackToDash
 
   return (
     <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
-      <div className="bg-[linear-gradient(90deg,#243b95_0%,#314db8_100%)] px-6 py-4 text-white">
+      <div className="bg-[linear-gradient(90deg,#243b95_0%,#314db8_100%)] px-4 py-3 text-white sm:px-6 sm:py-4">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/10">
@@ -56,7 +56,7 @@ export default function DashboardCards({ activeCardKey, onOpenCard, onBackToDash
         </div>
       </div>
 
-      <div className="grid gap-5 p-5 md:grid-cols-2">
+      <div className="grid gap-4 p-4 sm:gap-5 sm:p-5 md:grid-cols-2">
         {cards.map((card) => {
           const isActive = card.key === activeCardKey;
 
@@ -71,7 +71,7 @@ export default function DashboardCards({ activeCardKey, onOpenCard, onBackToDash
                   : "border-slate-200 bg-white hover:-translate-y-1 hover:border-indigo-200 hover:shadow-[0_18px_50px_rgba(15,23,42,0.10)]"
               }`}
             >
-              <div className={`relative min-h-64 overflow-hidden bg-linear-to-br ${card.accentClassName}`}>
+              <div className={`relative min-h-48 overflow-hidden bg-linear-to-br sm:min-h-64 ${card.accentClassName}`}>
                 {card.imageUrl && (
                   <div
                     className="absolute inset-0 bg-cover bg-center opacity-65"

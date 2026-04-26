@@ -154,7 +154,7 @@ function OfferStepView({ step, onSubmit, isSubmitting }) {
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-[30px] font-semibold tracking-tight text-slate-950">{step.title}</h2>
+        <h2 className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-[30px]">{step.title}</h2>
         <p className="mt-2 text-sm text-slate-500">{step.description}</p>
       </div>
 
@@ -267,7 +267,7 @@ function DocumentStepView({ step, instanceId, authToken, onSubmitStep, isSubmitt
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-[30px] font-semibold tracking-tight text-slate-950">{step.title}</h2>
+        <h2 className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-[30px]">{step.title}</h2>
         <p className="mt-2 text-sm text-slate-500">{step.description}</p>
       </div>
 
@@ -343,7 +343,7 @@ function ReadingModal({ open, task, reading, loading, readOnly, onClose, onMarkR
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-8 backdrop-blur-sm">
-      <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.24)] sm:p-7">
+      <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_24px_80px_rgba(15,23,42,0.24)] sm:rounded-[28px] sm:p-6 md:p-7">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-600">
@@ -565,7 +565,7 @@ function PreJoiningStepView({
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-[30px] font-semibold tracking-tight text-slate-950">{step.title}</h2>
+        <h2 className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-[30px]">{step.title}</h2>
         <p className="mt-2 text-sm text-slate-500">{step.description}</p>
       </div>
 
@@ -762,11 +762,11 @@ function downloadJoiningPass(instance, step) {
   URL.revokeObjectURL(url);
 }
 
-function DayOneStepView({ instance, step }) {
+function DayOneStepView({ instance, step, onSubmit, isSubmitting }) {
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-[30px] font-semibold tracking-tight text-slate-950">{step.title}</h2>
+        <h2 className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-[30px]">{step.title}</h2>
         <p className="mt-2 text-sm text-slate-500">{step.description}</p>
       </div>
 
@@ -805,17 +805,25 @@ function DayOneStepView({ instance, step }) {
           </span>
           <div>
             <h3 className="text-xl font-semibold text-slate-900">Office Location</h3>
-            <p className="mt-1 text-sm text-slate-500">{step.content.location?.name}</p>
-            {(step.content.location?.addressLines || []).map((line) => (
-              <p key={line} className="text-sm text-slate-700">{line}</p>
-            ))}
+            {(() => {
+              const raw = step.content.location;
+              const loc = typeof raw === "string" ? { name: raw, addressLines: [] } : (raw || {});
+              return (
+                <>
+                  <p className="mt-1 text-sm text-slate-500">{loc.name || "Location details will be shared soon"}</p>
+                  {(loc.addressLines || []).map((line) => (
+                    <p key={line} className="text-sm text-slate-700">{line}</p>
+                  ))}
+                </>
+              );
+            })()}
           </div>
         </div>
 
         <div className="mt-5 flex min-h-55 items-center justify-center rounded-[22px] border border-slate-200 bg-[linear-gradient(180deg,#f8fafc_0%,#eef2ff_100%)] text-slate-500">
           <div className="text-center">
             <MapOutlinedIcon sx={{ fontSize: 34 }} />
-            <p className="mt-3 text-sm font-medium">{step.content.location?.mapLabel}</p>
+            <p className="mt-3 text-sm font-medium">{(typeof step.content.location === "object" ? step.content.location?.mapLabel : step.content.location) || "Map view"}</p>
           </div>
         </div>
       </section>
@@ -841,7 +849,7 @@ function DayOneStepView({ instance, step }) {
         </ul>
       </section>
 
-      <div className="grid gap-5 xl:grid-cols-[1.05fr_1fr]">
+      <div className="grid gap-5 md:grid-cols-[1.05fr_1fr]">
         <section className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-sm">
           <div className="text-center">
             <span className="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
@@ -876,14 +884,22 @@ function DayOneStepView({ instance, step }) {
         </section>
       </div>
 
-      <div className="flex justify-center">
+      <div className="flex flex-col justify-center gap-3 sm:flex-row sm:gap-4">
         <button
           type="button"
           onClick={() => downloadJoiningPass(instance, step)}
-          className="inline-flex items-center gap-2 rounded-[18px] bg-indigo-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-indigo-700"
+          className="inline-flex items-center gap-2 rounded-[18px] border border-indigo-600 px-6 py-3 text-sm font-semibold text-indigo-600 transition hover:bg-indigo-50"
         >
           <DownloadRoundedIcon sx={{ fontSize: 18 }} />
           Download Joining Pass
+        </button>
+        <button
+          type="button"
+          disabled={isSubmitting || step.status === "completed"}
+          onClick={onSubmit}
+          className="inline-flex items-center gap-2 rounded-[18px] bg-indigo-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-50"
+        >
+          {isSubmitting ? "Completing..." : "Complete Onboarding"}
         </button>
       </div>
     </div>
@@ -1176,7 +1192,14 @@ export default function OnboardingPortal() {
   }
 
   if (loading) {
-    return <PortalSkeleton />;
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#f6f8fc] px-4">
+        <div className="max-w-md rounded-[28px] border border-slate-200 bg-white p-8 text-center shadow-sm">
+          <div className="mx-auto mb-5 h-10 w-10 animate-spin rounded-full border-4 border-indigo-100 border-t-indigo-600"></div>
+          <h1 className="text-xl font-semibold tracking-tight text-slate-950">Loading your onboarding offers...</h1>
+        </div>
+      </div>
+    );
   }
 
   if (!activeAuthToken) {
@@ -1265,17 +1288,35 @@ export default function OnboardingPortal() {
           completedCount={selectedInstance.progress.completed}
           totalCount={selectedInstance.progress.total}
           deadline={selectedInstance.deadline}
+          instanceStatus={selectedInstance.status}
           onSelectStep={(stepId) => openStepView(stepId)}
         />
       )}
     >
       <div key={`${viewMode}-${activeStep?.id || "dashboard"}`} className="transition-all duration-300">
         {viewMode === "dashboard" && (
-          <DashboardCards
-            activeCardKey={learnMoreSectionKey}
-            onOpenCard={handleOpenCard}
-            onBackToDashboard={() => navigate("/student/dashboard")}
-          />
+          <>
+            {selectedInstance.progress.completed === selectedInstance.progress.total && selectedInstance.progress.total > 0 && (
+              <div className="mb-5 rounded-[22px] border border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50 p-5 shadow-sm">
+                <div className="flex flex-wrap items-center gap-4">
+                  <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600">
+                    <CheckCircleRoundedIcon sx={{ fontSize: 26 }} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-lg font-semibold text-emerald-900">Onboarding Complete!</h3>
+                    <p className="mt-1 text-sm text-emerald-700">
+                      All {selectedInstance.progress.total} steps have been completed. You are ready for your first day at {selectedInstance.companyName || "the company"}.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+            <DashboardCards
+              activeCardKey={learnMoreSectionKey}
+              onOpenCard={handleOpenCard}
+              onBackToDashboard={() => navigate("/student/dashboard")}
+            />
+          </>
         )}
 
         {viewMode === "learn-more" && (
@@ -1321,7 +1362,12 @@ export default function OnboardingPortal() {
             )}
 
             {activeStep.type === "day_one_info" && (
-              <DayOneStepView instance={selectedInstance} step={activeStep} />
+              <DayOneStepView 
+                 instance={selectedInstance} 
+                 step={activeStep} 
+                 onSubmit={() => submitStep(activeStep, {}, "Onboarding completed!")}
+                 isSubmitting={submittingStepId === activeStep.id}
+              />
             )}
           </StepContentRenderer>
         )}

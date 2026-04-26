@@ -35,10 +35,7 @@ const shouldStartScheduler = String(process.env.ENABLE_SCHEDULER || "true").trim
    SECURITY MIDDLEWARE (S2, S3, S4, S5)
 =========================== */
 
-// S5: Helmet for HTTP security headers
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" }
-}));
+// Helmet configuration is applied dynamically below the allowedOrigins definition
 
 // S2: CORS — restrict to frontend origin
 const defaultOrigins = [
@@ -96,6 +93,25 @@ function isAllowedOrigin(origin) {
 
   return false;
 }
+
+// S5: Helmet for HTTP security headers (moved below allowedOrigins for dynamic CSP)
+const cspFrameAncestors = ["'self'", ...allowedOrigins];
+
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  xFrameOptions: false,
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      frameAncestors: cspFrameAncestors,
+      frameSrc: ["'self'", "blob:", "data:"],
+      objectSrc: ["'self'", "blob:"],
+      imgSrc: ["'self'", "data:", "blob:", "http:", "https:"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"]
+    }
+  }
+}));
 
 app.use(cors({
   origin: function (origin, callback) {
@@ -215,7 +231,7 @@ app.use("/api/documents", require("./routes/documentRoutes"));
 /* ===========================
    STATIC FILES
 =========================== */
-app.use("/uploads", express.static("uploads"));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/offers", express.static(path.join(__dirname, "offers")));
 
 /* ===========================

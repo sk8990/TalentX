@@ -26,16 +26,28 @@ async function generateContentWithGemini(content) {
   let lastError = null;
 
   for (const modelName of getModelCandidates()) {
-    try {
-      const model = genAI.getGenerativeModel({ model: modelName });
-      const result = await model.generateContent(content);
-      const response = await result.response;
-      const text = response.text();
-      if (text && text.trim()) {
-        return text.trim();
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        console.info(`[Gemini] Trying model "${modelName}" (attempt ${attempt + 1})`);
+        const model = genAI.getGenerativeModel({ model: modelName });
+        const result = await model.generateContent(content);
+        const response = await result.response;
+        const text = response.text();
+        if (text && text.trim()) {
+          return text.trim();
+        }
+      } catch (err) {
+        lastError = err;
+        const status = err?.status || err?.response?.status || 0;
+        const isTransient = status === 429 || status === 503;
+        console.warn(`[Gemini] Model "${modelName}" attempt ${attempt + 1} failed (status=${status}): ${err.message}`);
+        if (isTransient && attempt === 0) {
+          const delayMs = 1500 + Math.random() * 1000;
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+          continue;
+        }
+        break;
       }
-    } catch (err) {
-      lastError = err;
     }
   }
 
@@ -160,7 +172,7 @@ function normalizeParsedJobData(raw) {
     description: normalizeText(payload.description),
     aboutCompany: normalizeText(payload.aboutCompany),
     ctc: normalizeOptionalNumber(payload.ctc, { min: 0.01 }),
-    minCgpa: normalizeOptionalNumber(payload.minCgpa, { min: 0, max: 10 }),
+    minCgpa: normalizeOptionalNumber(payload.minCgpa, { min: 0.1, max: 10 }),
     eligibleBranches: normalizeBranchList(payload.eligibleBranches),
     eligibilityText: normalizeText(payload.eligibilityText),
     deadline: normalizeIsoDate(payload.deadline),

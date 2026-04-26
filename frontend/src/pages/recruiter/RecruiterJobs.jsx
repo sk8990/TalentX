@@ -273,8 +273,8 @@ export default function RecruiterJobs() {
       return;
     }
 
-    if (Number.isNaN(payload.minCgpa) || payload.minCgpa < 0 || payload.minCgpa > 10) {
-      showAlert("warning", "Minimum CGPA must be between 0 and 10");
+    if (Number.isNaN(payload.minCgpa) || payload.minCgpa <= 0 || payload.minCgpa > 10) {
+      showAlert("warning", "Minimum CGPA must be between 0.1 and 10");
       return;
     }
 
@@ -605,7 +605,7 @@ export default function RecruiterJobs() {
             <input
               type="number"
               step="0.1"
-              min="0"
+              min="0.1"
               max="10"
               placeholder="7.0"
               className={inputClass}

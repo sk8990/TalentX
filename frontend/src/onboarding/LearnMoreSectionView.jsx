@@ -4,9 +4,6 @@ import PublicRoundedIcon from "@mui/icons-material/PublicRounded";
 import TravelExploreRoundedIcon from "@mui/icons-material/TravelExploreRounded";
 import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import TimelineRoundedIcon from "@mui/icons-material/TimelineRounded";
-import { CircleMarker, MapContainer, Popup, TileLayer, useMap } from "react-leaflet";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
 
 function formatGeneratedAt(value) {
   if (!value) return "";
@@ -26,47 +23,11 @@ function timelineBadgeClass(statusLabel) {
   return "border-slate-200 bg-slate-50 text-slate-600";
 }
 
-function parseCoordinate(value) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function buildLocationKey(item, index) {
-  return `${item?.officeName || ""}|${item?.city || ""}|${item?.country || ""}|${item?.latitude || ""}|${item?.longitude || ""}|${index}`.toLowerCase();
-}
-
-function LocationMapViewportController({ locations, focusedLocation }) {
-  const map = useMap();
-
-  useEffect(() => {
-    if (!Array.isArray(locations) || locations.length === 0) {
-      return;
-    }
-
-    if (focusedLocation) {
-      map.flyTo([focusedLocation.latitude, focusedLocation.longitude], Math.max(map.getZoom(), 5), {
-        animate: true,
-        duration: 0.6
-      });
-      return;
-    }
-
-    if (locations.length === 1) {
-      map.setView([locations[0].latitude, locations[0].longitude], 12);
-      return;
-    }
-
-    const bounds = L.latLngBounds(locations.map((item) => [item.latitude, item.longitude]));
-    map.fitBounds(bounds, { padding: [30, 30] });
-  }, [locations, focusedLocation, map]);
-
-  return null;
-}
 
 export default function LearnMoreSectionView({ sectionKey, payload, loading, onBack }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [countryFilter, setCountryFilter] = useState("all");
-  const [selectedMapLocationKey, setSelectedMapLocationKey] = useState("");
+
 
   const content = payload?.content || {};
   const locations = Array.isArray(content.locations) ? content.locations : [];
@@ -77,7 +38,6 @@ export default function LearnMoreSectionView({ sectionKey, payload, loading, onB
   useEffect(() => {
     setSearchTerm("");
     setCountryFilter("all");
-    setSelectedMapLocationKey("");
   }, [sectionKey, payload?.generatedAt]);
 
   const countries = useMemo(() => {
@@ -105,41 +65,7 @@ export default function LearnMoreSectionView({ sectionKey, payload, loading, onB
     });
   }, [locations, countryFilter, searchTerm]);
 
-  const mappableLocations = useMemo(() => {
-    return filteredLocations
-      .map((item, index) => {
-        const latitude = parseCoordinate(item?.latitude);
-        const longitude = parseCoordinate(item?.longitude);
 
-        if (latitude === null || longitude === null) {
-          return null;
-        }
-
-        return {
-          ...item,
-          latitude,
-          longitude,
-          mapKey: buildLocationKey(item, index)
-        };
-      })
-      .filter(Boolean);
-  }, [filteredLocations]);
-
-  useEffect(() => {
-    if (!mappableLocations.length) {
-      setSelectedMapLocationKey("");
-      return;
-    }
-
-    const hasSelectedLocation = mappableLocations.some((item) => item.mapKey === selectedMapLocationKey);
-    if (!hasSelectedLocation) {
-      setSelectedMapLocationKey(mappableLocations[0].mapKey);
-    }
-  }, [mappableLocations, selectedMapLocationKey]);
-
-  const focusedMapLocation = useMemo(() => {
-    return mappableLocations.find((item) => item.mapKey === selectedMapLocationKey) || null;
-  }, [mappableLocations, selectedMapLocationKey]);
 
   return (
     <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
@@ -253,58 +179,6 @@ export default function LearnMoreSectionView({ sectionKey, payload, loading, onB
                   Showing {filteredLocations.length} of {locations.length} discovered locations.
                 </p>
 
-                {mappableLocations.length > 0 ? (
-                  <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-                    <div className="h-96 w-full">
-                      <MapContainer
-                        center={[mappableLocations[0].latitude, mappableLocations[0].longitude]}
-                        zoom={3}
-                        scrollWheelZoom
-                        className="h-full w-full"
-                      >
-                        <TileLayer
-                          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                        />
-
-                        <LocationMapViewportController locations={mappableLocations} focusedLocation={focusedMapLocation} />
-
-                        {mappableLocations.map((item) => {
-                          const isActive = item.mapKey === focusedMapLocation?.mapKey;
-
-                          return (
-                            <CircleMarker
-                              key={item.mapKey}
-                              center={[item.latitude, item.longitude]}
-                              radius={isActive ? 9 : 7}
-                              pathOptions={{
-                                color: isActive ? "#1d4ed8" : "#4f46e5",
-                                fillColor: isActive ? "#1d4ed8" : "#6366f1",
-                                fillOpacity: 0.8,
-                                weight: 2
-                              }}
-                              eventHandlers={{
-                                click: () => setSelectedMapLocationKey(item.mapKey)
-                              }}
-                            >
-                              <Popup>
-                                <div className="max-w-60 space-y-1">
-                                  <p className="text-sm font-semibold text-slate-900">{item.officeName}</p>
-                                  <p className="text-xs text-slate-600">{[item.city, item.country].filter(Boolean).join(", ") || "Location"}</p>
-                                  {item.address && <p className="text-xs leading-5 text-slate-500">{item.address}</p>}
-                                </div>
-                              </Popup>
-                            </CircleMarker>
-                          );
-                        })}
-                      </MapContainer>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm text-slate-600">
-                    Map view is unavailable for these results because coordinates were not found for the current filter.
-                  </div>
-                )}
 
                 {filteredLocations.length === 0 ? (
                   <div className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-8 text-center text-sm text-slate-500">
@@ -317,25 +191,8 @@ export default function LearnMoreSectionView({ sectionKey, payload, loading, onB
                         <p className="text-base font-semibold text-slate-900">{item.officeName}</p>
                         <p className="mt-1 text-sm text-slate-700">{[item.city, item.country].filter(Boolean).join(", ")}</p>
                         {item.address && <p className="mt-2 text-xs leading-6 text-slate-500">{item.address}</p>}
-                        {parseCoordinate(item?.latitude) !== null && parseCoordinate(item?.longitude) !== null && (
-                          <button
-                            type="button"
-                            onClick={() => setSelectedMapLocationKey(buildLocationKey(item, index))}
-                            className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-700"
-                          >
-                            Focus on map
-                          </button>
-                        )}
-                        {item.sourceUrl && (
-                          <a
-                            href={item.sourceUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-700"
-                          >
-                            Open map location
-                          </a>
-                        )}
+
+
                       </article>
                     ))}
                   </div>

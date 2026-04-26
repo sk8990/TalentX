@@ -8,8 +8,8 @@ const steps = [
 
 export default function OnboardingStepper({ activeStep }) {
   return (
-    <div className="border-b border-slate-200 bg-white px-4 py-4">
-      <div className="mx-auto flex max-w-4xl items-start justify-between">
+    <div className="border-b border-slate-200 bg-white px-3 py-3 sm:px-4 sm:py-4">
+      <div className="mx-auto flex max-w-4xl items-start justify-between gap-1 sm:gap-0">
         {steps.map((label, index) => {
           const isCompleted = index < activeStep;
           const isActive = index === activeStep;

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import VisibilityIcon from "@mui/icons-material/Visibility";
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import {
   Button,
   Dialog,
@@ -52,6 +53,42 @@ function formatDateTime(date) {
     hour: "2-digit",
     minute: "2-digit"
   });
+}
+
+function formatCountdown(totalSeconds) {
+  const safeSeconds = Math.max(0, Math.floor(totalSeconds));
+  const days = Math.floor(safeSeconds / 86400);
+  const hours = Math.floor((safeSeconds % 86400) / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  const seconds = safeSeconds % 60;
+
+  if (days > 0) return `${days}d ${hours}h ${minutes}m`;
+  if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`;
+  if (minutes > 0) return `${minutes}m ${seconds}s`;
+  return `${seconds}s`;
+}
+
+function CountdownBanner({ targetDate, nowMs }) {
+  const targetMs = targetDate ? new Date(targetDate).getTime() : 0;
+  const remainingSeconds = Number.isFinite(targetMs) ? (targetMs - nowMs) / 1000 : 0;
+
+  if (remainingSeconds <= 0) return null;
+
+  const isUrgent = remainingSeconds < 3600;
+
+  return (
+    <div className={`mt-4 flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold ${
+      isUrgent
+        ? "bg-amber-50 text-amber-700 ring-1 ring-amber-200"
+        : "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200"
+    }`}>
+      <AccessTimeIcon sx={{ fontSize: 18 }} />
+      <span>
+        {isUrgent ? "Starting soon — " : "Starts in "}
+        <span className="font-bold">{formatCountdown(remainingSeconds)}</span>
+      </span>
+    </div>
+  );
 }
 
 export default function Assessments() {
@@ -200,6 +237,10 @@ export default function Assessments() {
                   <InfoCard label="Company Name" value={companyName || "N/A"} />
                   <InfoCard label="Date & Time" value={formatDateTime(assessmentDate)} />
                 </div>
+
+                {status === "UPCOMING" && assessmentDate ? (
+                  <CountdownBanner targetDate={assessmentDate} nowMs={nowMs} />
+                ) : null}
 
                 <div className="mt-6 flex flex-wrap gap-2">
                   {canStart ? (

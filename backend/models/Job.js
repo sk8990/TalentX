@@ -14,7 +14,7 @@ const jobSchema = new mongoose.Schema(
     description: String,
     ctc: { type: Number, required: true },
     aboutCompany: { type: String, required: true },
-    minCgpa: { type: Number, required: true },
+    minCgpa: { type: Number, required: true, min: 0.1 },
     eligibleBranches: {
       type: [String],
       enum: ["CS", "IT", "ENTC", "MECH", "CIVIL"],

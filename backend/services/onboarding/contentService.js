@@ -444,13 +444,16 @@ function buildLocationSearchQueries({ companyName, companyDomain }) {
   return [...new Set(queries)];
 }
 
-async function searchNominatim(query) {
-  const response = await axios.get("https://nominatim.openstreetmap.org/search", {
+async function searchGeoapify(query) {
+  const apiKey = process.env.GEOAPIFY_API_KEY || "";
+  if (!apiKey) {
+    console.warn("GEOAPIFY_API_KEY is missing. Location search may fail.");
+  }
+  const response = await axios.get("https://api.geoapify.com/v1/geocode/search", {
     params: {
-      q: query,
-      format: "jsonv2",
-      addressdetails: 1,
-      limit: 25
+      text: query,
+      limit: 25,
+      apiKey: apiKey
     },
     timeout: 15000,
     headers: {
@@ -459,25 +462,24 @@ async function searchNominatim(query) {
     }
   });
 
-  return Array.isArray(response.data) ? response.data : [];
+  return Array.isArray(response.data?.features) ? response.data.features : [];
 }
 
-function mapNominatimLocation(item) {
-  const address = item?.address || {};
-  const country = normalizeText(address.country);
-  const countryCode = normalizeText(address.country_code).toUpperCase();
+function mapGeoapifyLocation(feature) {
+  const props = feature?.properties || {};
+  const country = normalizeText(props.country);
+  const countryCode = normalizeText(props.country_code).toUpperCase();
   const city = normalizeText(
-    address.city
-      || address.town
-      || address.village
-      || address.municipality
-      || address.county
-      || address.state_district
-      || address.state
+    props.city
+      || props.town
+      || props.village
+      || props.municipality
+      || props.county
+      || props.state
   );
 
-  const displayName = normalizeText(item?.display_name);
-  const officeName = normalizeText(item?.name) || normalizeText(displayName.split(",")[0]) || "Office";
+  const displayName = normalizeText(props.formatted);
+  const officeName = normalizeText(props.name) || normalizeText(displayName.split(",")[0]) || "Office";
 
   return {
     officeName,
@@ -485,10 +487,10 @@ function mapNominatimLocation(item) {
     country,
     countryCode,
     address: displayName,
-    latitude: Number(item?.lat),
-    longitude: Number(item?.lon),
-    sourceUrl: `https://www.openstreetmap.org/?mlat=${item?.lat}&mlon=${item?.lon}#map=14/${item?.lat}/${item?.lon}`,
-    importance: Number(item?.importance || 0)
+    latitude: Number(props.lat),
+    longitude: Number(props.lon),
+    sourceUrl: `https://www.openstreetmap.org/?mlat=${props.lat}&mlon=${props.lon}#map=14/${props.lat}/${props.lon}`,
+    importance: Number(props.rank?.importance || 0)
   };
 }
 
@@ -497,7 +499,7 @@ function buildFallbackLocations(context) {
     title: `${context.companyName} Global Locations`,
     intro: `Live office location data is not available right now for ${context.companyName}. You can still search by country once locations are discovered in later refreshes.`,
     locations: [],
-    source: "nominatim-fallback"
+    source: "geoapify-fallback"
   };
 }
 
@@ -509,11 +511,12 @@ async function discoverCompanyLocations(context) {
 
   for (const query of queries) {
     try {
-      const results = await searchNominatim(query);
+      const results = await searchGeoapify(query);
 
       for (const item of results) {
-        const haystack = `${item?.display_name || ""} ${item?.name || ""}`.toLowerCase();
-        const location = mapNominatimLocation(item);
+        const props = item?.properties || {};
+        const haystack = `${props.formatted || ""} ${props.name || ""}`.toLowerCase();
+        const location = mapGeoapifyLocation(item);
         if (!location.country && !location.city && !location.address) {
           continue;
         }
@@ -553,7 +556,7 @@ async function discoverCompanyLocations(context) {
     title: `${context.companyName} Global Locations`,
     intro: `Explore office and branch locations discovered for ${context.companyName}. Use country filtering and search to quickly narrow your view.`,
     locations,
-    source: strictMatches.length > 0 ? "openstreetmap-nominatim" : "openstreetmap-nominatim-relaxed"
+    source: strictMatches.length > 0 ? "geoapify" : "geoapify-relaxed"
   };
 }
 

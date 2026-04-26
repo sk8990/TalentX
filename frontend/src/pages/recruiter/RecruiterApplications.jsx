@@ -130,6 +130,10 @@ export default function RecruiterApplications() {
     aiConfig: createDefaultAIConfig(),
     slots: [createEmptySlot()],
   });
+  const [reportDialog, setReportDialog] = useState({
+    open: false,
+    app: null,
+  });
 
   useEffect(() => {
     fetchJobs();
@@ -341,22 +345,57 @@ export default function RecruiterApplications() {
   };
 
   const updateSlotField = (index, field, value) => {
-    setSlotDialog((prev) => ({
-      ...prev,
-      slots: prev.slots.map((slot, idx) =>
-        idx === index ? { ...slot, [field]: value } : slot
-      ),
-    }));
+    setSlotDialog((prev) => {
+      const newSlots = prev.slots.map((slot, idx) => {
+        if (idx !== index) return slot;
+
+        const updatedSlot = { ...slot, [field]: value };
+
+        if (field === "start" && value && prev.aiConfig?.durationMinutes) {
+          const startDate = new Date(value);
+          if (!Number.isNaN(startDate.getTime())) {
+            const durationMs = parseInt(prev.aiConfig.durationMinutes, 10) * 60000;
+            const endDate = new Date(startDate.getTime() + durationMs);
+
+            const pad = (n) => n.toString().padStart(2, "0");
+            updatedSlot.end = `${endDate.getFullYear()}-${pad(endDate.getMonth() + 1)}-${pad(endDate.getDate())}T${pad(endDate.getHours())}:${pad(endDate.getMinutes())}`;
+          }
+        }
+
+        return updatedSlot;
+      });
+      return { ...prev, slots: newSlots };
+    });
   };
 
   const updateAIConfigField = (field, value) => {
-    setSlotDialog((prev) => ({
-      ...prev,
-      aiConfig: {
-        ...prev.aiConfig,
-        [field]: value
+    setSlotDialog((prev) => {
+      const newAiConfig = { ...prev.aiConfig, [field]: value };
+      
+      let newSlots = prev.slots;
+      if (field === "durationMinutes" && value) {
+        newSlots = prev.slots.map((slot) => {
+          if (!slot.start) return slot;
+          const startDate = new Date(slot.start);
+          if (!Number.isNaN(startDate.getTime())) {
+            const durationMs = parseInt(value, 10) * 60000;
+            const endDate = new Date(startDate.getTime() + durationMs);
+            const pad = (n) => n.toString().padStart(2, "0");
+            return {
+              ...slot,
+              end: `${endDate.getFullYear()}-${pad(endDate.getMonth() + 1)}-${pad(endDate.getDate())}T${pad(endDate.getHours())}:${pad(endDate.getMinutes())}`
+            };
+          }
+          return slot;
+        });
       }
-    }));
+
+      return {
+        ...prev,
+        aiConfig: newAiConfig,
+        slots: newSlots
+      };
+    });
   };
 
   const addSlotRow = () => {
@@ -373,6 +412,65 @@ export default function RecruiterApplications() {
     });
   };
 
+  const handleDownloadPDF = (app) => {
+    if (!app || !app.aiInterview) return;
+    const printWindow = window.open("", "_blank");
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>AI Interview Report - ${app.studentId?.userId?.name || "Candidate"}</title>
+          <style>
+            body { font-family: system-ui, -apple-system, sans-serif; padding: 40px; color: #1e293b; line-height: 1.5; }
+            h1 { color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 20px; }
+            h2 { color: #334155; margin-top: 30px; border-bottom: 1px solid #f1f5f9; padding-bottom: 5px; }
+            .section { margin-bottom: 24px; background: #f8fafc; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0; }
+            .section p { margin: 4px 0; }
+            .score-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 16px; }
+            .score-item { background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; font-weight: 500; }
+            .score-value { color: #4f46e5; font-weight: 700; float: right; }
+            .transcript-item { margin-bottom: 16px; padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; page-break-inside: avoid; }
+            .q { font-weight: 600; color: #0f172a; margin-bottom: 8px; }
+            .a { color: #475569; }
+          </style>
+        </head>
+        <body>
+          <h1>AI Interview Report</h1>
+          <div class="section">
+            <p><strong>Candidate:</strong> ${app.studentId?.userId?.name || "Unknown"}</p>
+            <p><strong>Email:</strong> ${app.studentId?.userId?.email || "Unknown"}</p>
+            <p><strong>Role:</strong> ${app.jobId?.title || "Unknown Role"}</p>
+            <p><strong>Date:</strong> ${new Date(app.aiInterview.endedAt || Date.now()).toLocaleString()}</p>
+            <p><strong>Overall Recommendation:</strong> <span style="color: #4f46e5; font-weight: 700;">${(app.aiInterview.recommendation || "N/A").replaceAll("_", " ")}</span></p>
+          </div>
+          
+          <h2>Scores</h2>
+          <div class="score-grid">
+            <div class="score-item">Communication <span class="score-value">${app.aiInterview?.scores?.communication ?? "-"} / 5</span></div>
+            <div class="score-item">Technical Knowledge <span class="score-value">${app.aiInterview?.scores?.technicalKnowledge ?? "-"} / 5</span></div>
+            <div class="score-item">Problem Solving <span class="score-value">${app.aiInterview?.scores?.problemSolving ?? "-"} / 5</span></div>
+            <div class="score-item">Role Fit <span class="score-value">${app.aiInterview?.scores?.roleFit ?? "-"} / 5</span></div>
+          </div>
+
+          ${app.aiInterview.summary ? `<h2>Summary</h2><div class="section">${app.aiInterview.summary}</div>` : ""}
+          ${app.aiInterview.finalReport ? `<h2>Final Report</h2><div class="section">${app.aiInterview.finalReport}</div>` : ""}
+
+          <h2>Transcript</h2>
+          ${(app.aiInterview.transcript || []).map((t, i) => `
+            <div class="transcript-item">
+              <div class="q">Q${i + 1}: ${t.question}</div>
+              <div class="a">A: ${t.answer || "(No answer provided)"}</div>
+            </div>
+          `).join("")}
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
+  };
+
   const submitSlotDialog = async () => {
     for (let i = 0; i < slotDialog.slots.length; i += 1) {
       const slot = slotDialog.slots[i];
@@ -386,6 +484,11 @@ export default function RecruiterApplications() {
 
       if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end.getTime() <= start.getTime()) {
         toast.error(`Slot ${i + 1}: invalid start/end time`);
+        return;
+      }
+
+      if (start.getTime() <= Date.now()) {
+        toast.error(`Slot ${i + 1}: start time must be in the future`);
         return;
       }
 
@@ -492,8 +595,8 @@ export default function RecruiterApplications() {
       confirmText: "Generate",
       fields: [
         { name: "salary", label: "Salary", placeholder: "e.g. 6 LPA", required: true },
-        { name: "joiningDate", label: "Joining Date", placeholder: "YYYY-MM-DD", required: true },
-        { name: "location", label: "Location", placeholder: "City / Office", required: true },
+        { name: "joiningDate", type: "date", label: "Joining Date", required: true },
+        { name: "location", type: "location", label: "Location", placeholder: "City / Office", required: true },
       ],
     });
 
@@ -537,7 +640,7 @@ export default function RecruiterApplications() {
               options={jobs}
               value={selectedJobOption}
               isOptionEqualToValue={(option, value) => option._id === value._id}
-              getOptionLabel={(option) => option?.title || ""}
+              getOptionLabel={(option) => option?.companyName ? `${option.companyName} - ${option.title}` : option?.title || ""}
               noOptionsText="No matching jobs"
               onChange={(_, value) => {
                 const jobId = value?._id || "";
@@ -547,7 +650,7 @@ export default function RecruiterApplications() {
               renderInput={(params) => (
                 <TextField
                   {...params}
-                  placeholder="Type job title to search"
+                  placeholder="Type job title or company to search"
                   size="small"
                   sx={{
                     mt: 1,
@@ -701,30 +804,44 @@ export default function RecruiterApplications() {
                           ) : null}
 
                           {app?.aiInterview?.endedAt ? (
-                            <div className="mt-2 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-3 text-xs text-cyan-900">
-                              <p className="font-semibold">AI Interview Report</p>
-                              <p className="mt-1">
-                                Status: {String(app.aiInterview.status || "COMPLETED").replaceAll("_", " ")}
-                              </p>
-                              <p className="mt-1">
-                                Recommendation: {formatRecommendation(app.aiInterview.recommendation)}
-                              </p>
-                              <p className="mt-1">
-                                Scores - Comm: {app.aiInterview?.scores?.communication ?? "-"}, Tech: {app.aiInterview?.scores?.technicalKnowledge ?? "-"}, PS: {app.aiInterview?.scores?.problemSolving ?? "-"}, Fit: {app.aiInterview?.scores?.roleFit ?? "-"}
-                              </p>
-                              {app.aiInterview.summary ? <p className="mt-1">{app.aiInterview.summary}</p> : null}
-                              {app.aiInterview.finalReport ? <p className="mt-1">{app.aiInterview.finalReport}</p> : null}
-                              {Array.isArray(app.aiInterview?.transcript) && app.aiInterview.transcript.length ? (
-                                <div className="mt-2 rounded-lg border border-cyan-100 bg-white/80 p-2">
-                                  <p className="font-semibold text-cyan-900">Transcript Preview</p>
-                                  {app.aiInterview.transcript.slice(0, 2).map((entry) => (
-                                    <div key={`${app._id}-${entry.questionIndex}`} className="mt-1">
-                                      <p className="font-medium">Q: {entry.question || "Question"}</p>
-                                      <p className="text-cyan-800">A: {entry.answer || "No answer captured"}</p>
-                                    </div>
-                                  ))}
+                            <div className="mt-2 rounded-xl border border-cyan-200 bg-cyan-50 p-3 text-xs text-cyan-900">
+                              <div className="flex items-center justify-between mb-2">
+                                <p className="font-semibold text-sm">AI Interview Report</p>
+                                <span className="rounded-full bg-cyan-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-cyan-800">
+                                  {String(app.aiInterview.status || "COMPLETED").replaceAll("_", " ")}
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 mb-3">
+                                <div className="rounded-lg bg-white/60 p-2 text-center border border-cyan-100/50">
+                                  <p className="text-[10px] uppercase tracking-wide text-cyan-600/80 mb-0.5">Recommendation</p>
+                                  <p className="font-semibold">{formatRecommendation(app.aiInterview.recommendation)}</p>
                                 </div>
-                              ) : null}
+                                <div className="rounded-lg bg-white/60 p-2 text-center border border-cyan-100/50">
+                                  <p className="text-[10px] uppercase tracking-wide text-cyan-600/80 mb-0.5">Avg Score</p>
+                                  <p className="font-semibold">
+                                    {(() => {
+                                      const scores = [
+                                        parseInt(app.aiInterview?.scores?.communication),
+                                        parseInt(app.aiInterview?.scores?.technicalKnowledge),
+                                        parseInt(app.aiInterview?.scores?.problemSolving),
+                                        parseInt(app.aiInterview?.scores?.roleFit)
+                                      ].filter(s => !isNaN(s));
+                                      return scores.length > 0 ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1) + " / 5" : "N/A";
+                                    })()}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex gap-2">
+                                <Button 
+                                  variant="contained" 
+                                  size="small" 
+                                  fullWidth
+                                  onClick={() => setReportDialog({ open: true, app })}
+                                  sx={{ textTransform: "none", bgcolor: "#0891b2", "&:hover": { bgcolor: "#0e7490" }, boxShadow: "none" }}
+                                >
+                                  View Full Report
+                                </Button>
+                              </div>
                             </div>
                           ) : null}
 
@@ -902,40 +1019,60 @@ export default function RecruiterApplications() {
           </DialogContentText>
         ) : null}
         <DialogContent sx={{ display: "grid", gap: 2, pt: 1 }}>
-          {inputDialog.fields.map((field) => (
-            <TextField
-              key={field.name}
-              select={field.type === "select"}
-              type={field.type === "datetime-local" ? "datetime-local" : "text"}
-              label={field.label}
-              value={inputValues[field.name] || ""}
-              onChange={(e) =>
-                setInputValues((prev) => ({
-                  ...prev,
-                  [field.name]: e.target.value,
-                }))
-              }
-              placeholder={field.placeholder || ""}
-              size="small"
-              fullWidth
-              required={Boolean(field.required)}
-              InputLabelProps={field.type === "datetime-local" ? { shrink: true } : undefined}
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 2,
-                  backgroundColor: "#ffffff",
-                },
-              }}
-            >
-              {field.type === "select"
-                ? field.options?.map((option) => (
-                    <MenuItem key={option} value={option}>
-                      {option}
-                    </MenuItem>
-                  ))
-                : null}
-            </TextField>
-          ))}
+          {inputDialog.fields.map((field, index) => {
+            if (field.type === "location") {
+              return (
+                <LocationAutocompleteField
+                  key={field.name}
+                  field={field}
+                  autoFocus={index === 0}
+                  value={inputValues[field.name] || ""}
+                  onChange={(val) =>
+                    setInputValues((prev) => ({
+                      ...prev,
+                      [field.name]: val,
+                    }))
+                  }
+                />
+              );
+            }
+
+            return (
+              <TextField
+                key={field.name}
+                autoFocus={index === 0}
+                select={field.type === "select"}
+                type={field.type !== "select" ? (field.type || "text") : undefined}
+                label={field.label}
+                value={inputValues[field.name] || ""}
+                onChange={(e) =>
+                  setInputValues((prev) => ({
+                    ...prev,
+                    [field.name]: e.target.value,
+                  }))
+                }
+                placeholder={field.placeholder || ""}
+                size="small"
+                fullWidth
+                required={Boolean(field.required)}
+                InputLabelProps={(field.type === "datetime-local" || field.type === "date" || field.type === "time") ? { shrink: true } : undefined}
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: 2,
+                    backgroundColor: "#ffffff",
+                  },
+                }}
+              >
+                {field.type === "select"
+                  ? field.options?.map((option) => (
+                      <MenuItem key={option} value={option}>
+                        {option}
+                      </MenuItem>
+                    ))
+                  : null}
+              </TextField>
+            );
+          })}
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
           <Button
@@ -1056,8 +1193,9 @@ export default function RecruiterApplications() {
                     size="small"
                     fullWidth
                     required
+                    disabled
                     InputLabelProps={{ shrink: true }}
-                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2, backgroundColor: "#ffffff" } }}
+                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2, backgroundColor: "#ffffff", opacity: 0.8 } }}
                   />
                   <TextField
                     label="Mode"
@@ -1106,6 +1244,121 @@ export default function RecruiterApplications() {
             sx={{ textTransform: "none", borderRadius: 2, bgcolor: "#4f46e5", "&:hover": { bgcolor: "#4338ca" } }}
           >
             Publish Slots
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={reportDialog.open}
+        onClose={() => setReportDialog({ open: false, app: null })}
+        fullWidth
+        maxWidth="md"
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            border: "1px solid #e2e8f0",
+            boxShadow: "0 24px 45px rgba(15, 23, 42, 0.25)",
+            background: "#ffffff",
+          },
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 700, color: "#0f172a", pb: 1, borderBottom: "1px solid #f1f5f9" }}>
+          <div className="flex items-center justify-between">
+            <span>AI Interview Report</span>
+            {reportDialog.app?.aiInterview?.status && (
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-slate-700 border border-slate-200">
+                {String(reportDialog.app.aiInterview.status).replaceAll("_", " ")}
+              </span>
+            )}
+          </div>
+        </DialogTitle>
+        <DialogContent sx={{ p: 0 }}>
+          {reportDialog.app?.aiInterview && (
+            <div className="p-5 space-y-6">
+              {/* Top Overview */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-4">
+                  <h4 className="text-xs font-bold uppercase tracking-widest text-indigo-500 mb-1">Recommendation</h4>
+                  <p className="text-xl font-bold text-indigo-900">{formatRecommendation(reportDialog.app.aiInterview.recommendation) || "N/A"}</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <h4 className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-3">Scores</h4>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                    <div className="flex justify-between border-b border-slate-200 pb-1">
+                      <span className="text-slate-600">Communication</span>
+                      <span className="font-semibold text-slate-900">{reportDialog.app.aiInterview.scores?.communication || "-"}</span>
+                    </div>
+                    <div className="flex justify-between border-b border-slate-200 pb-1">
+                      <span className="text-slate-600">Technical</span>
+                      <span className="font-semibold text-slate-900">{reportDialog.app.aiInterview.scores?.technicalKnowledge || "-"}</span>
+                    </div>
+                    <div className="flex justify-between border-b border-slate-200 pb-1">
+                      <span className="text-slate-600">Problem Solving</span>
+                      <span className="font-semibold text-slate-900">{reportDialog.app.aiInterview.scores?.problemSolving || "-"}</span>
+                    </div>
+                    <div className="flex justify-between border-b border-slate-200 pb-1">
+                      <span className="text-slate-600">Role Fit</span>
+                      <span className="font-semibold text-slate-900">{reportDialog.app.aiInterview.scores?.roleFit || "-"}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Summaries */}
+              <div className="space-y-4">
+                {reportDialog.app.aiInterview.summary && (
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900 mb-2">Summary</h4>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
+                      {reportDialog.app.aiInterview.summary}
+                    </div>
+                  </div>
+                )}
+                {reportDialog.app.aiInterview.finalReport && (
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900 mb-2">Final Report</h4>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
+                      {reportDialog.app.aiInterview.finalReport}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Transcript */}
+              {Array.isArray(reportDialog.app.aiInterview.transcript) && reportDialog.app.aiInterview.transcript.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 mb-3">Transcript</h4>
+                  <div className="space-y-3">
+                    {reportDialog.app.aiInterview.transcript.map((t, idx) => (
+                      <div key={idx} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <p className="font-semibold text-slate-900 text-sm mb-2 pb-2 border-b border-slate-100">
+                          <span className="text-indigo-500 mr-2">Q{idx + 1}:</span> {t.question}
+                        </p>
+                        <p className="text-sm text-slate-600 leading-relaxed">
+                          <span className="font-semibold text-slate-400 mr-2">A:</span> {t.answer || "(No answer provided)"}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 2, borderTop: "1px solid #f1f5f9" }}>
+          <Button
+            onClick={() => setReportDialog({ open: false, app: null })}
+            variant="outlined"
+            sx={{ textTransform: "none", borderRadius: 2 }}
+          >
+            Close
+          </Button>
+          <Button
+            onClick={() => handleDownloadPDF(reportDialog.app)}
+            variant="contained"
+            sx={{ textTransform: "none", borderRadius: 2, bgcolor: "#0f172a", "&:hover": { bgcolor: "#1e293b" } }}
+          >
+            Download PDF
           </Button>
         </DialogActions>
       </Dialog>
@@ -1186,4 +1439,111 @@ function formatPanelType(value) {
 function formatRecommendation(value) {
   const normalized = String(value || "").trim();
   return normalized ? normalized.replaceAll("_", " ") : "Pending";
+}
+
+function LocationAutocompleteField({ field, value, onChange, autoFocus }) {
+  const [options, setOptions] = useState([]);
+  const [inputValue, setInputValue] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+
+    if (inputValue === "") {
+      setOptions(value ? [value] : []);
+      return undefined;
+    }
+
+    const apiKey = import.meta.env.VITE_GEOAPIFY_API_KEY;
+    if (!apiKey) {
+      console.warn("VITE_GEOAPIFY_API_KEY is missing. Please add it to the frontend .env file!");
+      return undefined;
+    }
+
+    const timer = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(inputValue)}&apiKey=${apiKey}`);
+        const data = await res.json();
+        if (active && data.features) {
+          const newOptions = data.features.map((feature) => feature.properties.formatted);
+          setOptions([...new Set(newOptions)].filter(Boolean));
+        }
+      } catch (err) {
+        console.error("Geoapify search failed:", err);
+      } finally {
+        if (active) setLoading(false);
+      }
+    }, 500);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [inputValue, value]);
+
+  return (
+    <Autocomplete
+      freeSolo
+      options={options}
+      loading={loading}
+      value={value}
+      onChange={(event, newValue) => {
+        onChange(newValue || "");
+      }}
+      onInputChange={(event, newInputValue) => {
+        setInputValue(newInputValue);
+        onChange(newInputValue);
+      }}
+      renderInput={(params) => (
+        <TextField
+          {...params}
+          autoFocus={autoFocus}
+          label={field.label}
+          placeholder={field.placeholder || ""}
+          required={Boolean(field.required)}
+          size="small"
+          fullWidth
+          sx={{
+            "& .MuiOutlinedInput-root": {
+              borderRadius: 2,
+              backgroundColor: "#ffffff",
+            },
+          }}
+        />
+      )}
+    />
+  );
+}
+
+function TranscriptPreview({ appId, transcript }) {
+  const [expanded, setExpanded] = useState(false);
+  const PREVIEW_COUNT = 2;
+  const entries = expanded ? transcript : transcript.slice(0, PREVIEW_COUNT);
+  const hasMore = transcript.length > PREVIEW_COUNT;
+
+  return (
+    <div className="mt-2 rounded-lg border border-cyan-100 bg-white/80 p-2">
+      <div className="flex items-center justify-between">
+        <p className="font-semibold text-cyan-900">
+          Transcript {expanded ? `(${transcript.length} entries)` : "Preview"}
+        </p>
+        {hasMore && (
+          <button
+            type="button"
+            onClick={() => setExpanded((prev) => !prev)}
+            className="rounded-md bg-cyan-100 px-2 py-1 text-[10px] font-semibold text-cyan-800 transition hover:bg-cyan-200"
+          >
+            {expanded ? "Collapse" : `Show All (${transcript.length})`}
+          </button>
+        )}
+      </div>
+      {entries.map((entry) => (
+        <div key={`${appId}-${entry.questionIndex}`} className="mt-1">
+          <p className="font-medium">Q{entry.questionIndex + 1}: {entry.question || "Question"}</p>
+          <p className="text-cyan-800">A: {entry.answer || "No answer captured"}</p>
+        </div>
+      ))}
+    </div>
+  );
 }

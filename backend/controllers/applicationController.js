@@ -378,7 +378,7 @@ exports.getMyApplications = async (req, res) => {
     const applications = await Application.find({
       studentId: student._id
     })
-      .populate("jobId", "title")
+      .populate("jobId", "title companyName companyLogo companyDomain")
       .sort({ createdAt: -1 });
 
     res.json(applications);
@@ -980,6 +980,13 @@ exports.bookInterviewSlot = async (req, res) => {
       return res.status(400).json({ message: "This slot is already booked" });
     }
 
+    const alreadyBookedSlot = app.interviewSlots.find(
+      (s) => s.bookedByStudent && String(s.bookedBy) === String(student._id)
+    );
+    if (alreadyBookedSlot) {
+      return res.status(400).json({ message: "You have already booked an interview slot for this application" });
+    }
+
     if (new Date(slot.start).getTime() <= Date.now()) {
       return res.status(400).json({ message: "This slot has already started or expired" });
     }
@@ -1376,6 +1383,10 @@ exports.respondToOffer = async (req, res) => {
     const validDecisions = ["ACCEPTED", "DECLINED"];
     if (!validDecisions.includes(decision)) {
       return res.status(400).json({ message: "Decision must be ACCEPTED or DECLINED" });
+    }
+
+    if (app.offer.status !== "PENDING") {
+      return res.status(400).json({ message: `Offer has already been ${app.offer.status.toLowerCase()}` });
     }
 
     const previousStatus = app.offer.status;

@@ -62,11 +62,11 @@ function LetterPreview({ selectedInstance, user }) {
 
   if (offerLetterUrl) {
     return (
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-100 p-4 shadow-sm">
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-100 p-2 shadow-sm sm:p-4">
         <iframe
           title={`${companyName} offer letter`}
           src={buildServerAssetUrl(offerLetterUrl)}
-          className="h-[560px] w-full rounded-lg border border-slate-200 bg-white"
+          className="h-[360px] w-full rounded-lg border border-slate-200 bg-white sm:h-[560px]"
         />
       </div>
     );
@@ -74,8 +74,8 @@ function LetterPreview({ selectedInstance, user }) {
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="rounded-xl bg-slate-100 p-6 sm:p-8">
-        <div className="mx-auto max-w-3xl bg-white px-6 py-8 shadow-sm sm:px-10">
+      <div className="rounded-xl bg-slate-100 p-4 sm:p-6 md:p-8">
+        <div className="mx-auto max-w-3xl bg-white px-4 py-6 shadow-sm sm:px-6 sm:py-8 md:px-10">
           <div className="flex items-center gap-3 text-indigo-600">
             <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-sm font-semibold">
               {companyInitials}
@@ -132,7 +132,7 @@ function OfficialLetterStep({ selectedInstance, user, onAgree, onCancel }) {
         </div>
       </div>
 
-      <main className="bg-[#f6f7fb] px-4 py-8">
+      <main className="bg-[#f6f7fb] px-3 py-6 sm:px-4 sm:py-8">
         <div className="mx-auto max-w-5xl">
           <h2 className="text-center text-xl font-semibold text-slate-950">Letter Of Intent</h2>
           <div className="mt-6">
@@ -185,7 +185,7 @@ function DocumentsStep({
   const allAccepted = requiredDocuments.every((document) => isDocumentAccepted(documents[document.key]));
 
   return (
-    <main className="bg-[#f6f7fb] px-4 py-8">
+    <main className="bg-[#f6f7fb] px-3 py-6 sm:px-4 sm:py-8">
       <div className="mx-auto max-w-3xl">
         <h1 className="text-lg font-semibold text-slate-950">Documents for verification</h1>
         <p className="mt-2 text-sm text-slate-600">
@@ -254,11 +254,11 @@ function FinalAcceptStep({
   const companyName = selectedInstance?.companyName || "Company";
 
   return (
-    <main className="min-h-[560px] bg-[#f6f7fb] px-4 py-12">
+    <main className="min-h-[400px] bg-[#f6f7fb] px-3 py-8 sm:min-h-[560px] sm:px-4 sm:py-12">
       <div className="mx-auto max-w-3xl">
         <h1 className="text-center text-xl font-semibold text-slate-950">Final Step</h1>
 
-        <div className="mx-auto mt-10 max-w-xl rounded-xl border border-slate-100 bg-white p-6 text-center shadow-[0_18px_45px_rgba(15,23,42,0.12)]">
+        <div className="mx-auto mt-6 max-w-xl rounded-xl border border-slate-100 bg-white p-4 text-center shadow-[0_18px_45px_rgba(15,23,42,0.12)] sm:mt-10 sm:p-6">
           <span className="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 ring-8 ring-emerald-100">
             <CheckCircleRoundedIcon sx={{ fontSize: 28 }} />
           </span>
@@ -268,7 +268,7 @@ function FinalAcceptStep({
           </h2>
 
           <div className="mt-6 rounded-lg bg-slate-50 px-5 py-4 text-left text-sm">
-            <div className="grid grid-cols-[1fr_auto] gap-x-6 gap-y-3">
+            <div className="grid grid-cols-1 gap-y-3 sm:grid-cols-[1fr_auto] sm:gap-x-6">
               <span className="text-slate-600">Company</span>
               <span className="font-medium text-slate-950">{companyName}</span>
               <span className="text-slate-600">Role</span>

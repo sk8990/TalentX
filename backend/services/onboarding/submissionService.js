@@ -170,6 +170,9 @@ async function submitDocumentCollection({ instance, step, payload }) {
   const session = await mongoose.startSession();
   try {
     await session.withTransaction(async () => {
+      const hasManualReview = latestDocuments.some((document) => document.status === "manual_review");
+      const documentStepStatus = hasManualReview ? "under_review" : "completed";
+
       const submission = await createSubmissionWithRetry({
         instanceId: instance._id,
         applicationId: instance.applicationId,
@@ -178,15 +181,17 @@ async function submitDocumentCollection({ instance, step, payload }) {
         stepId: step._id,
         stepKey: step.key,
         stepType: step.type,
-        status: "under_review",
+        status: documentStepStatus,
         payload: { formData },
         documentIds,
         submittedAt: new Date(),
         history: [
           {
-            status: "under_review",
+            status: documentStepStatus,
             changedAt: new Date(),
-            note: "Documents submitted for recruiter review"
+            note: hasManualReview
+              ? "Documents submitted for manual recruiter review"
+              : "Documents submitted and verified successfully"
           }
         ]
       }, session);
@@ -195,7 +200,6 @@ async function submitDocumentCollection({ instance, step, payload }) {
         { _id: { $in: documentIds } },
         {
           $set: {
-            status: "under_review",
             submissionId: submission._id,
             submissionVersion: submission.version,
             rejectionReason: "",
@@ -206,12 +210,19 @@ async function submitDocumentCollection({ instance, step, payload }) {
         { session }
       );
 
-      step.status = "under_review";
+      step.status = documentStepStatus;
       step.submittedAt = new Date();
-      step.reviewedAt = null;
       step.lastSubmissionId = submission._id;
       step.rejectionReason = "";
       step.reviewNotes = "";
+
+      if (documentStepStatus === "completed") {
+        step.completedAt = new Date();
+        unlockNextStep(instance, step._id);
+      } else {
+        step.reviewedAt = null;
+      }
+
       recalculateInstanceState(instance);
       await instance.save({ session });
     });
@@ -278,6 +289,43 @@ async function submitPreJoining({ userId, instance, step, payload }) {
   }
 }
 
+async function submitDayOneInfo({ userId, instance, step, payload }) {
+  const session = await mongoose.startSession();
+  try {
+    await session.withTransaction(async () => {
+      const submission = await createSubmissionWithRetry({
+        instanceId: instance._id,
+        applicationId: instance.applicationId,
+        studentId: instance.studentId,
+        companyId: instance.companyId || null,
+        stepId: step._id,
+        stepKey: step.key,
+        stepType: step.type,
+        status: "completed",
+        payload: { completed: true },
+        submittedAt: new Date(),
+        history: [
+          {
+            status: "completed",
+            changedAt: new Date(),
+            note: "Student marked Day 1 Details as complete"
+          }
+        ]
+      }, session);
+
+      step.status = "completed";
+      step.completedAt = new Date();
+      step.lastSubmissionId = submission._id;
+      step.rejectionReason = "";
+      step.reviewNotes = "";
+      recalculateInstanceState(instance);
+      await instance.save({ session });
+    });
+  } finally {
+    await session.endSession();
+  }
+}
+
 async function submitOnboardingStep({ userId, stepId, payload }) {
   const { instance } = await findInstanceByStepIdForStudent({ userId, stepId });
   const step = instance.steps.id(stepId);
@@ -294,6 +342,8 @@ async function submitOnboardingStep({ userId, stepId, payload }) {
     await submitDocumentCollection({ instance, step, payload });
   } else if (step.type === STEP_TYPES.PRE_JOINING) {
     await submitPreJoining({ userId, instance, step, payload });
+  } else if (step.type === STEP_TYPES.DAY_ONE_INFO) {
+    await submitDayOneInfo({ userId, instance, step, payload });
   } else {
     const error = new Error("This step does not accept submissions");
     error.statusCode = 400;
@@ -504,7 +554,7 @@ async function acceptOnboardingOffer({ userId, identifier }) {
   }
 
   const offerStep = instance.steps.find((candidate) => candidate.type === STEP_TYPES.OFFER_ACCEPTANCE);
-  const { documentStep, documents, missingOrInvalid } = await getLatestRequiredDocuments(instance);
+  const { missingOrInvalid } = await getLatestRequiredDocuments(instance);
 
   if (!offerStep) {
     const error = new Error("Offer acceptance step not found");
@@ -517,10 +567,6 @@ async function acceptOnboardingOffer({ userId, identifier }) {
     error.statusCode = 400;
     throw error;
   }
-
-  const documentIds = documents.map((document) => document._id);
-  const hasManualReview = documents.some((document) => document.status === "manual_review");
-  const documentStepStatus = hasManualReview ? "under_review" : "completed";
 
   const session = await mongoose.startSession();
   try {
@@ -556,63 +602,7 @@ async function acceptOnboardingOffer({ userId, identifier }) {
       offerStep.rejectionReason = "";
       offerStep.reviewNotes = "";
 
-      const documentSubmission = await createSubmissionWithRetry({
-        instanceId: instance._id,
-        applicationId: instance.applicationId,
-        studentId: instance.studentId,
-        companyId: instance.companyId || null,
-        stepId: documentStep._id,
-        stepKey: documentStep.key,
-        stepType: documentStep.type,
-        status: documentStepStatus,
-        payload: {
-          verificationStatus: hasManualReview ? "manual_review" : "verified",
-          requiredDocuments: documents.map((document) => ({
-            key: document.documentType.key,
-            label: document.documentType.label,
-            status: document.status,
-            verification: serializeVerification(document.verification)
-          }))
-        },
-        documentIds,
-        submittedAt: new Date(),
-        history: [
-          {
-            status: documentStepStatus,
-            changedAt: new Date(),
-            changedBy: userId,
-            note: hasManualReview
-              ? "Documents sent for manual review after AI-assisted verification"
-              : "Documents verified by AI-assisted verification"
-          }
-        ]
-      }, session);
-
-      await OnboardingDocument.updateMany(
-        { _id: { $in: documentIds } },
-        {
-          $set: {
-            submissionId: documentSubmission._id,
-            submissionVersion: documentSubmission.version,
-            rejectionReason: ""
-          }
-        },
-        { session }
-      );
-
-      documentStep.status = documentStepStatus;
-      documentStep.submittedAt = new Date();
-      documentStep.lastSubmissionId = documentSubmission._id;
-      documentStep.rejectionReason = "";
-      documentStep.reviewNotes = "";
-
-      if (documentStepStatus === "completed") {
-        documentStep.completedAt = new Date();
-        unlockNextStep(instance, documentStep._id);
-      } else {
-        documentStep.reviewedAt = null;
-      }
-
+      unlockNextStep(instance, offerStep._id);
       recalculateInstanceState(instance);
       await instance.save({ session });
     });
