@@ -33,6 +33,19 @@ import BillingSuccess from "./pages/BillingSuccess";
 import BlogPlaceholder from "./pages/BlogPlaceholder";
 import { ThemeProvider } from "./utils/ThemeContext";
 import OnboardingPortal from "./onboarding/OnboardingPortal";
+import FeatureGate from "./components/FeatureGate";
+import PackageQuotaExceededModal from "./components/PackageQuotaExceededModal";
+import { SubscriptionProvider } from "./context/SubscriptionContext";
+import SuperAdminLayout from "./layout/SuperAdminLayout";
+import SuperAdminDashboard from "./pages/super-admin/SuperAdminDashboard";
+import PackagesPage from "./pages/super-admin/PackagesPage";
+import PaymentsPage from "./pages/super-admin/PaymentsPage";
+import RevenuePage from "./pages/super-admin/RevenuePage";
+import SubscriptionsPage from "./pages/super-admin/SubscriptionsPage";
+import UniversitiesPage from "./pages/super-admin/UniversitiesPage";
+import RecruitersPage from "./pages/super-admin/RecruitersPage";
+import SubscriptionPage from "./pages/SubscriptionPage";
+import SuperAdminSettingsPage from "./pages/super-admin/SuperAdminSettingsPage";
 
 export default function App() {
   return (
@@ -48,7 +61,9 @@ export default function App() {
         }}
       />
 
+      <SubscriptionProvider>
       <BrowserRouter>
+        <PackageQuotaExceededModal />
         <Routes>
           {/* PUBLIC */}
           <Route
@@ -131,9 +146,31 @@ export default function App() {
           >
             <Route index element={<RecruiterDashboard />} />
             <Route path="dashboard" element={<RecruiterDashboard />} />
-            <Route path="jobs" element={<RecruiterJobs />} />
-            <Route path="applications" element={<RecruiterApplications />} />
-            <Route path="onboarding" element={<RecruiterOnboardingReviews />} />
+            <Route path="subscription" element={<SubscriptionPage />} />
+            <Route
+              path="jobs"
+              element={
+                <FeatureGate feature="jobPosting">
+                  <RecruiterJobs />
+                </FeatureGate>
+              }
+            />
+            <Route
+              path="applications"
+              element={
+                <FeatureGate feature="basicApplicantTracking">
+                  <RecruiterApplications />
+                </FeatureGate>
+              }
+            />
+            <Route
+              path="onboarding"
+              element={
+                <FeatureGate feature="onboardingManagement">
+                  <RecruiterOnboardingReviews />
+                </FeatureGate>
+              }
+            />
             <Route path="support" element={<RecruiterSupport />} />
           </Route>
 
@@ -156,6 +193,7 @@ export default function App() {
             }
           >
             <Route index element={<InterviewerPanel />} />
+            <Route path="dashboard" element={<InterviewerPanel />} />
             <Route path="panel" element={<InterviewerPanel />} />
             <Route path="interviews/:applicationId/room" element={<VirtualInterviewRoom role="interviewer" />} />
           </Route>
@@ -164,16 +202,60 @@ export default function App() {
           <Route
             path="/admin"
             element={
-              <ProtectedRoute role="admin">
+              <ProtectedRoute role={["admin", "university_admin"]}>
               <AdminLayout />
               </ProtectedRoute>
             }
           >
-            <Route index element={<AdminDashboard />} />
-            <Route path="support" element={<AdminSupport />} />
+            <Route
+              index
+              element={
+                <FeatureGate feature="adminDashboard">
+                  <AdminDashboard />
+                </FeatureGate>
+              }
+            />
+            <Route path="subscription" element={<SubscriptionPage />} />
+            <Route
+              path="dashboard"
+              element={
+                <FeatureGate feature="adminDashboard">
+                  <AdminDashboard />
+                </FeatureGate>
+              }
+            />
+            <Route
+              path="support"
+              element={
+                <FeatureGate feature="adminDashboard">
+                  <AdminSupport />
+                </FeatureGate>
+              }
+            />
+          </Route>
+
+          {/* SUPER ADMIN */}
+          <Route
+            path="/super-admin"
+            element={
+              <ProtectedRoute role="super_admin">
+                <SuperAdminLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<SuperAdminDashboard />} />
+            <Route path="packages" element={<PackagesPage />} />
+            <Route path="payments" element={<PaymentsPage />} />
+            <Route path="revenue" element={<RevenuePage />} />
+            <Route path="subscriptions" element={<SubscriptionsPage />} />
+            <Route path="universities" element={<UniversitiesPage />} />
+            <Route path="recruiters" element={<RecruitersPage />} />
+            <Route path="settings" element={<SuperAdminSettingsPage />} />
           </Route>
         </Routes>
       </BrowserRouter>
+      </SubscriptionProvider>
     </ThemeProvider>
   );
 }

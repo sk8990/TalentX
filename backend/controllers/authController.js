@@ -100,8 +100,12 @@ exports.login = async (req, res) => {
         const user = await User.findOne({ email: normalizedEmail });
         if(!user)
             return res.status(401).json({message: 'Invalid credentials'});
-        if (!user.isActive)
-            return res.status(403).json({message: "Account disabled by admin"});
+        if (!user.isActive) {
+            const reason = String(user.disabledReason || "").trim();
+            return res.status(403).json({
+              message: reason ? `Account disabled: ${reason}` : "Account disabled by admin"
+            });
+        }
         const isMatch = await bcrypt.compare(password, user.password);
         if(!isMatch)
             return res.status(401).json({message: 'Invalid Credentials'});

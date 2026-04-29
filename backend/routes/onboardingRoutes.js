@@ -3,6 +3,9 @@ const auth = require("../middleware/authMiddleware");
 const onboardingAuth = require("../middleware/onboardingAuth");
 const role = require("../middleware/roleMiddleware");
 const upload = require("../middleware/onboardingUpload");
+const requireFeature = require("../middleware/requireFeature");
+const { enforceLimit } = require("../middleware/packageLimits");
+const { withUsageIncrement } = require("../middleware/usageTracker");
 const {
   initOnboarding,
   getOnboardingPortal,
@@ -18,10 +21,42 @@ const {
   getStats
 } = require("../controllers/onboardingController");
 
+const requireOnboardingManagement = requireFeature("onboardingManagement");
+const enforceOnboardingPanelAccess = enforceLimit("onboarding_panel_access");
+
+function requireRecruiterOnboardingManagement(req, res, next) {
+  if (req.user?.role === "recruiter") {
+    return requireOnboardingManagement(req, res, next);
+  }
+  return next();
+}
+
+function requireRecruiterOnboardingLimit(req, res, next) {
+  if (req.user?.role === "recruiter") {
+    return enforceOnboardingPanelAccess(req, res, next);
+  }
+  return next();
+}
+
+function trackRecruiterOnboardingUsage(controller) {
+  return (req, res, next) => {
+    if (req.user?.role === "recruiter") {
+      return withUsageIncrement(controller, "onboarding_panel_access")(req, res, next);
+    }
+    return controller(req, res, next);
+  };
+}
+
 router.post("/init", auth, role("student"), initOnboarding);
-router.get("/", onboardingAuth, getOnboardingPortal);
+router.get(
+  "/",
+  onboardingAuth,
+  requireRecruiterOnboardingManagement,
+  requireRecruiterOnboardingLimit,
+  trackRecruiterOnboardingUsage(getOnboardingPortal)
+);
 router.get("/companies", onboardingAuth, role("student"), getOnboardingCompanies);
-router.get("/stats", auth, role("recruiter"), getStats);
+router.get("/stats", auth, role("recruiter"), requireOnboardingManagement, getStats);
 router.get("/learn-more/:instanceId/:sectionKey", onboardingAuth, role("student"), getLearnMoreSection);
 router.get("/pre-joining/:instanceId/content/:taskKey", onboardingAuth, role("student"), getPreJoiningReading);
 router.get("/pre-joining/:instanceId/video", onboardingAuth, role("student"), getPreJoiningVideo);

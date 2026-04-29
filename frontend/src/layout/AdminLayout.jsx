@@ -2,6 +2,7 @@ import { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import SupportAgentIcon from "@mui/icons-material/SupportAgent";
+import CreditCardIcon from "@mui/icons-material/CreditCard";
 import LogoutIcon from "@mui/icons-material/Logout";
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
@@ -15,6 +16,7 @@ export default function AdminLayout() {
 
   const links = [
     { to: "/admin", label: "Dashboard", icon: DashboardIcon, end: true },
+    { to: "/admin/subscription", label: "Subscription", icon: CreditCardIcon },
     { to: "/admin/support", label: "Support", icon: SupportAgentIcon },
   ];
 

@@ -20,8 +20,12 @@ module.exports = async (req, res, next) => {
     if (!user)
       return res.status(401).json({ message: "User not found" });
 
-    if (!user.isActive)
-      return res.status(403).json({ message: "Account disabled by admin" });
+    if (!user.isActive) {
+      const reason = String(user.disabledReason || "").trim();
+      return res.status(403).json({
+        message: reason ? `Account disabled: ${reason}` : "Account disabled by admin"
+      });
+    }
 
     req.user = {
       id: user._id.toString(),

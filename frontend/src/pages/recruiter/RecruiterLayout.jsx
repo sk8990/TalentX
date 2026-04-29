@@ -4,6 +4,7 @@ import DashboardIcon from "@mui/icons-material/Dashboard";
 import WorkIcon from "@mui/icons-material/Work";
 import GroupsIcon from "@mui/icons-material/Groups";
 import BadgeOutlinedIcon from "@mui/icons-material/BadgeOutlined";
+import CreditCardIcon from "@mui/icons-material/CreditCard";
 import LogoutIcon from "@mui/icons-material/Logout";
 import SupportAgentIcon from "@mui/icons-material/SupportAgent";
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
@@ -21,6 +22,7 @@ export default function RecruiterLayout() {
     { to: "/recruiter/jobs", label: "Jobs", icon: WorkIcon },
     { to: "/recruiter/applications", label: "Applications", icon: GroupsIcon },
     { to: "/recruiter/onboarding", label: "Onboarding", icon: BadgeOutlinedIcon },
+    { to: "/recruiter/subscription", label: "Subscription", icon: CreditCardIcon },
     { to: "/recruiter/support", label: "Support", icon: SupportAgentIcon },
   ];
 

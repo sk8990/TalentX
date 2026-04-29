@@ -11,6 +11,9 @@ import SearchIcon from "@mui/icons-material/Search";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import { FormControl, MenuItem, Select } from "@mui/material";
 import toast from "react-hot-toast";
+import FeatureGate from "../../components/FeatureGate";
+import UpgradeCard from "../../components/UpgradeCard";
+import { useSubscription } from "../../context/SubscriptionContext";
 import { useConfirmDialog } from "../../components/useConfirmDialog";
 
 const initialForm = {
@@ -44,6 +47,7 @@ export default function RecruiterJobs() {
   const [jobCompanyFilter, setJobCompanyFilter] = useState("all");
   const navigate = useNavigate();
   const { confirm, confirmDialog } = useConfirmDialog();
+  const { subscription } = useSubscription();
   const jobFormRef = useRef(null);
 
   const [formData, setFormData] = useState(initialForm);
@@ -52,6 +56,15 @@ export default function RecruiterJobs() {
     () => jobs.reduce((sum, job) => sum + (job.applicationsCount || 0), 0),
     [jobs]
   );
+  const activeJobCount = useMemo(
+    () => jobs.filter((job) => job.isActive).length,
+    [jobs]
+  );
+  const activeJobLimit = subscription?.limits?.activeJobs;
+  const activeJobUsage =
+    activeJobLimit === null || activeJobLimit === undefined
+      ? "Unlimited"
+      : `${activeJobCount}/${activeJobLimit}`;
 
   const setField = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -464,10 +477,11 @@ export default function RecruiterJobs() {
         <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <OverviewCard label="Total Jobs" value={jobs.length} />
           <OverviewCard label="Applicants (listed jobs)" value={totalApplicants} />
-          <OverviewCard label="Form Mode" value={selectedJob ? "Editing" : "Creating"} />
+          <OverviewCard label="Active Job Limit" value={activeJobUsage} />
         </div>
       </div>
 
+      <FeatureGate feature="jobPosting">
       <div ref={jobFormRef} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:rounded-3xl sm:p-6 md:p-8">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <h3 className="text-xl font-semibold text-slate-900">{selectedJob ? "Edit Job" : "Post New Job"}</h3>
@@ -484,6 +498,16 @@ export default function RecruiterJobs() {
 
         <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2">
           <div className="md:col-span-2">
+            <FeatureGate
+              feature="aiJdGeneration"
+              fallback={
+                <UpgradeCard
+                  feature="aiJdGeneration"
+                  compact
+                  className="border-emerald-100 bg-emerald-50/60 ring-emerald-50"
+                />
+              }
+            >
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 sm:p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -512,6 +536,7 @@ export default function RecruiterJobs() {
                 </span>
               </div>
             </div>
+            </FeatureGate>
           </div>
 
           <div>
@@ -714,6 +739,15 @@ export default function RecruiterJobs() {
           </div>
 
           <div className="md:col-span-2 flex flex-wrap gap-3">
+            <FeatureGate
+              feature="aiJdGeneration"
+              compact
+              fallback={
+                <span className="inline-flex items-center rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-2.5 text-xs font-semibold text-[#243b95]">
+                  AI JD generation unlocks on Recruiter Pro.
+                </span>
+              }
+            >
             <button
               type="button"
               onClick={generateAI}
@@ -725,6 +759,7 @@ export default function RecruiterJobs() {
                 {isGeneratingDescription ? "Generating..." : "Generate Description with AI"}
               </span>
             </button>
+            </FeatureGate>
 
             <button
               type="submit"
@@ -739,6 +774,7 @@ export default function RecruiterJobs() {
           </div>
         </form>
       </div>
+      </FeatureGate>
 
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:rounded-3xl sm:p-6 md:p-8">
         <div className="flex flex-wrap items-start justify-between gap-3 sm:gap-4">

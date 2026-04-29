@@ -10,7 +10,7 @@ const auditLogSchema = new mongoose.Schema(
     },
     actorRole: {
       type: String,
-      enum: ["student", "recruiter", "admin", "system", "interviewer"],
+      enum: ["student", "recruiter", "admin", "university_admin", "super_admin", "system", "interviewer"],
       default: "system"
     },
     action: {
@@ -20,7 +20,18 @@ const auditLogSchema = new mongoose.Schema(
     },
     entityType: {
       type: String,
-      enum: ["APPLICATION", "INTERVIEW_SLOT", "BULK_ACTION", "INTERVIEWER", "INTERVIEWER_ASSIGNMENT", "INTERVIEWER_FEEDBACK"],
+      enum: [
+        "APPLICATION",
+        "INTERVIEW_SLOT",
+        "BULK_ACTION",
+        "INTERVIEWER",
+        "INTERVIEWER_ASSIGNMENT",
+        "INTERVIEWER_FEEDBACK",
+        "PACKAGE",
+        "PAYMENT",
+        "SUBSCRIPTION",
+        "USER"
+      ],
       required: true
     },
     entityId: {

@@ -1,6 +1,10 @@
 const router = require("express").Router();
 const auth = require("../middleware/authMiddleware");
 const role = require("../middleware/roleMiddleware");
+const requireFeature = require("../middleware/requireFeature");
+
+const { enforceFeature, enforceLimit } = require("../middleware/packageLimits");
+const { withUsageIncrement } = require("../middleware/usageTracker");
 
 const {
   getAllUsers,
@@ -14,23 +18,27 @@ const {
   getAuditLogs
 } = require("../controllers/adminController");
 
-router.get("/users", auth, role("admin"), getAllUsers);
-router.put("/users/:id/toggle", auth, role("admin"), toggleUserStatus);
+const requireAdminDashboard = requireFeature("adminDashboard");
+const requireReportsAnalytics = requireFeature("reportsAnalytics");
 
-router.get("/jobs", auth, role("admin"), getAllJobs);
-router.delete("/jobs/:id", auth, role("admin"), deleteJob);
+router.get("/users", auth, role("admin"), requireAdminDashboard, getAllUsers);
+router.put("/users/:id/toggle", auth, role("admin"), requireAdminDashboard, toggleUserStatus);
 
-router.get("/stats", auth, role("admin"), getPlatformStats);
-router.get("/selected-candidates", auth, role("admin"), getSelectedCandidates);
-router.get("/audit-logs", auth, role("admin"), getAuditLogs);
-router.get("/audit/logs", auth, role("admin"), getAuditLogs);
-router.get("/audit_logs", auth, role("admin"), getAuditLogs);
-router.get("/pending-recruiters", auth, role("admin"), getPendingRecruiters);
+router.get("/jobs", auth, role("admin"), requireAdminDashboard, getAllJobs);
+router.delete("/jobs/:id", auth, role("admin"), requireAdminDashboard, enforceFeature("deleteJobFeature"), deleteJob);
+
+router.get("/stats", auth, role("admin"), requireReportsAnalytics, getPlatformStats);
+router.get("/selected-candidates", auth, role("admin"), requireReportsAnalytics, getSelectedCandidates);
+router.get("/audit-logs", auth, role("admin"), requireReportsAnalytics, enforceLimit("audit_usage"), withUsageIncrement(getAuditLogs, "audit_usage"));
+router.get("/audit/logs", auth, role("admin"), requireReportsAnalytics, enforceLimit("audit_usage"), withUsageIncrement(getAuditLogs, "audit_usage"));
+router.get("/audit_logs", auth, role("admin"), requireReportsAnalytics, enforceLimit("audit_usage"), withUsageIncrement(getAuditLogs, "audit_usage"));
+router.get("/pending-recruiters", auth, role("admin"), requireAdminDashboard, getPendingRecruiters);
 
 router.put(
   "/recruiter-review/:id",
   auth,
   role("admin"),
+  requireAdminDashboard,
   reviewRecruiter
 );
 

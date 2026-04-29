@@ -1,10 +1,18 @@
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import DashboardRoundedIcon from "@mui/icons-material/DashboardRounded";
 import TalentXBrand from "../components/TalentXBrand";
+import { useSubscription } from "../context/SubscriptionContext";
 
 export default function BillingSuccess() {
+  const { refreshSubscription } = useSubscription();
+
+  useEffect(() => {
+    refreshSubscription();
+  }, [refreshSubscription]);
+
   return (
     <main className="flex min-h-[100dvh] items-center justify-center bg-[#f4f6fb] px-4 py-10 sm:px-6">
       <section className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-xl sm:rounded-[2rem] sm:p-10">

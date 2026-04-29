@@ -1,6 +1,7 @@
 const router = require("express").Router();
 const auth = require("../middleware/authMiddleware");
 const role = require("../middleware/roleMiddleware");
+const requireFeature = require("../middleware/requireFeature");
 const { getRecruiterStats } = require("../controllers/companyController");
 const {
   getRecruiterInterviewers,
@@ -14,19 +15,20 @@ const {
 router.get("/stats", auth, role("recruiter"), getRecruiterStats);
 
 // Recruiter-managed interviewers
-router.get("/interviewers", auth, role("recruiter"), getRecruiterInterviewers);
-router.post("/interviewers", auth, role("recruiter"), createRecruiterInterviewer);
-router.put("/interviewers/:id", auth, role("recruiter"), updateRecruiterInterviewer);
-router.delete("/interviewers/:id", auth, role("recruiter"), deactivateRecruiterInterviewer);
+router.get("/interviewers", auth, role("recruiter"), requireFeature("humanInterviewPanel"), getRecruiterInterviewers);
+router.post("/interviewers", auth, role("recruiter"), requireFeature("humanInterviewPanel"), createRecruiterInterviewer);
+router.put("/interviewers/:id", auth, role("recruiter"), requireFeature("humanInterviewPanel"), updateRecruiterInterviewer);
+router.delete("/interviewers/:id", auth, role("recruiter"), requireFeature("humanInterviewPanel"), deactivateRecruiterInterviewer);
 router.post(
   "/interviewers/:id/resend-credentials",
   auth,
   role("recruiter"),
+  requireFeature("humanInterviewPanel"),
   resendRecruiterInterviewerCredentials
 );
 
 // Recruiter Applications
-router.get("/applications", auth, role("recruiter"), async (req, res) => {
+router.get("/applications", auth, role("recruiter"), requireFeature("basicApplicantTracking"), async (req, res) => {
   try {
     const Application = require("../models/Application");
     const Job = require("../models/Job");

@@ -5,8 +5,11 @@
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon server.js",
-    "smoke": "node scripts/smoke-http.js"
+    "start": "node server.js",
+    "dev": "nodemon --legacy-watch server.js",
+    "smoke": "node scripts/smoke-http.js",
+    "seed:super-admin": "node scripts/createSuperAdmin.js",
+    "seed:packages": "node scripts/seedPackages.js"
   },
   "keywords": [],
   "author": "",

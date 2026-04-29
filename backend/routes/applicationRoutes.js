@@ -3,6 +3,10 @@ const auth = require("../middleware/authMiddleware");
 const role = require("../middleware/roleMiddleware");
 const upload = require("../middleware/upload.js");
 const profileComplete = require("../middleware/profileComplete");
+const requireFeature = require("../middleware/requireFeature");
+const { enforceLimit } = require("../middleware/packageLimits");
+const { withUsageIncrement } = require("../middleware/usageTracker");
+const { requireApplicantMonthlyLimit } = require("../middleware/requireJobLimit");
 
 const {
   applyJob,
@@ -33,7 +37,7 @@ const {
   unassignInterviewerFromApplication
 } = require("../controllers/applicationController");
 
-router.post("/apply", auth, role("student"), profileComplete, upload.single("resume"), applyJob);
+router.post("/apply", auth, role("student"), profileComplete, upload.single("resume"), requireApplicantMonthlyLimit, applyJob);
 
 router.get("/my", auth, role("student"), getMyApplications);
 
@@ -108,24 +112,39 @@ router.get(
 );
 
 
-router.get("/job/:jobId", auth, role("recruiter"), getApplicationsByJob);
+router.get("/job/:jobId", auth, role("recruiter"), requireFeature("basicApplicantTracking"), getApplicationsByJob);
 
-router.put("/:applicationId/shortlist", auth, role("recruiter"), shortlistApplication);
+router.put("/:applicationId/shortlist", auth, role("recruiter"), requireFeature("basicApplicantTracking"), shortlistApplication);
 
-router.put("/:applicationId/assessment", auth, role("recruiter"), sendAssessment);
+router.put("/:applicationId/assessment", auth, role("recruiter"), requireFeature("assessmentPanel"), sendAssessment);
 
-router.put("/:applicationId/assessment/result", auth, role("recruiter"), updateAssessmentResult);
+router.put("/:applicationId/assessment/result", auth, role("recruiter"), requireFeature("assessmentPanel"), updateAssessmentResult);
 
-router.put("/:applicationId/interview", auth, role("recruiter"), scheduleInterview);
+router.put(
+  "/:applicationId/interview",
+  auth,
+  role("recruiter"),
+  requireFeature("interviewScheduling"),
+  enforceLimit("interview_scheduling"),
+  withUsageIncrement(scheduleInterview, "interview_scheduling")
+);
 
-router.put("/:applicationId/interview/reschedule", auth, role("recruiter"), rescheduleInterview);
+router.put("/:applicationId/interview/reschedule", auth, role("recruiter"), requireFeature("interviewScheduling"), rescheduleInterview);
 
-router.put("/:applicationId/interview/slots", auth, role("recruiter"), publishInterviewSlots);
+router.put(
+  "/:applicationId/interview/slots",
+  auth,
+  role("recruiter"),
+  requireFeature("interviewScheduling"),
+  enforceLimit("interview_scheduling"),
+  withUsageIncrement(publishInterviewSlots, "interview_scheduling")
+);
 
 router.put(
   "/:applicationId/interviewer/assign",
   auth,
   role("recruiter"),
+  requireFeature("humanInterviewPanel"),
   assignInterviewerToApplication
 );
 
@@ -133,16 +152,24 @@ router.put(
   "/:applicationId/interviewer/unassign",
   auth,
   role("recruiter"),
+  requireFeature("humanInterviewPanel"),
   unassignInterviewerFromApplication
 );
 
 router.put("/:applicationId/interview/book", auth, role("student"), bookInterviewSlot);
 
-router.put("/:applicationId/select", auth, role("recruiter"), selectCandidate);
+router.put("/:applicationId/select", auth, role("recruiter"), requireFeature("basicApplicantTracking"), selectCandidate);
 
-router.put("/:applicationId/reject", auth, role("recruiter"), rejectCandidate);
+router.put("/:applicationId/reject", auth, role("recruiter"), requireFeature("basicApplicantTracking"), rejectCandidate);
 
-router.put("/:applicationId/offer", auth, role("recruiter"), generateOffer);
+router.put(
+  "/:applicationId/offer",
+  auth,
+  role("recruiter"),
+  requireFeature("offerGeneration"),
+  enforceLimit("offer_letter_generation"),
+  withUsageIncrement(generateOffer, "offer_letter_generation")
+);
 
 router.put("/:applicationId/offer/respond", auth, role("student"), respondToOffer);
 

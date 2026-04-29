@@ -1,6 +1,22 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { getDefaultRouteForUser, LOGIN_ROUTE, readStoredSession } from "../utils/authRouting";
 
+function getAllowedRoles(requiredRole) {
+  if (!requiredRole) {
+    return new Set();
+  }
+
+  const roleList = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
+  const allowedRoles = new Set(roleList);
+
+  if (allowedRoles.has("admin") || allowedRoles.has("university_admin")) {
+    allowedRoles.add("admin");
+    allowedRoles.add("university_admin");
+  }
+
+  return allowedRoles;
+}
+
 export default function ProtectedRoute({ children, role }) {
   const location = useLocation();
   const { token, user } = readStoredSession();
@@ -9,8 +25,9 @@ export default function ProtectedRoute({ children, role }) {
     return <Navigate to={LOGIN_ROUTE} replace />;
   }
 
-  if (role && user.role !== role) {
-    return <Navigate to={getDefaultRouteForUser(user)} replace />;
+  const allowedRoles = getAllowedRoles(role);
+  if (allowedRoles.size > 0 && !allowedRoles.has(user.role)) {
+    return <Navigate to={getDefaultRouteForUser(user) || LOGIN_ROUTE} replace />;
   }
 
   if (user.role === "interviewer") {
@@ -22,7 +39,7 @@ export default function ProtectedRoute({ children, role }) {
     }
 
     if (!mustReset && onResetPage) {
-      return <Navigate to="/interviewer" replace />;
+      return <Navigate to="/interviewer/dashboard" replace />;
     }
   }
 

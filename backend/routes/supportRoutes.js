@@ -2,6 +2,7 @@ const router = require('express').Router();
 const auth = require('../middleware/authMiddleware');
 const role = require('../middleware/roleMiddleware');
 const supportUpload = require("../middleware/supportUpload");
+const requireFeature = require("../middleware/requireFeature");
 const {
   askAI,
   createTicket,
@@ -36,7 +37,7 @@ router.post("/recruiter/ticket", auth, role("recruiter"), (req, res, next) => {
 router.get("/recruiter/my", auth, role("recruiter"), getMyRecruiterTickets);
 
 // Admin routes
-router.get('/admin', auth, role('admin'), getAllTickets);
-router.put('/admin/:id/respond', auth, role('admin'), respondTicket);
+router.get('/admin', auth, role('admin'), requireFeature("adminDashboard"), getAllTickets);
+router.put('/admin/:id/respond', auth, role('admin'), requireFeature("adminDashboard"), respondTicket);
 
 module.exports = router;

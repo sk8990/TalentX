@@ -213,6 +213,8 @@ app.get("/api/health", (_req, res) => {
 
 app.use("/api/auth", authLimiter, require("./routes/authRoutes"));
 app.use("/api/public", require("./routes/publicRoutes"));
+app.use("/api/packages", require("./routes/publicPackagesRoutes"));
+app.use("/api/enterprise-requests", require("./routes/enterpriseRequestRoutes"));
 app.use("/api/student", require("./routes/studentRoutes"));
 app.use("/api/company", require("./routes/companyRoutes"));
 app.use("/api/application", require("./routes/applicationRoutes"));
@@ -228,6 +230,8 @@ app.use("/api/bulk", require("./routes/bulkRoutes"));
 app.use("/api/onboarding", require("./routes/onboardingRoutes"));
 app.use("/api/documents", require("./routes/documentRoutes"));
 app.use("/api/payments", require("./routes/paymentRoutes"));
+app.use("/api/subscriptions", require("./routes/subscriptionRoutes"));
+app.use("/api/super-admin", require("./routes/superAdminRoutes"));
 
 /* ===========================
    STATIC FILES

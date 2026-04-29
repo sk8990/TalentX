@@ -23,6 +23,8 @@ import {
   TextField,
 } from "@mui/material";
 import ScreenLoader from "../../components/ScreenLoader";
+import FeatureGate from "../../components/FeatureGate";
+import { useSubscription } from "../../context/SubscriptionContext";
 
 const API_BASE_URL = API.defaults.baseURL || "";
 const SERVER_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, "");
@@ -135,6 +137,7 @@ export default function RecruiterApplications() {
     open: false,
     app: null,
   });
+  const { hasFeature } = useSubscription();
 
   useEffect(() => {
     fetchJobs();
@@ -501,10 +504,6 @@ export default function RecruiterApplications() {
 
     const payload = {
       panelType: "AI",
-      aiConfig: {
-        ...slotDialog.aiConfig,
-        focusAreas: slotDialog.aiConfig.focusAreas,
-      },
       slots: slotDialog.slots.map((slot) => ({
         start: toUtcIso(slot.start),
         end: toUtcIso(slot.end),
@@ -512,6 +511,13 @@ export default function RecruiterApplications() {
         link: slot.link.trim(),
       })),
     };
+
+    if (hasFeature("assessmentPanel")) {
+      payload.aiConfig = {
+        ...slotDialog.aiConfig,
+        focusAreas: slotDialog.aiConfig.focusAreas,
+      };
+    }
 
     await runAction(
       () => API.put(`/application/${slotDialog.applicationId}/interview/slots`, payload),
@@ -807,6 +813,7 @@ export default function RecruiterApplications() {
                           ) : null}
 
                           {app?.aiInterview?.endedAt ? (
+                            <FeatureGate feature="assessmentPanel" compact>
                             <div className="mt-2 rounded-xl border border-cyan-200 bg-cyan-50 p-3 text-xs text-cyan-900">
                               <div className="flex items-center justify-between mb-2">
                                 <p className="font-semibold text-sm">AI Interview Report</p>
@@ -846,6 +853,7 @@ export default function RecruiterApplications() {
                                 </Button>
                               </div>
                             </div>
+                            </FeatureGate>
                           ) : null}
 
                           {status === "INTERVIEW_SCHEDULED" && (app?.aiInterview?.endedAt || app?.interviewSession?.endedAt) ? (
@@ -905,21 +913,23 @@ export default function RecruiterApplications() {
 
                             {status === "SHORTLISTED" ? (
                               <>
+                                <FeatureGate feature="assessmentPanel" compact>
                                 <ActionButton
                                   label={assessmentSentMap[app._id] ? "Assessment Sent" : "Send Assessment"}
                                   tone="indigo"
                                   onClick={() => sendAssessment(app._id)}
                                   disabled={Boolean(assessmentSentMap[app._id] || assessmentSendingMap[app._id])}
                                 />
+                                </FeatureGate>
                                 <ActionButton label="Reject" tone="red" onClick={() => reject(app._id)} />
                               </>
                             ) : null}
 
                             {status === "ASSESSMENT_SENT" ? (
-                              <>
+                              <FeatureGate feature="assessmentPanel" compact>
                                 <ActionButton label="Mark Passed" tone="green" onClick={() => markAssessmentResult(app._id, true)} />
                                 <ActionButton label="Mark Failed" tone="red" onClick={() => markAssessmentResult(app._id, false)} />
-                              </>
+                              </FeatureGate>
                             ) : null}
 
                             {status === "ASSESSMENT_PASSED" ? (
@@ -938,7 +948,9 @@ export default function RecruiterApplications() {
                             ) : null}
 
                             {status === "SELECTED" && !app.offer?.pdfPath ? (
+                              <FeatureGate feature="offerGeneration" compact>
                               <ActionButton label="Generate Offer" tone="indigo" onClick={() => generateOffer(app._id)} />
+                              </FeatureGate>
                             ) : null}
 
                             {status === "SELECTED" && offerLetterLink ? (
@@ -1116,9 +1128,10 @@ export default function RecruiterApplications() {
           </DialogContentText>
 
           <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900">
-            AI-only mode is active. Every slot uses the in-app AI interviewer panel, online access, browser voice controls, and proctoring checks.
+            Basic scheduling is available on Starter. Advanced AI interview configuration unlocks on Recruiter Pro.
           </div>
 
+          <FeatureGate feature="assessmentPanel" compact>
           <div className="grid gap-3 rounded-2xl border border-indigo-100 bg-indigo-50 p-4 sm:grid-cols-2">
             <TextField
               label="Question Count"
@@ -1159,6 +1172,7 @@ export default function RecruiterApplications() {
               sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2, backgroundColor: "#ffffff" } }}
             />
           </div>
+          </FeatureGate>
 
           <div className="max-h-[55vh] space-y-3 overflow-y-auto pr-1">
             {slotDialog.slots.map((slot, index) => (

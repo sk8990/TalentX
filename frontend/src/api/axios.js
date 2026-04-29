@@ -26,6 +26,12 @@ instance.interceptors.request.use((config) => {
 instance.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (error.response?.data?.code === "PACKAGE_QUOTA_EXHAUSTED") {
+      window.dispatchEvent(new CustomEvent("talentx-quota-exhausted", {
+        detail: error.response.data
+      }));
+    }
+
     if (error.response?.status === 401) {
       const currentPath = window.location.pathname;
       if (!PUBLIC_ROUTES.includes(currentPath)) {

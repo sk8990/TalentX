@@ -1,5 +1,14 @@
 const mongoose = require("mongoose");
 
+const USER_ROLES = [
+  "student",
+  "recruiter",
+  "admin",
+  "university_admin",
+  "interviewer",
+  "super_admin"
+];
+
 const userSchema = new mongoose.Schema(
   {
     name: String,
@@ -7,7 +16,7 @@ const userSchema = new mongoose.Schema(
     password: String,
     role: {
       type: String,
-      enum: ["student", "recruiter", "admin", "interviewer"],
+      enum: USER_ROLES,
       required: true
     },
     mustChangePassword: {
@@ -15,16 +24,29 @@ const userSchema = new mongoose.Schema(
       default: false
     },
     isActive: {
-  type: Boolean,
-  default: true
-  },
+      type: Boolean,
+      default: true
+    },
+    disabledBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null
+    },
+    disabledAt: {
+      type: Date,
+      default: null
+    },
+    disabledReason: {
+      type: String,
+      default: ""
+    },
 
-  isApproved: {
-  type: Boolean,
-  default: function () {
-    return this.role === "recruiter" ? false : true;
-  }
-  },
+    isApproved: {
+      type: Boolean,
+      default: function () {
+        return this.role === "recruiter" ? false : true;
+      }
+    },
 
     resetPasswordToken: String,
     resetPasswordExpire: Date

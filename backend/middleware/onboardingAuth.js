@@ -33,7 +33,10 @@ module.exports = async function onboardingAuth(req, res, next) {
     }
 
     if (!user.isActive) {
-      return res.status(403).json({ message: "Account disabled by admin" });
+      const reason = String(user.disabledReason || "").trim();
+      return res.status(403).json({
+        message: reason ? `Account disabled: ${reason}` : "Account disabled by admin"
+      });
     }
 
     req.user = {

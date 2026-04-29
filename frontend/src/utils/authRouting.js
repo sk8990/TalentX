@@ -4,6 +4,7 @@ const PUBLIC_ROUTES = ["/", LOGIN_ROUTE, "/register", "/forgot-password"];
 export function clearStoredAuth() {
   localStorage.removeItem("token");
   localStorage.removeItem("user");
+  localStorage.removeItem("talentx_subscription");
 }
 
 export function readStoredSession() {
@@ -26,20 +27,24 @@ export function getDefaultRouteForUser(user) {
     return LOGIN_ROUTE;
   }
 
+  if (user.role === "super_admin") {
+    return "/super-admin/dashboard";
+  }
+
   if (user.role === "student") {
-    return "/student/jobs";
+    return "/student/dashboard";
   }
 
   if (user.role === "recruiter") {
-    return "/recruiter";
+    return "/recruiter/dashboard";
   }
 
-  if (user.role === "admin") {
-    return "/admin";
+  if (user.role === "admin" || user.role === "university_admin") {
+    return "/admin/dashboard";
   }
 
   if (user.role === "interviewer") {
-    return user.forcePasswordReset ? "/interviewer/reset-password" : "/interviewer";
+    return user.forcePasswordReset ? "/interviewer/reset-password" : "/interviewer/dashboard";
   }
 
   return LOGIN_ROUTE;

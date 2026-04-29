@@ -10,6 +10,7 @@ import API from "../api/axios";
 import "./Login.css";
 import TalentXBrand from "../components/TalentXBrand";
 import ScreenLoader from "../components/ScreenLoader";
+import { useSubscription } from "../context/SubscriptionContext";
 import { getDefaultRouteForUser } from "../utils/authRouting";
 import {
   authContentVariants,
@@ -29,6 +30,7 @@ export default function Login() {
 
   const navigate = useNavigate();
   const location = useLocation();
+  const { refreshSubscription } = useSubscription();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -49,6 +51,7 @@ export default function Login() {
 
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
+      await refreshSubscription();
 
       const selectedPlan =
         new URLSearchParams(location.search).get("selectedPlan") ||

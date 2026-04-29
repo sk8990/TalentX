@@ -1,5 +1,14 @@
 const mongoose = require("mongoose");
 
+const PAYMENT_ROLES = [
+  "student",
+  "recruiter",
+  "admin",
+  "university_admin",
+  "interviewer",
+  "super_admin"
+];
+
 const paymentSchema = new mongoose.Schema(
   {
     user: {
@@ -8,13 +17,32 @@ const paymentSchema = new mongoose.Schema(
       required: true,
       index: true
     },
+    userRole: {
+      type: String,
+      enum: PAYMENT_ROLES,
+      required: false,
+      index: true
+    },
+    // Legacy alias.
     role: {
       type: String,
-      enum: ["student", "recruiter", "admin", "interviewer"]
+      enum: PAYMENT_ROLES,
+      index: true
     },
+    package: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Package",
+      default: null,
+      index: true
+    },
+    planKey: {
+      type: String,
+      required: false,
+      index: true
+    },
+    // Legacy alias.
     plan: {
       type: String,
-      enum: ["student_free", "recruiter_starter", "recruiter_pro", "enterprise"],
       required: true,
       index: true
     },
@@ -32,15 +60,31 @@ const paymentSchema = new mongoose.Schema(
     },
     razorpayPaymentId: String,
     razorpaySignature: String,
+    provider: {
+      type: String,
+      enum: ["razorpay"],
+      default: "razorpay"
+    },
+    // Legacy alias.
+    paymentProvider: {
+      type: String,
+      enum: ["razorpay"],
+      default: "razorpay"
+    },
     status: {
       type: String,
-      enum: ["created", "paid", "failed"],
+      enum: ["created", "paid", "failed", "refunded"],
       default: "created",
       index: true
     },
-    paymentProvider: {
-      type: String,
-      default: "razorpay"
+    paidAt: {
+      type: Date,
+      default: null
+    },
+    subscription: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Subscription",
+      default: null
     },
     metadata: {
       type: mongoose.Schema.Types.Mixed,

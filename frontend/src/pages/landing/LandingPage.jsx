@@ -45,7 +45,6 @@ export default function LandingPage() {
     features,
     howItWorks,
     productPreview,
-    pricingPlans,
     blogPosts,
     faqs,
     trust,
@@ -65,7 +64,7 @@ export default function LandingPage() {
         <FeaturesSection features={features} />
         <HowItWorks steps={howItWorks} />
         <ProductPreviewSection productPreview={productPreview} />
-        <PricingSection pricingPlans={pricingPlans} />
+        <PricingSection />
         <BlogSection blogPosts={blogPosts} />
         <TrustSection trust={trust} logoDevToken={logoDevToken} />
         <TestimonialsSection testimonial={testimonial} />
