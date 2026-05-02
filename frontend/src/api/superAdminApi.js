@@ -71,3 +71,51 @@ export function disableRecruiter(id, reason) {
 export function enableRecruiter(id) {
   return API.patch(`/super-admin/recruiters/${id}/enable`).then((response) => response.data);
 }
+
+export function getColleges(params = {}) {
+  return API.get("/super-admin/colleges", { params }).then((response) => response.data);
+}
+
+export function getCollegeById(id) {
+  return API.get(`/super-admin/colleges/${id}`).then((response) => response.data);
+}
+
+export function createCollege(payload) {
+  return API.post("/super-admin/colleges", payload).then((response) => response.data);
+}
+
+export function updateCollege(id, payload) {
+  return API.put(`/super-admin/colleges/${id}`, payload).then((response) => response.data);
+}
+
+export function deleteCollege(id) {
+  return API.delete(`/super-admin/colleges/${id}`).then((response) => response.data);
+}
+
+export function createCollegeAdmin(payload) {
+  return API.post("/super-admin/college-admins", payload).then((response) => response.data);
+}
+
+export function getCollegeAdmins(params = {}) {
+  return API.get("/super-admin/college-admins", { params }).then((response) => response.data);
+}
+
+export function getCollegeAdminById(id) {
+  return API.get(`/super-admin/college-admins/${id}`).then((response) => response.data);
+}
+
+export function getRecruitersByStatus(status, params = {}) {
+  return API.get(`/super-admin/recruiters/${status}`, { params }).then((response) => response.data);
+}
+
+export function approveRecruiter(id) {
+  return API.post(`/super-admin/recruiters/${id}/approve`).then((response) => response.data);
+}
+
+export function rejectRecruiter(id) {
+  return API.post(`/super-admin/recruiters/${id}/reject`).then((response) => response.data);
+}
+
+export function suspendRecruiter(id) {
+  return API.post(`/super-admin/recruiters/${id}/suspend`).then((response) => response.data);
+}

@@ -4,7 +4,8 @@ import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import ErrorOutlineRoundedIcon from "@mui/icons-material/ErrorOutlineRounded";
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 import AutorenewRoundedIcon from "@mui/icons-material/AutorenewRounded";
-import onboardingAPI, { buildServerAssetUrl } from "./api";
+import onboardingAPI from "./api";
+import ProtectedUploadLink from "../components/ProtectedUploadLink";
 
 const statusConfig = {
   not_uploaded: { label: "Not Uploaded", className: "bg-slate-100 text-slate-600", icon: DescriptionOutlinedIcon },
@@ -144,15 +145,13 @@ export default function DocumentUploadCard({
       />
 
       {uploadedDocument?.originalName && (
-        <a
-          href={uploadedDocument.url ? buildServerAssetUrl(uploadedDocument.url) : undefined}
-          target="_blank"
-          rel="noreferrer"
+        <ProtectedUploadLink
+          uploadPath={uploadedDocument.url}
           className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-indigo-700 hover:text-indigo-800"
         >
           <DescriptionOutlinedIcon sx={{ fontSize: 16 }} />
           {uploadedDocument.originalName}
-        </a>
+        </ProtectedUploadLink>
       )}
 
       {verification.message && (

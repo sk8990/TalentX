@@ -20,7 +20,7 @@ const PackageSchema = new mongoose.Schema(
     },
     roleTarget: {
       type: String,
-      enum: ["student", "recruiter", "admin", "university"],
+      enum: ["student", "recruiter", "admin", "university", "university_admin"],
       required: true,
       index: true,
     },

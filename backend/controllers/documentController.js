@@ -30,7 +30,7 @@ exports.uploadDocument = async (req, res) => {
       fs.unlink(req.file.path, () => {});
     }
     const statusCode = err.statusCode || 500;
-    res.status(statusCode).json({ message: err.message });
+    res.status(statusCode).json({ message: statusCode < 500 ? err.message : "Internal server error" });
   }
 };
 
@@ -54,7 +54,7 @@ exports.approveDocuments = async (req, res) => {
     });
   } catch (err) {
     const statusCode = err.statusCode || 500;
-    res.status(statusCode).json({ message: err.message });
+    res.status(statusCode).json({ message: statusCode < 500 ? err.message : "Internal server error" });
   }
 };
 
@@ -78,6 +78,6 @@ exports.rejectDocuments = async (req, res) => {
     });
   } catch (err) {
     const statusCode = err.statusCode || 500;
-    res.status(statusCode).json({ message: err.message });
+    res.status(statusCode).json({ message: statusCode < 500 ? err.message : "Internal server error" });
   }
 };

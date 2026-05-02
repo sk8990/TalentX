@@ -34,7 +34,7 @@ export default function HowItWorks({ steps }) {
           <div className="absolute left-0 right-0 top-[3.25rem] hidden h-0.5 bg-gradient-to-r from-transparent via-indigo-200 to-transparent lg:block" />
 
           <div className="grid gap-6 sm:grid-cols-2 sm:gap-8 lg:grid-cols-4 lg:gap-6">
-            {steps.map((step, index) => (
+            {steps.map((step) => (
               <motion.div
                 key={step.step}
                 variants={revealItem}

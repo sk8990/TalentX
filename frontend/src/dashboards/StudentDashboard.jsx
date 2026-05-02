@@ -14,6 +14,7 @@ import NavigateBeforeIcon from "@mui/icons-material/NavigateBefore";
 import NavigateNextIcon from "@mui/icons-material/NavigateNext";
 import BadgeOutlinedIcon from "@mui/icons-material/BadgeOutlined";
 import LaunchRoundedIcon from "@mui/icons-material/LaunchRounded";
+import LockIcon from "@mui/icons-material/Lock";
 import { clearStoredOnboardingInstanceId } from "../onboarding/session";
 import ScreenLoader from "../components/ScreenLoader";
 
@@ -31,6 +32,7 @@ const statusColors = {
 export default function StudentDashboard() {
   const [data, setData] = useState(null);
   const [recommendations, setRecommendations] = useState([]);
+  const [accessSummary, setAccessSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [launchingOnboarding, setLaunchingOnboarding] = useState(false);
   const [timelinePage, setTimelinePage] = useState(1);
@@ -43,12 +45,14 @@ export default function StudentDashboard() {
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
-        const [dashRes, recRes] = await Promise.all([
+        const [dashRes, recRes, accessRes] = await Promise.all([
           API.get("/student/dashboard"),
           API.get("/student/recommendations").catch(() => ({ data: { recommendations: [] } })),
+          API.get("/student/access-summary").catch(() => ({ data: null })),
         ]);
         setData(dashRes.data);
         setRecommendations(recRes.data?.recommendations || []);
+        setAccessSummary(accessRes.data);
       } catch (err) {
         console.error("Dashboard error:", err);
       } finally {
@@ -111,8 +115,113 @@ export default function StudentDashboard() {
     }
   };
 
+  const studentType = data.student?.studentType || "open_student";
+  const verificationStatus = data.student?.collegeVerificationStatus || "not_required";
+  const isCollegeVerified = data.student?.isCollegeVerified || false;
+
+  const renderVerificationBanner = () => {
+    if (studentType === "college_student" && verificationStatus === "pending") {
+      return (
+        <section className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-300">
+          <p className="font-semibold">College Verification Pending</p>
+          <p className="mt-1">Your college verification is pending. You will get full access after your College Admin approves your account.</p>
+        </section>
+      );
+    }
+    if (studentType === "college_student" && verificationStatus === "approved" && isCollegeVerified) {
+      return (
+        <section className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-800 dark:border-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300">
+          <p className="font-semibold">College Verified</p>
+          <p className="mt-1">Your college verification is approved. You have full access to TalentX.</p>
+        </section>
+      );
+    }
+    if (studentType === "college_student" && verificationStatus === "rejected") {
+      return (
+        <section className="rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-800 dark:border-rose-700 dark:bg-rose-900/20 dark:text-rose-300">
+          <p className="font-semibold">College Verification Rejected</p>
+          <p className="mt-1">Your college verification was rejected. You can continue as an Open Student with limited access.</p>
+        </section>
+      );
+    }
+    if (studentType === "open_student") {
+      return (
+        <section className="rounded-2xl border border-blue-200 bg-blue-50 px-5 py-4 text-sm text-blue-800 dark:border-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
+          <p className="font-semibold">Open Student</p>
+          <p className="mt-1">You are using TalentX as an Open Student. Full access is available only when your college joins TalentX Enterprise.</p>
+        </section>
+      );
+    }
+    return null;
+  };
+
+  const renderAccessSummaryCard = () => {
+    if (!accessSummary || accessSummary.hasFullAccess) {
+      return null;
+    }
+
+    const { limits, usage, remaining, accessType } = accessSummary;
+
+    const accessTypeLabels = {
+      open_student: "Open Student",
+      pending_college_student: "Pending College Student",
+      rejected_college_student: "Rejected College Student",
+      limited: "Limited Student"
+    };
+
+    const accessTypeLabel = accessTypeLabels[accessType] || "Limited Student";
+
+    return (
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-lg font-bold text-slate-900">Current Plan</h3>
+            <p className="text-sm text-slate-500">{accessTypeLabel}</p>
+          </div>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1.5 text-xs font-semibold text-amber-700">
+            <LockIcon sx={{ fontSize: 14 }} />
+            Limited Access
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-400">Job Applications</p>
+            <p className="mt-1 text-lg font-bold text-slate-900">{usage?.jobApplicationsUsed || 0} / {limits?.jobApplicationsPerMonth || 5}</p>
+            <p className="text-xs text-slate-500">{remaining?.jobApplications || 0} remaining</p>
+          </div>
+          <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-400">AI Interviews</p>
+            <p className="mt-1 text-lg font-bold text-slate-900">{usage?.aiInterviewsUsed || 0} / {limits?.aiInterviewsPerMonth || 2}</p>
+            <p className="text-xs text-slate-500">{remaining?.aiInterviews || 0} remaining</p>
+          </div>
+          <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-400">Skill Tests</p>
+            <p className="mt-1 text-lg font-bold text-slate-900">{usage?.skillTestsUsed || 0} / {limits?.skillTestsPerMonth || 3}</p>
+            <p className="text-xs text-slate-500">{remaining?.skillTests || 0} remaining</p>
+          </div>
+          <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-400">Resumes</p>
+            <p className="mt-1 text-lg font-bold text-slate-900">{usage?.resumesCreated || 0} / {limits?.resumeCount || 1}</p>
+            <p className="text-xs text-slate-500">{remaining?.resumes || 0} remaining</p>
+          </div>
+        </div>
+
+        <p className="mt-4 text-xs text-slate-500">
+          Full access is available when your college joins TalentX Enterprise.
+        </p>
+      </section>
+    );
+  };
+
   return (
     <div className="space-y-6 sm:space-y-8">
+      {/* Verification Banner */}
+      {renderVerificationBanner()}
+
+      {/* Access Summary Card */}
+      {renderAccessSummaryCard()}
+
       {/* Header */}
       <section className="tx-page-header px-5 py-6 sm:px-8 sm:py-8">
         <div className="flex items-center gap-3">
@@ -144,7 +253,7 @@ export default function StudentDashboard() {
         ))}
       </section>
 
-      {data.offers?.length > 0 && (
+      {accessSummary?.hasFullAccess && data.offers?.length > 0 && (
         <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>

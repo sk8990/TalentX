@@ -13,6 +13,15 @@ const {
   respondTicket
 } = require('../controllers/supportController');
 
+function blockUniversityAdminPlatformSupport(req, res, next) {
+  if (req.user?.role === "university_admin") {
+    return res.status(403).json({
+      message: "University Admin cannot access the platform-wide support queue in this demo."
+    });
+  }
+  return next();
+}
+
 // Student routes
 router.post('/ask-ai', auth, role('student'), askAI);
 router.post("/ticket", auth, role("student"), (req, res, next) => {
@@ -37,7 +46,7 @@ router.post("/recruiter/ticket", auth, role("recruiter"), (req, res, next) => {
 router.get("/recruiter/my", auth, role("recruiter"), getMyRecruiterTickets);
 
 // Admin routes
-router.get('/admin', auth, role('admin'), requireFeature("adminDashboard"), getAllTickets);
-router.put('/admin/:id/respond', auth, role('admin'), requireFeature("adminDashboard"), respondTicket);
+router.get('/admin', auth, role('admin'), blockUniversityAdminPlatformSupport, requireFeature("adminDashboard"), getAllTickets);
+router.put('/admin/:id/respond', auth, role('admin'), blockUniversityAdminPlatformSupport, requireFeature("adminDashboard"), respondTicket);
 
 module.exports = router;

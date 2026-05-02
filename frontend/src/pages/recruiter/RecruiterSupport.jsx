@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
-import API, { getServerOrigin } from "../../api/axios";
+import API from "../../api/axios";
+import ProtectedUploadLink from "../../components/ProtectedUploadLink";
 import toast from "react-hot-toast";
 import SupportAgentIcon from "@mui/icons-material/SupportAgent";
 import AddPhotoAlternateIcon from "@mui/icons-material/AddPhotoAlternate";
 import CloseIcon from "@mui/icons-material/Close";
 
 export default function RecruiterSupport() {
-  const serverOrigin = getServerOrigin();
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -103,15 +103,13 @@ export default function RecruiterSupport() {
                 </div>
 
                 {ticket.screenshotPath && (
-                  <a
-                    href={`${serverOrigin}${ticket.screenshotPath}`}
-                    target="_blank"
-                    rel="noreferrer"
+                  <ProtectedUploadLink
+                    uploadPath={ticket.screenshotPath}
                     className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-700"
                   >
                     <AddPhotoAlternateIcon sx={{ fontSize: 14 }} />
                     View Screenshot
-                  </a>
+                  </ProtectedUploadLink>
                 )}
 
                 {ticket.adminResponse ? (

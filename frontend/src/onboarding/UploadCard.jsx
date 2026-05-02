@@ -3,7 +3,8 @@ import CloudUploadRoundedIcon from "@mui/icons-material/CloudUploadRounded";
 import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 import ErrorOutlineRoundedIcon from "@mui/icons-material/ErrorOutlineRounded";
-import onboardingAPI, { buildServerAssetUrl } from "./api";
+import onboardingAPI from "./api";
+import ProtectedUploadLink from "../components/ProtectedUploadLink";
 
 // Phase 4.3: Real drag-and-drop support for document uploads
 export default function UploadCard({ doc, instanceId, stepId, authToken, onUploaded, disabled }) {
@@ -120,15 +121,13 @@ export default function UploadCard({ doc, instanceId, stepId, authToken, onUploa
       </div>
 
       {uploadedDoc && (
-        <a
-          href={buildServerAssetUrl(uploadedDoc.url)}
-          target="_blank"
-          rel="noreferrer"
+        <ProtectedUploadLink
+          uploadPath={uploadedDoc.url}
           className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-indigo-600 hover:text-indigo-700"
         >
           <DescriptionRoundedIcon sx={{ fontSize: 14 }} />
           {uploadedDoc.originalName}
-        </a>
+        </ProtectedUploadLink>
       )}
 
       <div className="mt-3">

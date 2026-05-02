@@ -30,6 +30,7 @@ module.exports = async (req, res, next) => {
     req.user = {
       id: user._id.toString(),
       role: user.role,
+      collegeId: user.collegeId || null,
       mustChangePassword: Boolean(user.mustChangePassword)
     };
 

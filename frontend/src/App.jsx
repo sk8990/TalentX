@@ -6,6 +6,7 @@ import MyApplications from "./student/MyApplications";
 import StudentLayout from "./layout/StudentLayout";
 import JobProfiles from "./student/JobProfiles";
 import MyProfile from "./student/MyProfile";
+import StudentSettings from "./student/StudentSettings";
 import Interviews from "./student/Interviews";
 import Assessments from "./student/Assessments";
 import AdminDashboard from "./dashboards/AdminDashboard";
@@ -21,6 +22,7 @@ import StudentFAQ from "./student/StudentFAQ";
 import AdminSupport from "./admin/AdminSupport";
 import RecruiterApplications from "./pages/recruiter/RecruiterApplications";
 import RecruiterSupport from "./pages/recruiter/RecruiterSupport";
+import RecruiterInterviewers from "./pages/recruiter/RecruiterInterviewers";
 import RecruiterOnboardingReviews from "./pages/recruiter/RecruiterOnboardingReviews";
 import InterviewerLayout from "./pages/interviewer/InterviewerLayout";
 import InterviewerPanel from "./pages/interviewer/InterviewerPanel";
@@ -46,6 +48,14 @@ import UniversitiesPage from "./pages/super-admin/UniversitiesPage";
 import RecruitersPage from "./pages/super-admin/RecruitersPage";
 import SubscriptionPage from "./pages/SubscriptionPage";
 import SuperAdminSettingsPage from "./pages/super-admin/SuperAdminSettingsPage";
+import CollegesPage from "./pages/super-admin/CollegesPage";
+import CreateCollegeAdminPage from "./pages/super-admin/CreateCollegeAdminPage";
+import RecruiterApprovalsPage from "./pages/super-admin/RecruiterApprovalsPage";
+import CollegeAdminLayout from "./layout/CollegeAdminLayout";
+import CollegeAdminDashboard from "./pages/college-admin/CollegeAdminDashboard";
+import StudentVerificationPage from "./pages/college-admin/StudentVerificationPage";
+import CollegeJobsPage from "./pages/college-admin/CollegeJobsPage";
+import PlacementReportsPage from "./pages/college-admin/PlacementReportsPage";
 
 export default function App() {
   return (
@@ -119,6 +129,7 @@ export default function App() {
             <Route path="dashboard" element={<StudentDashboard />} />
             <Route path="jobs" element={<JobProfiles />} />
             <Route path="profile" element={<MyProfile />} />
+            <Route path="settings" element={<StudentSettings />} />
             <Route path="interviews" element={<Interviews />} />
             <Route path="assessments" element={<Assessments />} />
             <Route path="applications" element={<MyApplications />} />
@@ -168,6 +179,14 @@ export default function App() {
               element={
                 <FeatureGate feature="onboardingManagement">
                   <RecruiterOnboardingReviews />
+                </FeatureGate>
+              }
+            />
+            <Route
+              path="interviewers"
+              element={
+                <FeatureGate feature="humanInterviewPanel">
+                  <RecruiterInterviewers />
                 </FeatureGate>
               }
             />
@@ -234,6 +253,22 @@ export default function App() {
             />
           </Route>
 
+          {/* COLLEGE ADMIN */}
+          <Route
+            path="/college-admin"
+            element={
+              <ProtectedRoute role="college_admin">
+                <CollegeAdminLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<CollegeAdminDashboard />} />
+            <Route path="students" element={<StudentVerificationPage />} />
+            <Route path="jobs" element={<CollegeJobsPage />} />
+            <Route path="reports" element={<PlacementReportsPage />} />
+          </Route>
+
           {/* SUPER ADMIN */}
           <Route
             path="/super-admin"
@@ -251,6 +286,9 @@ export default function App() {
             <Route path="subscriptions" element={<SubscriptionsPage />} />
             <Route path="universities" element={<UniversitiesPage />} />
             <Route path="recruiters" element={<RecruitersPage />} />
+            <Route path="colleges" element={<CollegesPage />} />
+            <Route path="college-admins" element={<CreateCollegeAdminPage />} />
+            <Route path="recruiter-approvals" element={<RecruiterApprovalsPage />} />
             <Route path="settings" element={<SuperAdminSettingsPage />} />
           </Route>
         </Routes>

@@ -102,6 +102,7 @@ function buildOfferStepContent({ step, application, templateStep, instance }) {
     intro: templateStep?.description || step.title,
     offerLetterParagraphs: buildOfferLetterPreview(application, companyName),
     offerLetterUrl: application?.offer?.pdfPath || "",
+    applicationId: application?._id || "",
     cards: [
       { key: "role", label: "Role", value: application?.jobId?.title || "Not available" },
       { key: "salary", label: "Annual Salary", value: application?.offer?.salary || "Not available" },
@@ -391,6 +392,7 @@ async function buildStudentPortalPayload({ userId, selectedInstanceId }) {
     companies: companyCards,
     selectedInstance: {
       id: selectedInstance._id,
+      applicationId: application?._id || selectedInstance.applicationId,
       companyName: selectedInstance.companyName,
       companyLogo: selectedInstance.companyLogo || "",
       status: selectedInstance.status,
@@ -401,6 +403,7 @@ async function buildStudentPortalPayload({ userId, selectedInstanceId }) {
       },
       overallBanner,
       offer: {
+        applicationId: application?._id || selectedInstance.applicationId,
         salary: application?.offer?.salary || "",
         location: application?.offer?.location || "",
         joiningDate: application?.offer?.joiningDate || null,

@@ -1,53 +1,41 @@
 const User = require('../models/User.js');
+const mongoose = require("mongoose");
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require("crypto");
 const Student = require("../models/Student");
-const { sendEmail } = require("../services/emailService");
-
-const zxcvbn = require("zxcvbn");
-
-function validatePassword(password) {
-  const minLength = 8;
-  const hasUpper = /[A-Z]/.test(password);
-  const hasLower = /[a-z]/.test(password);
-  const hasNumber = /[0-9]/.test(password);
-  const hasSymbol = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-
-  if (!password) return "Password is required";
-
-  if (password.length < minLength)
-    return "Password must be at least 8 characters long";
-
-  if (!hasUpper)
-    return "Password must contain at least one uppercase letter";
-
-  if (!hasLower)
-    return "Password must contain at least one lowercase letter";
-
-  if (!hasNumber)
-    return "Password must contain at least one number";
-
-  if (!hasSymbol)
-    return "Password must contain at least one special character";
-
-  const strength = zxcvbn(password);
-  if (strength.score < 3)
-    return "Password is too weak";
-
-  return null;
-}
+const College = require("../models/College");
+const { sendEmail, emailTemplates } = require("../services/emailService");
+const { validatePassword } = require("../utils/validatePassword");
 
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || "").trim());
 }
 
+function emailWarningFor(result) {
+  return result?.success === false ? "Account created but email could not be sent." : undefined;
+}
+
 exports.register = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const {
+      name,
+      email,
+      password,
+      role,
+      studentType,
+      collegeId,
+      companyName,
+      companyEmail,
+      companyWebsite
+    } = req.body;
     const normalizedName = String(name || "").trim();
-    const normalizedEmail = String(email || "").trim().toLowerCase();
     const normalizedRole = String(role || "").trim();
+    const normalizedEmail = String(
+      normalizedRole === "recruiter" ? (companyEmail || email || "") : (email || "")
+    ).trim().toLowerCase();
+    const normalizedCompanyName = String(companyName || "").trim();
+    const normalizedCompanyWebsite = String(companyWebsite || "").trim();
 
     if (!normalizedName || !normalizedEmail || !password || !normalizedRole) {
       return res.status(400).json({ message: "All fields are required" });
@@ -71,24 +59,152 @@ exports.register = async (req, res) => {
     if (existingUser)
       return res.status(400).json({ message: "User already exists" });
 
+    const emailDomain = normalizedEmail.split("@")[1]?.toLowerCase();
+
+    if (normalizedRole === "recruiter") {
+      if (!normalizedCompanyName) {
+        return res.status(400).json({ message: "Company name is required" });
+      }
+
+      if (!normalizedCompanyWebsite) {
+        return res.status(400).json({ message: "Company website is required" });
+      }
+    }
+
+    const resolvedStudentType =
+      normalizedRole === "student"
+        ? (studentType === "college_student" ? "college_student" : "open_student")
+        : undefined;
+
+    let studentData = {};
+
+    if (normalizedRole === "student" && resolvedStudentType === "college_student") {
+      if (!collegeId) {
+        return res.status(400).json({ message: "Please select your college." });
+      }
+
+      if (!mongoose.Types.ObjectId.isValid(String(collegeId))) {
+        return res.status(400).json({ message: "Selected college was not found." });
+      }
+
+      const college = await College.findById(collegeId);
+      if (!college) {
+        return res.status(400).json({ message: "Selected college was not found." });
+      }
+
+      if (college.status !== "active" || !college.enterprisePlanActive) {
+        return res.status(400).json({ message: "This college is not active on TalentX Enterprise." });
+      }
+
+      if (emailDomain !== String(college.domain || "").toLowerCase()) {
+        return res.status(400).json({
+          message: `Please use your official college email address ending with @${college.domain}.`
+        });
+      }
+
+      studentData = {
+        studentType: "college_student",
+        collegeId: college._id,
+        collegeName: college.name,
+        collegeVerificationStatus: "pending",
+        isCollegeVerified: false,
+        accessLevel: "limited"
+      };
+    }
+
+    if (normalizedRole === "student" && resolvedStudentType === "open_student") {
+      const domainCollege = await College.findOne({ domain: emailDomain });
+      if (domainCollege) {
+        return res.status(400).json({
+          message: "This email belongs to a registered college. Please register as a College Student and select your college."
+        });
+      }
+
+      studentData = {
+        studentType: "open_student",
+        collegeId: null,
+        collegeName: null,
+        collegeVerificationStatus: "not_required",
+        isCollegeVerified: false,
+        accessLevel: "limited"
+      };
+    }
+
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    const user = await User.create({
+    const userData = {
       name: normalizedName,
       email: normalizedEmail,
       password: hashedPassword,
       role: normalizedRole
-    });
+    };
 
-    if (normalizedRole === "student") {
-      await Student.create({ userId: user._id });
+    if (normalizedRole === "recruiter") {
+      userData.recruiterApprovalStatus = "pending";
+      userData.companyName = normalizedCompanyName;
+      userData.companyEmail = normalizedEmail;
+      userData.companyWebsite = normalizedCompanyWebsite;
     }
 
-    res.status(201).json({ message: "Registration successful" });
+    if (normalizedRole === "student" && resolvedStudentType === "college_student") {
+      userData.collegeId = studentData.collegeId;
+    }
+
+    const user = await User.create(userData);
+
+    if (normalizedRole === "student") {
+      await Student.create({
+        userId: user._id,
+        ...studentData
+      });
+    }
+
+    let emailResult = null;
+    if (normalizedRole === "student" && resolvedStudentType === "open_student") {
+      emailResult = await sendEmail({
+        to: user.email,
+        ...emailTemplates.openStudentWelcomeEmail({
+          name: user.name,
+          email: user.email
+        })
+      });
+    } else if (normalizedRole === "student" && resolvedStudentType === "college_student") {
+      emailResult = await sendEmail({
+        to: user.email,
+        ...emailTemplates.collegeStudentPendingEmail({
+          name: user.name,
+          email: user.email,
+          collegeName: studentData.collegeName
+        })
+      });
+    } else if (normalizedRole === "recruiter") {
+      emailResult = await sendEmail({
+        to: user.email,
+        ...emailTemplates.recruiterPendingEmail({
+          name: user.name,
+          email: user.email
+        })
+      });
+    }
+
+    const successMessage =
+      normalizedRole === "recruiter"
+        ? "Your recruiter account is pending approval from TalentX Super Admin."
+        : resolvedStudentType === "college_student"
+        ? "Signup successful. Your account is pending verification from your College Admin."
+        : normalizedRole === "student"
+          ? "Signup successful. You are registered as an Open Student."
+          : "Registration successful";
+
+    res.status(201).json({
+      message: successMessage,
+      emailSent: emailResult ? Boolean(emailResult.success) : undefined,
+      emailWarning: emailWarningFor(emailResult)
+    });
 
   } catch (err) {
     console.error("REGISTER ERROR:", err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: "Registration failed" });
   }
 };
 
@@ -109,11 +225,6 @@ exports.login = async (req, res) => {
         const isMatch = await bcrypt.compare(password, user.password);
         if(!isMatch)
             return res.status(401).json({message: 'Invalid Credentials'});
-        if (user.role === "recruiter" && !user.isApproved) {
-          return res.status(403).json ({
-            message: "Your account is pending approval. Please wait for an admin to approve your account."
-          });
-        }
         const token = jwt.sign(
             {id: user._id, role: user.role},
             process.env.JWT_SECRET,
@@ -130,6 +241,15 @@ exports.login = async (req, res) => {
   }
 };
 
+        if (user.role === "recruiter") {
+          const approvalStatus = user.recruiterApprovalStatus || "pending";
+          responsePayload.user.recruiterApprovalStatus = approvalStatus;
+          responsePayload.user.isRecruiterApproved = approvalStatus === "approved";
+          responsePayload.user.companyName = user.companyName || "";
+          responsePayload.user.companyEmail = user.companyEmail || user.email || "";
+          responsePayload.user.companyWebsite = user.companyWebsite || "";
+        }
+
         if (user.mustChangePassword) {
           responsePayload.forcePasswordReset = true;
         }
@@ -137,7 +257,7 @@ exports.login = async (req, res) => {
         res.json(responsePayload);
 
     } catch (err) {
-        res.status(500).json({error: err.message});
+        res.status(500).json({message: "Login failed"});
     }
 };
 
@@ -167,7 +287,7 @@ exports.forgotPassword = async (req, res) => {
       user.resetPasswordExpire = Date.now() + 15 * 60 * 1000; // 15 min
       await user.save();
 
-      const frontendUrl = String(process.env.FRONTEND_URL || "http://localhost:5173").trim().replace(/\/+$/, "");
+      const frontendUrl = String(process.env.FRONTEND_URL || "http://localhost:3000").trim().replace(/\/+$/, "");
       const resetPage = `${frontendUrl}/forgot-password`;
       const html = `
         <div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
@@ -191,7 +311,8 @@ exports.forgotPassword = async (req, res) => {
       message: "If this email is registered, reset instructions have been sent."
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("forgotPassword error:", err);
+    res.status(500).json({ message: "Password reset failed" });
   }
 };
 
@@ -229,7 +350,8 @@ exports.resetPassword = async (req, res) => {
 
     res.json({ message: "Password reset successful" });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("resetPassword error:", err);
+    res.status(500).json({ message: "Password reset failed" });
   }
 };
 
@@ -270,6 +392,83 @@ exports.interviewerResetPassword = async (req, res) => {
     res.json({ message: "Password reset successful. You can now access your panel." });
   } catch (err) {
     console.error("INTERVIEWER RESET ERROR:", err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: "Password reset failed" });
+  }
+};
+
+/* ===========================
+   CHANGE EMAIL
+=========================== */
+exports.changeEmail = async (req, res) => {
+  try {
+    const { newEmail, password } = req.body;
+
+    if (!newEmail || !password) {
+      return res.status(400).json({ message: "New email and password are required" });
+    }
+
+    const normalizedEmail = String(newEmail).trim().toLowerCase();
+    if (!isValidEmail(normalizedEmail)) {
+      return res.status(400).json({ message: "Please enter a valid email address" });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: "Password is incorrect" });
+    }
+
+    const existingUser = await User.findOne({ email: normalizedEmail });
+    if (existingUser && String(existingUser._id) !== String(user._id)) {
+      return res.status(409).json({ message: "Email already in use" });
+    }
+
+    user.email = normalizedEmail;
+    await user.save();
+
+    res.json({ message: "Email updated successfully" });
+  } catch (err) {
+    console.error("CHANGE EMAIL ERROR:", err);
+    res.status(500).json({ message: "Email update failed" });
+  }
+};
+
+/* ===========================
+   CHANGE PASSWORD
+=========================== */
+exports.changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: "Current password and new password are required" });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: "Current password is incorrect" });
+    }
+
+    const passwordError = validatePassword(newPassword);
+    if (passwordError) {
+      return res.status(400).json({ message: passwordError });
+    }
+
+    user.password = await bcrypt.hash(newPassword, 12);
+    await user.save();
+
+    res.json({ message: "Password updated successfully" });
+  } catch (err) {
+    console.error("CHANGE PASSWORD ERROR:", err);
+    res.status(500).json({ message: "Password update failed" });
   }
 };

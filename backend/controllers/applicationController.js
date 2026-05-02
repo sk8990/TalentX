@@ -36,6 +36,13 @@ const {
   notifyInterviewSlotBooked,
   notifyOfferReceived
 } = require("../services/notificationService");
+const {
+  checkStudentLimit,
+  incrementStudentUsage,
+  hasFullStudentAccess,
+  simplifyApplicationStatusForLimitedStudent
+} = require("../helpers/studentAccessHelper");
+const { canStudentViewJob } = require("../helpers/jobVisibilityHelper");
 
 function parseDateInput(value) {
   const raw = String(value || "").trim();
@@ -202,6 +209,12 @@ function getBackendOrigin(req) {
   return `${req.protocol}://${req.get("host")}`;
 }
 
+function removeUploadedFile(req) {
+  if (req.file?.path) {
+    fs.unlink(req.file.path, () => {});
+  }
+}
+
 async function findStudentApplicationByUser(applicationId, userId) {
   const student = await Student.findOne({ userId });
   if (!student) {
@@ -329,16 +342,29 @@ exports.applyJob = async (req, res) => {
     const student = await Student.findOne({ userId: req.user.id });
 
     if (!student) {
+      removeUploadedFile(req);
       return res.status(404).json({ message: "Student profile not found" });
     }
 
-    const job = await Job.findById(jobId).select("isActive deadline");
+    const job = await Job.findById(jobId).select(
+      "isActive deadline targetColleges visibilityType"
+    );
     if (!job) {
+      removeUploadedFile(req);
       return res.status(404).json({ message: "Job not found" });
     }
 
     if (!job.isActive || new Date(job.deadline) < new Date()) {
+      removeUploadedFile(req);
       return res.status(400).json({ message: "Job deadline has passed. This job is inactive." });
+    }
+
+    const hasFullAccess = await hasFullStudentAccess(req.user);
+    if (!canStudentViewJob(student, job, { user: req.user, hasFullAccess })) {
+      removeUploadedFile(req);
+      return res.status(403).json({
+        message: "You are not eligible to apply for this college-specific job drive."
+      });
     }
 
     const existing = await Application.findOne({
@@ -347,7 +373,16 @@ exports.applyJob = async (req, res) => {
     });
 
     if (existing) {
+      removeUploadedFile(req);
       return res.status(400).json({ message: "Already applied" });
+    }
+
+    const limitCheck = await checkStudentLimit(req.user, "job_application");
+    if (!limitCheck.allowed) {
+      removeUploadedFile(req);
+      return res.status(403).json({
+        message: "You have reached your monthly job application limit. Verified Enterprise college students get higher access."
+      });
     }
 
     const application = await Application.create({
@@ -357,10 +392,15 @@ exports.applyJob = async (req, res) => {
       status: "APPLIED"
     });
 
+    if (!limitCheck.hasFullAccess) {
+      await incrementStudentUsage(req.user.id, "job_application");
+    }
+
     res.status(201).json(application);
   } catch (err) {
+    removeUploadedFile(req);
     console.error("Error applying for job:", err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: "Unable to submit application" });
   }
 };
 
@@ -375,15 +415,25 @@ exports.getMyApplications = async (req, res) => {
       return res.status(404).json({ message: "Student not found" });
     }
 
+    const hasFullAccess = await hasFullStudentAccess(req.user);
+
     const applications = await Application.find({
       studentId: student._id
     })
       .populate("jobId", "title companyName companyLogo companyDomain")
       .sort({ createdAt: -1 });
 
-    res.json(applications);
+    if (!hasFullAccess) {
+      const simplifiedApplications = applications.map((app) => ({
+        ...app.toObject(),
+        status: simplifyApplicationStatusForLimitedStudent(app.status)
+      }));
+      res.json(simplifiedApplications);
+    } else {
+      res.json(applications);
+    }
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: "Unable to load applications" });
   }
 };
 
@@ -413,7 +463,7 @@ exports.getApplicationsByJob = async (req, res) => {
 
     res.json(applications);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -462,7 +512,7 @@ async function updateStatus(req, res, newStatus) {
 
     res.json(app);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 }
 
@@ -546,7 +596,7 @@ exports.sendAssessment = async (req, res) => {
 
     res.json(app);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -610,7 +660,7 @@ exports.updateAssessmentResult = async (req, res) => {
 
     res.json(app);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -620,15 +670,27 @@ exports.scheduleInterview = async (req, res) => {
     const mode = normalizeInterviewMode(req.body?.mode);
     const link = normalizeWebLink(req.body?.link);
     const providedEndDate = parseDateInput(req.body?.endDate);
-    const panelType = "AI";
+
+    // Read panelType from the request body.
+    // Default to "AI" so existing clients that do not send panelType continue
+    // to work exactly as before (backward compatible).
+    const panelType = normalizeInterviewPanelType(req.body?.panelType ?? "AI");
     const aiConfig = normalizeAIInterviewConfigInput(req.body?.aiConfig);
 
     if (!startDate || !mode) {
       return res.status(400).json({ message: "Date and valid mode are required" });
     }
 
-    if (mode !== "Online") {
+    // AI interviews must be conducted online (the AI panel is browser-based).
+    // HUMAN interviews support both Online and Offline modes.
+    if (panelType === "AI" && mode !== "Online") {
       return res.status(400).json({ message: "AI interviews must use Online mode" });
+    }
+
+    // Online HUMAN interviews require a meeting link so the interviewer and
+    // candidate can join the same call.
+    if (panelType === "HUMAN" && mode === "Online" && !link) {
+      return res.status(400).json({ message: "A meeting link is required for Online interviews" });
     }
 
     const endDate = providedEndDate || new Date(startDate.getTime() + 30 * 60 * 1000);
@@ -663,8 +725,16 @@ exports.scheduleInterview = async (req, res) => {
     });
     app.interviewSlots = [];
     clearInterviewJoinRequest(app);
-    resetAIInterviewArtifacts(app);
-    clearInterviewerAssignment(app);
+
+    // Only reset AI artifacts when scheduling an AI interview.
+    // For HUMAN interviews, preserve any existing AI data and clear
+    // the interviewer assignment so it can be set fresh.
+    if (panelType === "AI") {
+      resetAIInterviewArtifacts(app);
+      clearInterviewerAssignment(app);
+    } else {
+      clearInterviewerAssignment(app);
+    }
 
     await app.save();
 
@@ -697,7 +767,7 @@ exports.scheduleInterview = async (req, res) => {
 
     res.json(app);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -827,7 +897,11 @@ exports.rescheduleInterview = async (req, res) => {
 exports.publishInterviewSlots = async (req, res) => {
   try {
     const slots = Array.isArray(req.body?.slots) ? req.body.slots : [];
-    const panelType = "AI";
+
+    // Read panelType from the request body.
+    // Default to "AI" so existing clients that do not send panelType continue
+    // to work exactly as before (backward compatible).
+    const panelType = normalizeInterviewPanelType(req.body?.panelType ?? "AI");
     const aiConfig = normalizeAIInterviewConfigInput(req.body?.aiConfig);
 
     if (slots.length === 0) {
@@ -864,10 +938,10 @@ exports.publishInterviewSlots = async (req, res) => {
       const rawSlot = slots[i] || {};
       const start = parseDateInput(rawSlot.start);
       const end = parseDateInput(rawSlot.end);
-      const mode = normalizeInterviewMode(rawSlot.mode);
+      const slotMode = normalizeInterviewMode(rawSlot.mode);
       const link = normalizeWebLink(rawSlot.link);
 
-      if (!start || !end || !mode) {
+      if (!start || !end || !slotMode) {
         return res.status(400).json({ message: `Slot ${i + 1}: start, end, and mode are required` });
       }
 
@@ -879,14 +953,20 @@ exports.publishInterviewSlots = async (req, res) => {
         return res.status(400).json({ message: `Slot ${i + 1}: start time must be in the future` });
       }
 
-      if (mode !== "Online") {
+      // AI slots must be online (the AI panel is browser-based).
+      if (panelType === "AI" && slotMode !== "Online") {
         return res.status(400).json({ message: `Slot ${i + 1}: AI interviews must use Online mode` });
+      }
+
+      // Online HUMAN slots require a meeting link.
+      if (panelType === "HUMAN" && slotMode === "Online" && !link) {
+        return res.status(400).json({ message: `Slot ${i + 1}: a meeting link is required for Online interviews` });
       }
 
       parsedSlots.push({
         start,
         end,
-        mode,
+        mode: slotMode,
         link,
         bookedByStudent: false,
         bookedAt: null,
@@ -910,7 +990,10 @@ exports.publishInterviewSlots = async (req, res) => {
     app.interview = undefined;
     app.interviewSlots = parsedSlots;
     clearInterviewJoinRequest(app);
-    resetAIInterviewArtifacts(app);
+    // Only reset AI artifacts when publishing AI slots.
+    if (panelType === "AI") {
+      resetAIInterviewArtifacts(app);
+    }
     clearInterviewerAssignment(app);
     await app.save();
 
@@ -941,7 +1024,7 @@ exports.publishInterviewSlots = async (req, res) => {
 
     res.json(app);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -991,6 +1074,16 @@ exports.bookInterviewSlot = async (req, res) => {
       return res.status(400).json({ message: "This slot has already started or expired" });
     }
 
+    const panelType = getInterviewPanelType(slot);
+    if (panelType === "HUMAN") {
+      const limitCheck = await checkStudentLimit(req.user, "human_interview");
+      if (!limitCheck.allowed) {
+        return res.status(403).json({
+          message: "Human interview scheduling is available only for verified Enterprise college students."
+        });
+      }
+    }
+
     const previousStatus = app.status;
     slot.bookedByStudent = true;
     slot.bookedAt = new Date();
@@ -1001,7 +1094,7 @@ exports.bookInterviewSlot = async (req, res) => {
       endDate: slot.end,
       mode: slot.mode,
       link: slot.link,
-      panelType: getInterviewPanelType(slot),
+      panelType,
       aiConfig: normalizeAIInterviewConfigInput(slot.aiConfig)
     });
     clearInterviewJoinRequest(app);
@@ -1055,7 +1148,7 @@ exports.bookInterviewSlot = async (req, res) => {
 
     res.json(app);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -1196,7 +1289,7 @@ exports.assignInterviewerToApplication = async (req, res) => {
 
     res.json(refreshed);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -1263,7 +1356,7 @@ exports.unassignInterviewerFromApplication = async (req, res) => {
 
     res.json(app);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -1354,7 +1447,7 @@ exports.generateOffer = async (req, res) => {
 
     res.json(app.offer);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -1368,6 +1461,13 @@ exports.respondToOffer = async (req, res) => {
     const student = await Student.findOne({ userId: req.user.id });
     if (!student) {
       return res.status(404).json({ message: "Student not found" });
+    }
+
+    const limitCheck = await checkStudentLimit(req.user, "offer_letter");
+    if (!limitCheck.allowed) {
+      return res.status(403).json({
+        message: "Offer letter access is available only after college verification."
+      });
     }
 
     const app = await Application.findOne({
@@ -1406,7 +1506,72 @@ exports.respondToOffer = async (req, res) => {
 
     res.json(app.offer);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+exports.downloadOfferLetter = async (req, res) => {
+  try {
+    const app = await Application.findById(req.params.applicationId)
+      .populate("jobId", "recruiterId")
+      .populate("studentId", "userId");
+
+    // Return 404 for both "not found" and "no PDF yet" — do not distinguish
+    // between the two to avoid leaking application existence to unauthorised callers.
+    if (!app || !app.offer?.pdfPath) {
+      return res.status(404).json({ message: "Offer letter not found" });
+    }
+
+    if (req.user.role === "student") {
+      // Find the Student document that belongs to the logged-in user.
+      const student = await Student.findOne({ userId: req.user.id });
+
+      // app.studentId is populated as a Student doc (has ._id) when populate
+      // succeeds, or remains a raw ObjectId when it does not. Both cases are
+      // handled by the `?._id || app.studentId` fallback.
+      const appStudentId = String(app.studentId?._id || app.studentId || "");
+      const myStudentId  = String(student?._id || "");
+
+      if (!student || !myStudentId || appStudentId !== myStudentId) {
+        // Return 404 — not 403 — so that Student A cannot confirm whether
+        // Student B's application ID exists.
+        return res.status(404).json({ message: "Offer letter not found" });
+      }
+
+      // Offer letter access is restricted to college-verified enterprise students.
+      const limitCheck = await checkStudentLimit(req.user, "offer_letter");
+      if (!limitCheck.allowed) {
+        return res.status(403).json({
+          message: "Offer letter access is available only after college verification."
+        });
+      }
+    } else if (req.user.role === "recruiter") {
+      // The job must still exist and must belong to this recruiter.
+      if (!app.jobId) {
+        return res.status(404).json({ message: "Offer letter not found" });
+      }
+
+      if (String(app.jobId.recruiterId || "") !== String(req.user.id)) {
+        return res.status(403).json({ message: "Not authorized" });
+      }
+    } else {
+      // Any other role that somehow passes the route-level role() guard.
+      return res.status(403).json({ message: "Not authorized" });
+    }
+
+    // Resolve the file path and guard against path-traversal attacks.
+    const offersDir = path.resolve(__dirname, "../offers");
+    const fileName  = path.basename(app.offer.pdfPath);
+    const filePath  = path.resolve(offersDir, fileName);
+
+    if (!filePath.startsWith(`${offersDir}${path.sep}`) || !fs.existsSync(filePath)) {
+      return res.status(404).json({ message: "Offer letter file not found" });
+    }
+
+    return res.download(filePath, fileName);
+  } catch (err) {
+    console.error("downloadOfferLetter error:", err);
+    return res.status(500).json({ message: "Unable to download offer letter" });
   }
 };
 
@@ -1450,7 +1615,7 @@ exports.getMyInterviews = async (req, res) => {
 
     res.json(payload);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -1480,7 +1645,9 @@ exports.getMyInterviewRoom = async (req, res) => {
 
     return res.json({
       applicationId: app._id,
+      roomId: accessResult.roomName,
       roomName: accessResult.roomName,
+      meetingLink: app.interview?.link || "",
       participant: {
         userId: req.user.id,
         role: accessResult.participantRole,
@@ -1691,6 +1858,13 @@ exports.startMyAIInterview = async (req, res) => {
       return res.status(400).json({ message: "This AI interview has already ended" });
     }
 
+    const limitCheck = await checkStudentLimit(req.user, "ai_interview");
+    if (!limitCheck.allowed) {
+      return res.status(403).json({
+        message: "You have used all free AI interview attempts for this month."
+      });
+    }
+
     if (!Array.isArray(app.aiInterview?.questionPlan) || app.aiInterview.questionPlan.length === 0) {
       try {
         const questionPlan = await generateInterviewQuestionPlan(app);
@@ -1715,6 +1889,10 @@ exports.startMyAIInterview = async (req, res) => {
 
     await app.save();
 
+    if (!limitCheck.hasFullAccess) {
+      await incrementStudentUsage(req.user.id, "ai_interview");
+    }
+
     await writeApplicationAudit({
       actorId: req.user.id,
       actorRole: req.user.role,
@@ -1736,7 +1914,7 @@ exports.startMyAIInterview = async (req, res) => {
       message: err.message
     });
     console.error("startMyAIInterview error:", err);
-    return res.status(500).json({ message: err.message || "Failed to start AI interview" });
+    return res.status(500).json({ message: "Failed to start AI interview" });
   }
 };
 
@@ -2007,7 +2185,7 @@ exports.endMyAIInterview = async (req, res) => {
       message: err.message
     });
     console.error("endMyAIInterview error:", err);
-    return res.status(500).json({ message: err.message || "Failed to end AI interview" });
+    return res.status(500).json({ message: "Failed to end AI interview" });
   }
 };
 
@@ -2046,7 +2224,7 @@ exports.getMyInterviewSlots = async (req, res) => {
 
     res.json(payload);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -2104,6 +2282,6 @@ exports.getMyAssessments = async (req, res) => {
 
     res.json(payload);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };

@@ -15,5 +15,10 @@
   "type": "commonjs",
   "devDependencies": {
     "concurrently": "^9.2.1"
+  },
+  "dependencies": {
+    "claude": "^0.1.1",
+    "codex": "^0.2.3",
+    "graphify": "^1.0.0"
   }
 }

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { TalentXMark } from "../components/TalentXBrand";
 import { getInitials } from "./constants";
+import SecureUploadImage from "../components/SecureUploadImage";
 import { buildServerAssetUrl } from "./api";
 
 export default function SelectorScreen({ data, onSelectCompany }) {
@@ -141,11 +142,10 @@ export default function SelectorScreen({ data, onSelectCompany }) {
                     <div className="flex items-center justify-center">
                       <span className="inline-flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
                         {hasLogo ? (
-                          <img
+                          <SecureUploadImage
                             src={logoUrl}
                             alt={`${companyName} logo`}
                             className="h-10 w-10 object-contain"
-                            referrerPolicy="origin"
                             onError={() => setLogoFailedByCompany((current) => ({ ...current, [company.id]: true }))}
                           />
                         ) : (

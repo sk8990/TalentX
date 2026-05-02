@@ -1,5 +1,6 @@
 const Student = require("../models/Student");
 const { parseResumePdf } = require("../services/resumeParserService");
+const { getStudentAccessSummary } = require("../helpers/studentAccessHelper");
 
 function normalizeList(value) {
   if (Array.isArray(value)) {
@@ -53,7 +54,7 @@ exports.createOrUpdateProfile = async (req, res) => {
 
     res.json(student);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: "Unable to update profile" });
   }
 };
 
@@ -68,7 +69,7 @@ exports.getProfile = async (req, res) => {
 
     res.json(student);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: "Unable to load profile" });
   }
 };
 
@@ -87,7 +88,7 @@ exports.uploadResume = async (req, res) => {
     res.json({ message: "Resume updated successfully" });
 
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Unable to update resume" });
   }
 };
 
@@ -142,8 +143,17 @@ exports.parseResumeAndAutofill = async (req, res) => {
   } catch (err) {
     console.error("Resume parse error:", err.message);
     res.status(500).json({
-      message: "Failed to parse resume",
-      error: err.message
+      message: "Failed to parse resume"
     });
+  }
+};
+
+exports.getAccessSummary = async (req, res) => {
+  try {
+    const summary = await getStudentAccessSummary(req.user);
+    res.json(summary);
+  } catch (err) {
+    console.error("getAccessSummary error:", err);
+    res.status(500).json({ message: "Failed to load access summary" });
   }
 };

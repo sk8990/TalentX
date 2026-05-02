@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import API, { getServerOrigin } from "../api/axios";
+import API from "../api/axios";
 import DownloadIcon from "@mui/icons-material/Download";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
@@ -82,10 +82,10 @@ function Timeline({ currentStatus }) {
 }
 
 export default function MyApplications() {
-  const serverOrigin = getServerOrigin();
   const [apps, setApps] = useState([]);
   const [loading, setLoading] = useState(true);
   const [respondingId, setRespondingId] = useState("");
+  const [downloadingOfferId, setDownloadingOfferId] = useState("");
 
   const fetchApps = async () => {
     try {
@@ -116,6 +116,29 @@ export default function MyApplications() {
     }
   };
 
+  const downloadOfferLetter = async (id) => {
+    if (downloadingOfferId) return;
+
+    try {
+      setDownloadingOfferId(id);
+      const response = await API.get(`/application/${id}/offer/download`, {
+        responseType: "blob"
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: "application/pdf" }));
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `offer-${id.slice(-6)}.pdf`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to download offer letter");
+    } finally {
+      setDownloadingOfferId("");
+    }
+  };
+
   if (loading) {
     return (
       <ScreenLoader
@@ -142,7 +165,7 @@ export default function MyApplications() {
         const companyName = job.companyName || "Company";
         const companyDomain = job.companyDomain || "";
         const explicitLogo = job.companyLogo;
-        const logoUrl = explicitLogo || (companyDomain ? `https://img.logo.dev/${companyDomain}?token=pk_fk1Hh_ndTkqCweLf2jauug` : "");
+        const logoUrl = explicitLogo || (companyDomain ? `https://img.logo.dev/${companyDomain}` : "");
 
         return (
           <article key={app._id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:rounded-3xl sm:p-6">
@@ -202,17 +225,17 @@ export default function MyApplications() {
                 </div>
 
                 {app.offer.pdfPath && (
-                  <a
-                    href={`${serverOrigin}${app.offer.pdfPath}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    type="button"
+                    onClick={() => downloadOfferLetter(app._id)}
+                    disabled={downloadingOfferId === app._id}
                     className="mt-3 inline-block rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700 sm:mt-4 sm:text-sm"
                   >
                     <span className="inline-flex items-center gap-1">
                       <DownloadIcon sx={{ fontSize: 16 }} />
-                      Download Offer Letter
+                      {downloadingOfferId === app._id ? "Downloading..." : "Download Offer Letter"}
                     </span>
-                  </a>
+                  </button>
                 )}
 
                 {app.offer.status === "PENDING" && (

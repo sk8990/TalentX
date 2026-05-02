@@ -9,6 +9,25 @@ const { writeAuditLog } = require("../services/auditService");
 const { activateSubscription, serializeSubscription } = require("../services/subscriptionService");
 
 const UNIVERSITY_ROLES = ["university_admin", "admin"];
+const UNIVERSITY_PACKAGE_TARGETS = new Set(["university_admin", "admin", "university"]);
+const PACKAGE_ROLE_TARGETS = new Set(["student", "recruiter", "university_admin", "admin", "university"]);
+const NUMERIC_ENTITLEMENT_KEYS = new Set([
+  "jobCreationLimit",
+  "interviewSchedulingLimit",
+  "offerLetterGenerationLimit",
+  "onboardingPanelAccessLimit",
+  "candidateManageLimit",
+  "recruiterManageLimit",
+  "auditLimit",
+  "applicantsPerMonth",
+  "monthlyApplicants",
+  "jobApplyLimit",
+  "aiInterviewLimit",
+  "resumeUploadLimit",
+  "offerAccessLimit",
+  "expectedCandidates",
+  "expectedRecruiters"
+]);
 
 function parsePage(value, fallback = 1) {
   const page = parseInt(value, 10);
@@ -89,7 +108,9 @@ function normalizePackagePayload(body, userId) {
       onboardingPanelAccessLimit: "onboardingPanelAccessLimit",
       candidateManageLimit: "candidateManageLimit",
       recruiterManageLimit: "recruiterManageLimit",
-      auditLimit: "auditLimit"
+      auditLimit: "auditLimit",
+      applicantsPerMonth: "applicantsPerMonth",
+      monthlyApplicants: "applicantsPerMonth"
     };
     Object.entries(limitMap).forEach(([legacyKey, entitlementKey]) => {
       const parsed = toOptionalNumber(source.limits[legacyKey]);
@@ -109,6 +130,12 @@ function normalizePackagePayload(body, userId) {
     "candidateManageLimit",
     "recruiterManageLimit",
     "auditLimit",
+    "applicantsPerMonth",
+    "monthlyApplicants",
+    "jobApplyLimit",
+    "aiInterviewLimit",
+    "resumeUploadLimit",
+    "offerAccessLimit",
     "expectedCandidates",
     "expectedRecruiters"
   ].forEach((key) => {
@@ -140,6 +167,31 @@ function normalizePackagePayload(body, userId) {
     entitlements,
     updatedBy: userId
   };
+}
+
+function validatePackagePayload(payload) {
+  const errors = [];
+  const roleTarget = String(payload?.roleTarget || "").trim();
+  if (!PACKAGE_ROLE_TARGETS.has(roleTarget)) {
+    errors.push("Invalid role target.");
+  }
+
+  const entitlements = payload?.entitlements || {};
+  Object.keys(entitlements).forEach((key) => {
+    if (!NUMERIC_ENTITLEMENT_KEYS.has(key)) return;
+    const parsed = Number(entitlements[key]);
+    if (!Number.isFinite(parsed)) {
+      errors.push(`Invalid numeric limit for ${key}.`);
+      return;
+    }
+    if (parsed < -1) {
+      errors.push(`Limit for ${key} must be -1 or greater.`);
+      return;
+    }
+    entitlements[key] = parsed;
+  });
+
+  return errors;
 }
 
 function buildSearchRegex(value) {
@@ -194,7 +246,7 @@ async function listAccounts(req, res, { roles, includeJobs = false }) {
     }
     const [users, total] = await Promise.all([
       User.find(query)
-        .select("name email role isActive isApproved disabledAt disabledReason createdAt")
+        .select("name email role isActive recruiterApprovalStatus disabledAt disabledReason createdAt")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -224,7 +276,7 @@ async function listAccounts(req, res, { roles, includeJobs = false }) {
         email: user.email,
         role: user.role,
         isActive: Boolean(user.isActive),
-        isApproved: Boolean(user.isApproved),
+        isApproved: user.role === "recruiter" ? user.recruiterApprovalStatus === "approved" : true,
         disabledAt: user.disabledAt || null,
         disabledReason: user.disabledReason || "",
         plan: subscription?.planKey || subscription?.plan || null,
@@ -331,9 +383,37 @@ exports.getDashboard = async (req, res) => {
 
 exports.getPackages = async (req, res) => {
   try {
-    const packages = await Package.find().populate("createdBy", "name email role").sort({ displayOrder: 1, createdAt: -1 }).lean();
-    return res.json({ packages });
+    const packages = await Package.find()
+      .sort({ displayOrder: 1, createdAt: -1 })
+      .lean();
+
+    const userIdSet = new Set();
+    packages.forEach((pkg) => {
+      if (mongoose.isValidObjectId(pkg.createdBy)) {
+        userIdSet.add(String(pkg.createdBy));
+      }
+      if (mongoose.isValidObjectId(pkg.updatedBy)) {
+        userIdSet.add(String(pkg.updatedBy));
+      }
+    });
+
+    let userMap = new Map();
+    if (userIdSet.size) {
+      const users = await User.find({ _id: { $in: Array.from(userIdSet) } })
+        .select("name email role")
+        .lean();
+      userMap = new Map(users.map((user) => [String(user._id), user]));
+    }
+
+    const hydrated = packages.map((pkg) => ({
+      ...pkg,
+      createdBy: userMap.get(String(pkg.createdBy)) || pkg.createdBy || null,
+      updatedBy: userMap.get(String(pkg.updatedBy)) || pkg.updatedBy || null
+    }));
+
+    return res.json({ packages: hydrated });
   } catch (err) {
+    console.error("getPackages error:", err);
     return res.status(500).json({ message: "Unable to load packages" });
   }
 };
@@ -449,6 +529,10 @@ exports.getSubscriptions = async (req, res) => {
 exports.createPackage = async (req, res) => {
   try {
     const payload = normalizePackagePayload(req.body, req.user.id);
+    const errors = validatePackagePayload(payload);
+    if (errors.length) {
+      return res.status(400).json({ message: errors[0], errors });
+    }
     const pkg = await Package.create({ ...payload, createdBy: req.user.id });
     await writeAuditLog({ actorId: req.user.id, actorRole: req.user.role, action: "PACKAGE_CREATED", entityType: "PACKAGE", entityId: pkg._id, metadata: { key: pkg.key, roleTarget: pkg.roleTarget } });
     return res.status(201).json({ message: "Package created successfully", package: pkg });
@@ -461,6 +545,10 @@ exports.createPackage = async (req, res) => {
 exports.updatePackage = async (req, res) => {
   try {
     const payload = normalizePackagePayload(req.body, req.user.id);
+    const errors = validatePackagePayload(payload);
+    if (errors.length) {
+      return res.status(400).json({ message: errors[0], errors });
+    }
     const pkg = await Package.findByIdAndUpdate(req.params.id, payload, { new: true, runValidators: true });
     if (!pkg) return res.status(404).json({ message: "Package not found" });
     await writeAuditLog({ actorId: req.user.id, actorRole: req.user.role, action: "PACKAGE_UPDATED", entityType: "PACKAGE", entityId: pkg._id, metadata: { key: pkg.key } });
@@ -522,7 +610,7 @@ exports.handleEnterpriseRequest = async (req, res) => {
     if (status === "approved" && assignedPackageId) {
       const pkg = await Package.findById(assignedPackageId);
       if (!pkg) return res.status(404).json({ message: "Package not found" });
-      if (pkg.roleTarget !== "university" && pkg.roleTarget !== "admin") {
+      if (!UNIVERSITY_PACKAGE_TARGETS.has(pkg.roleTarget)) {
         return res.status(400).json({ message: "Only university/admin packages can be assigned to enterprise requests" });
       }
 
@@ -574,7 +662,8 @@ exports.assignPackageToUser = async (req, res) => {
     if (!user) return res.status(404).json({ message: "User not found" });
     const pkg = await Package.findById(packageId);
     if (!pkg) return res.status(404).json({ message: "Package not found" });
-    if (pkg.roleTarget !== user.role && !(pkg.roleTarget === "university" && ["university_admin", "admin"].includes(user.role))) {
+    const isUniversityPackage = UNIVERSITY_PACKAGE_TARGETS.has(pkg.roleTarget);
+    if (pkg.roleTarget !== user.role && !(isUniversityPackage && ["university_admin", "admin"].includes(user.role))) {
       return res.status(400).json({ message: "Package role mismatch" });
     }
     const sub = await activateSubscription({
@@ -582,9 +671,9 @@ exports.assignPackageToUser = async (req, res) => {
       ownerRole: user.role,
       planKey: pkg.key,
       packageDoc: pkg,
-      source: pkg.roleTarget === "university" ? "offline_enterprise" : "manual",
-      provider: pkg.roleTarget === "university" ? "offline_enterprise" : "manual",
-      paymentProvider: pkg.roleTarget === "university" ? "offline_enterprise" : "manual",
+      source: isUniversityPackage ? "offline_enterprise" : "manual",
+      provider: isUniversityPackage ? "offline_enterprise" : "manual",
+      paymentProvider: isUniversityPackage ? "offline_enterprise" : "manual",
       payment: { assignedBySuperAdminId: req.user.id, requestedStatus: status },
       startsAt: new Date()
     });

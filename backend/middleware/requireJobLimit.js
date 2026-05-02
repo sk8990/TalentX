@@ -8,9 +8,18 @@ function isUnlimited(value) {
   return Number(value) === -1;
 }
 
+function parseNonUnlimitedLimit(value) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+}
+
 function removeUploadedFile(req) {
   if (req.file?.path) {
-    fs.unlink(req.file.path, () => {});
+    fs.unlink(req.file.path, () => { });
   }
 }
 
@@ -38,7 +47,8 @@ async function requireJobLimit(req, res, next) {
       return next();
     }
 
-    if (!Number.isFinite(Number(limit))) {
+    const numericLimit = parseNonUnlimitedLimit(limit);
+    if (numericLimit === null) {
       return res.status(403).json({
         message: "An active recruiter plan is required to create jobs.",
         feature: "jobPosting",
@@ -59,12 +69,12 @@ async function requireJobLimit(req, res, next) {
     }
 
     const activeJobs = await Job.countDocuments(filter);
-    if (activeJobs >= Number(limit)) {
+    if (activeJobs >= numericLimit) {
       return res.status(403).json({
         success: false,
         code: "PACKAGE_QUOTA_EXHAUSTED",
-        message: `Your current plan allows up to ${limit} active jobs. Upgrade to post more jobs.`,
-        limit: Number(limit),
+        message: `Your current plan allows up to ${numericLimit} active jobs. Upgrade to post more jobs.`,
+        limit: numericLimit,
         usedCount: activeJobs,
         currentActiveJobs: activeJobs,
         currentPlan: subscription?.plan || null
@@ -96,8 +106,21 @@ async function requireApplicantMonthlyLimit(req, res, next) {
     });
     const limit = subscription?.limits?.monthlyApplicants;
 
-    if (isUnlimited(limit) || !Number.isFinite(Number(limit))) {
+    // -1 is the only value that means unlimited.
+    if (isUnlimited(limit)) {
       return next();
+    }
+
+    // null / undefined / NaN means the feature is not configured on this plan.
+    // Do NOT silently pass through — treat as "no entitlement" and block.
+    const numericLimit = parseNonUnlimitedLimit(limit);
+    if (numericLimit === null) {
+      removeUploadedFile(req);
+      return res.status(403).json({
+        message: "An active recruiter plan is required to accept applications.",
+        feature: "applicantTracking",
+        currentPlan: subscription?.plan || null
+      });
     }
 
     const recruiterJobs = await Job.find({ recruiterId: job.recruiterId }).select("_id");
@@ -108,11 +131,11 @@ async function requireApplicantMonthlyLimit(req, res, next) {
       createdAt: { $gte: start, $lt: end }
     });
 
-    if (monthlyApplicants >= Number(limit)) {
+    if (monthlyApplicants >= numericLimit) {
       removeUploadedFile(req);
       return res.status(403).json({
         message: "This recruiter has reached their monthly applicant limit for the current plan.",
-        limit: Number(limit),
+        limit: numericLimit,
         currentApplicants: monthlyApplicants,
         recruiterPlan: subscription?.plan || null
       });

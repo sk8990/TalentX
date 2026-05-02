@@ -1,6 +1,23 @@
 const Application = require("../models/Application");
 const User = require("../models/User");
 const Job = require("../models/Job");
+const Student = require("../models/Student");
+
+function buildUniversityJobQuery(collegeId) {
+  return {
+    $or: [
+      { targetColleges: collegeId },
+      { visibilityType: { $in: ["all_students", "college_plus_off_campus"] } }
+    ]
+  };
+}
+
+async function getCollegeStudentsForExport(collegeId) {
+  if (!collegeId) return [];
+  return Student.find({ collegeId })
+    .populate("userId", "name email role isActive createdAt")
+    .sort({ createdAt: -1 });
+}
 
 function sanitizeForSpreadsheet(value) {
   const text = String(value ?? "");
@@ -63,7 +80,21 @@ function sendWorkbook(res, { fileName, sheetName, headers, rows }) {
 // F12: Export placement data as Excel
 exports.exportPlacements = async (req, res) => {
   try {
-    const selectedApplications = await Application.find({ status: "SELECTED" })
+    const query = { status: "SELECTED" };
+    if (req.user.role === "university_admin") {
+      if (!req.user.collegeId) {
+        return sendWorkbook(res, {
+          fileName: "placements",
+          sheetName: "Placements",
+          headers: ["Student Name", "Email", "Company", "Position", "CTC (LPA)", "Selected Date"],
+          rows: [],
+        });
+      }
+      const studentIds = await Student.find({ collegeId: req.user.collegeId }).distinct("_id");
+      query.studentId = { $in: studentIds };
+    }
+
+    const selectedApplications = await Application.find(query)
       .populate({
         path: "studentId",
         populate: { path: "userId", select: "name email" },
@@ -88,25 +119,41 @@ exports.exportPlacements = async (req, res) => {
       rows,
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
 // Export all users
 exports.exportUsers = async (req, res) => {
   try {
-    const users = await User.find({ role: { $ne: "interviewer" } })
-      .select("-password")
-      .sort({ createdAt: -1 });
+    let rows;
+    if (req.user.role === "university_admin") {
+      const students = await getCollegeStudentsForExport(req.user.collegeId);
+      rows = students.map((student) => {
+        const user = student.userId || {};
+        return [
+          user.name || "N/A",
+          user.email || "N/A",
+          "student",
+          user.isActive,
+          student.collegeVerificationStatus || "N/A",
+          user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "N/A",
+        ];
+      });
+    } else {
+      const users = await User.find({ role: { $ne: "interviewer" } })
+        .select("-password")
+        .sort({ createdAt: -1 });
 
-    const rows = users.map((u) => [
-      u.name,
-      u.email,
-      u.role,
-      u.isActive,
-      u.isApproved,
-      new Date(u.createdAt).toLocaleDateString(),
-    ]);
+      rows = users.map((u) => [
+        u.name,
+        u.email,
+        u.role,
+        u.isActive,
+        u.isApproved,
+        new Date(u.createdAt).toLocaleDateString(),
+      ]);
+    }
 
     sendWorkbook(res, {
       fileName: "users",
@@ -115,14 +162,20 @@ exports.exportUsers = async (req, res) => {
       rows,
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
 // Export all jobs
 exports.exportJobs = async (req, res) => {
   try {
-    const jobs = await Job.find()
+    const query = req.user.role === "university_admin"
+      ? req.user.collegeId
+        ? buildUniversityJobQuery(req.user.collegeId)
+        : { _id: null }
+      : {};
+
+    const jobs = await Job.find(query)
       .populate("recruiterId", "name email")
       .sort({ createdAt: -1 });
 
@@ -144,6 +197,6 @@ exports.exportJobs = async (req, res) => {
       rows,
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };

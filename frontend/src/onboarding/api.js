@@ -1,6 +1,5 @@
 import axios from "axios";
 import {
-  getStoredOnboardingToken,
   persistOnboardingToken,
   clearStoredOnboardingToken
 } from "./session";
@@ -37,7 +36,7 @@ async function tryRefreshToken() {
       persistOnboardingToken(data.token);
       return data.token;
     }
-  } catch (_err) {
+  } catch {
     clearStoredOnboardingToken();
   }
   return null;
@@ -78,6 +77,17 @@ export function buildServerAssetUrl(pathname) {
   }
 
   return `${SERVER_ORIGIN}${rawPath.startsWith("/") ? rawPath : `/${rawPath}`}`;
+}
+
+export async function fetchOfferLetterBlob(applicationId, authToken) {
+  const response = await onboardingAPI.get(`/application/${applicationId}/offer/download`, {
+    responseType: "blob",
+    headers: {
+      Authorization: `Bearer ${authToken}`
+    }
+  });
+
+  return response.data;
 }
 
 export default onboardingAPI;

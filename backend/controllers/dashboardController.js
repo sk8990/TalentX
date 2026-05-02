@@ -2,6 +2,8 @@ const Application = require("../models/Application");
 const Student = require("../models/Student");
 const Job = require("../models/Job");
 const { attachMatchScores, normalizeList } = require("../utils/jobMatch");
+const { canStudentViewJob } = require("../helpers/jobVisibilityHelper");
+const { hasFullStudentAccess } = require("../helpers/studentAccessHelper");
 
 // F3: Student Dashboard - get comprehensive stats
 exports.getStudentDashboard = async (req, res) => {
@@ -74,7 +76,7 @@ exports.getStudentDashboard = async (req, res) => {
     });
   } catch (err) {
     console.error("Student dashboard error:", err);
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -100,7 +102,8 @@ exports.getJobRecommendations = async (req, res) => {
       ],
     })
       .sort({ ctc: -1, createdAt: -1 })
-      .limit(10);
+      .limit(50);
+    const hasFullAccess = await hasFullStudentAccess(req.user);
 
     // Find already applied job IDs
     const appliedApps = await Application.find({ studentId: student._id }).select("jobId");
@@ -108,7 +111,9 @@ exports.getJobRecommendations = async (req, res) => {
 
     // Filter out already applied
     let recommendations = eligibleJobs.filter(
-      (job) => !appliedJobIds.includes(job._id.toString())
+      (job) =>
+        !appliedJobIds.includes(job._id.toString()) &&
+        canStudentViewJob(student, job, { user: req.user, hasFullAccess })
     );
 
     if (preferredMinCtc > 0) {
@@ -134,10 +139,11 @@ exports.getJobRecommendations = async (req, res) => {
     }
 
     recommendations = attachMatchScores(student, recommendations)
-      .sort((a, b) => (b.match?.score || 0) - (a.match?.score || 0));
+      .sort((a, b) => (b.match?.score || 0) - (a.match?.score || 0))
+      .slice(0, 10);
 
     res.json({ recommendations });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import WorkIcon from "@mui/icons-material/Work";
@@ -12,10 +12,47 @@ import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import NotificationBell from "../../components/NotificationBell";
 import DarkModeToggle from "../../components/DarkModeToggle";
 import TalentXBrand from "../../components/TalentXBrand";
+import ScreenLoader from "../../components/ScreenLoader";
+import API from "../../api/axios";
 import { logout } from "../../utils/logout";
+
+function readStoredRecruiterApproval() {
+  try {
+    const user = JSON.parse(localStorage.getItem("user") || "null");
+    const status = user?.recruiterApprovalStatus || (user?.isRecruiterApproved ? "approved" : "pending");
+    return {
+      recruiterApprovalStatus: status,
+      isRecruiterApproved: status === "approved" && user?.isRecruiterApproved === true
+    };
+  } catch {
+    return { recruiterApprovalStatus: "pending", isRecruiterApproved: false };
+  }
+}
+
+function mergeStoredRecruiterApproval(nextStatus) {
+  try {
+    const user = JSON.parse(localStorage.getItem("user") || "null");
+    if (!user) return;
+    localStorage.setItem(
+      "user",
+      JSON.stringify({
+        ...user,
+        recruiterApprovalStatus: nextStatus.recruiterApprovalStatus,
+        isRecruiterApproved: nextStatus.isRecruiterApproved,
+        companyName: nextStatus.companyName ?? user.companyName,
+        companyEmail: nextStatus.companyEmail ?? user.companyEmail,
+        companyWebsite: nextStatus.companyWebsite ?? user.companyWebsite
+      })
+    );
+  } catch {
+    // Stored auth is repaired by the global auth flow on the next login.
+  }
+}
 
 export default function RecruiterLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [approval, setApproval] = useState(readStoredRecruiterApproval);
+  const [approvalLoading, setApprovalLoading] = useState(true);
 
   const links = [
     { to: "/recruiter/dashboard", label: "Dashboard", icon: DashboardIcon },
@@ -25,6 +62,40 @@ export default function RecruiterLayout() {
     { to: "/recruiter/subscription", label: "Subscription", icon: CreditCardIcon },
     { to: "/recruiter/support", label: "Support", icon: SupportAgentIcon },
   ];
+  const recruiterApproved =
+    approval.recruiterApprovalStatus === "approved" &&
+    approval.isRecruiterApproved === true;
+  const visibleLinks = recruiterApproved ? links : [];
+
+  useEffect(() => {
+    let mounted = true;
+
+    API.get("/recruiter/approval-status")
+      .then((res) => {
+        if (!mounted) return;
+        const nextApproval = {
+          ...res.data,
+          recruiterApprovalStatus: res.data?.recruiterApprovalStatus || "pending",
+          isRecruiterApproved: res.data?.isRecruiterApproved === true
+        };
+        setApproval(nextApproval);
+        mergeStoredRecruiterApproval(nextApproval);
+      })
+      .catch(() => {
+        if (mounted) {
+          setApproval(readStoredRecruiterApproval());
+        }
+      })
+      .finally(() => {
+        if (mounted) {
+          setApprovalLoading(false);
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const navItemClass = ({ isActive }) =>
     `group flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
@@ -55,7 +126,7 @@ export default function RecruiterLayout() {
           </div>
 
           <nav className="flex flex-1 flex-col gap-2">
-            {links.map((link) => (
+            {visibleLinks.map((link) => (
               <NavLink key={link.to} to={link.to} className={navItemClass}>
                 <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-slate-100 text-slate-600 transition">
                   <link.icon sx={{ fontSize: 16 }} />
@@ -108,7 +179,16 @@ export default function RecruiterLayout() {
 
           {/* ── Page Content ── */}
           <div className="px-4 py-5 sm:px-6 sm:py-7 lg:px-8 lg:py-8">
-            <Outlet />
+            {approvalLoading ? (
+              <ScreenLoader
+                message="Checking recruiter approval..."
+                subtext="Confirming your TalentX recruiter access."
+              />
+            ) : recruiterApproved ? (
+              <Outlet />
+            ) : (
+              <RecruiterApprovalNotice status={approval.recruiterApprovalStatus} />
+            )}
           </div>
         </main>
       </div>
@@ -144,7 +224,7 @@ export default function RecruiterLayout() {
           </div>
 
           <nav className="flex flex-1 flex-col gap-1.5">
-            {links.map((link) => (
+            {visibleLinks.map((link) => (
               <NavLink
                 key={link.to}
                 to={link.to}
@@ -174,5 +254,42 @@ export default function RecruiterLayout() {
         </div>
       </div>
     </div>
+  );
+}
+
+function RecruiterApprovalNotice({ status }) {
+  const normalizedStatus = status || "pending";
+  const messageMap = {
+    rejected: "Your recruiter account has been rejected. Please contact TalentX support.",
+    suspended: "Your recruiter account has been suspended. Please contact TalentX support.",
+    pending:
+      "Your recruiter account is pending approval from TalentX Super Admin. You will be able to post jobs and manage interviews after approval."
+  };
+  const title =
+    normalizedStatus === "rejected"
+      ? "Recruiter Account Rejected"
+      : normalizedStatus === "suspended"
+        ? "Recruiter Account Suspended"
+        : "Recruiter Approval Pending";
+
+  return (
+    <section className="mx-auto flex min-h-[60vh] max-w-3xl items-center justify-center">
+      <div className="w-full rounded-2xl border border-amber-200 bg-white p-6 text-center shadow-sm sm:rounded-3xl sm:p-10">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-50 text-amber-700">
+          <BadgeOutlinedIcon sx={{ fontSize: 28 }} />
+        </div>
+        <h1 className="mt-5 text-2xl font-black text-slate-950 sm:text-3xl">{title}</h1>
+        <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-slate-600">
+          {messageMap[normalizedStatus] || messageMap.pending}
+        </p>
+        <button
+          type="button"
+          onClick={logout}
+          className="mt-6 rounded-xl border border-slate-200 bg-slate-50 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-white"
+        >
+          Logout
+        </button>
+      </div>
+    </section>
   );
 }

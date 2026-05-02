@@ -92,30 +92,44 @@ async function incrementPackageUsage(userId, usageType) {
 
   const entitlements = getPackageEntitlements(subscription.packageId);
   const limitValue = entitlements[entitlementKey];
+
+  // Do not track usage for features that are not configured or are unlimited.
   if (limitValue === undefined || limitValue === null || isUnlimited(limitValue)) return;
 
-  const existing = await resetUsageIfNeeded(await PackageUsage.findOne({ userId, usageType }));
-  if (existing) {
-    existing.packageId = subscription.packageId._id;
-    existing.limitCount = Number(limitValue);
-    existing.usedCount = Number(existing.usedCount || 0) + 1;
-    await existing.save();
-    return;
-  }
+  const numericLimit = Number(limitValue);
+  if (!Number.isFinite(numericLimit) || numericLimit < 0) return;
 
-  await PackageUsage.create({
-    userId,
-    packageId: subscription.packageId._id,
-    usageType,
-    usedCount: 1,
-    limitCount: Number(limitValue),
-    resetCycle: subscription.packageId.billingCycle === "monthly"
-      ? "monthly"
-      : subscription.packageId.billingCycle === "yearly"
-        ? "yearly"
-        : "never",
-    lastResetAt: new Date()
-  });
+  const packageId = subscription.packageId._id;
+  const resetCycle = subscription.packageId.billingCycle === "monthly"
+    ? "monthly"
+    : subscription.packageId.billingCycle === "yearly"
+      ? "yearly"
+      : "never";
+
+  // Atomic increment using findOneAndUpdate + $inc.
+  // This replaces the previous findOne → save pattern which had a race
+  // condition: two concurrent requests could both read the same usedCount,
+  // both increment it locally, and both write the same value — effectively
+  // counting only one use instead of two.
+  //
+  // With $inc the increment is applied atomically at the database level.
+  // The unique index on { userId, usageType } ensures the upsert path also
+  // cannot create duplicate documents under concurrent load.
+  await PackageUsage.findOneAndUpdate(
+    { userId, usageType },
+    {
+      $inc: { usedCount: 1 },
+      $set: {
+        packageId,
+        limitCount: numericLimit
+      },
+      $setOnInsert: {
+        resetCycle,
+        lastResetAt: new Date()
+      }
+    },
+    { upsert: true, new: true }
+  );
 }
 
 async function hasFeatureAccess(userId, featureKey) {

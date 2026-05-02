@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useSubscription } from "../context/SubscriptionContext";
 import { getMySubscription, cancelSubscription } from "../api/subscriptionApi";
 import { useConfirmDialog } from "../components/useConfirmDialog";
@@ -14,7 +14,7 @@ import {
 import Button from "../components/Button";
 
 export default function SubscriptionPage() {
-  const { subscription: cachedSub, refreshSubscription } = useSubscription();
+  const { refreshSubscription } = useSubscription();
   const { confirm } = useConfirmDialog();
   const [subscription, setSubscription] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -28,7 +28,7 @@ export default function SubscriptionPage() {
       setLoading(true);
       const data = await getMySubscription();
       setSubscription(data);
-    } catch (err) {
+    } catch {
       toast.error("Failed to load subscription details");
     } finally {
       setLoading(false);
@@ -48,7 +48,7 @@ export default function SubscriptionPage() {
       toast.success("Subscription cancelled successfully");
       await loadSubscription();
       await refreshSubscription();
-    } catch (err) {
+    } catch {
       toast.error("Cancellation failed. Please try again.");
     }
   }
@@ -57,6 +57,10 @@ export default function SubscriptionPage() {
 
   const isActive = subscription?.status === "active" || subscription?.status === "free";
   const isExpired = subscription?.status === "expired" || subscription?.status === "cancelled";
+
+  const isRecruiter = subscription?.ownerRole === "recruiter";
+  const isStarter = subscription?.planKey === "recruiter_starter";
+  const isPro = subscription?.planKey === "recruiter_pro";
 
   return (
     <div className="mx-auto max-w-4xl space-y-8 p-4 sm:p-0">
@@ -116,20 +120,36 @@ export default function SubscriptionPage() {
             {isExpired || subscription?.status === "inactive" ? (
               <Button
                 className="w-full flex items-center justify-center gap-2"
-                onClick={() => window.location.href = "/billing/success"} // Replace with actual pricing link
+                onClick={() => window.location.href = "/#pricing"}
               >
                 <ArrowRight size={16} />
-                Renew / Upgrade Plan
+                View Packages
               </Button>
             ) : (
-              <Button
-                variant="outline"
-                className="w-full flex items-center justify-center gap-2 text-rose-600 hover:bg-rose-50"
-                onClick={handleCancel}
-              >
-                <XCircle size={16} />
-                Cancel Subscription
-              </Button>
+              <div className="flex flex-col gap-3 w-full">
+                {isRecruiter && isStarter && (
+                  <Button
+                    className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white"
+                    onClick={() => window.location.href = "/#pricing"}
+                  >
+                    <ArrowRight size={16} />
+                    Upgrade to Pro Package
+                  </Button>
+                )}
+                {isRecruiter && isPro && (
+                  <div className="p-3 mb-1 rounded-xl bg-indigo-50 border border-indigo-100 text-center">
+                    <p className="text-sm font-semibold text-indigo-700">You are subscribed to the highest package!</p>
+                  </div>
+                )}
+                <Button
+                  variant="outline"
+                  className="w-full flex items-center justify-center gap-2 text-rose-600 hover:bg-rose-50"
+                  onClick={handleCancel}
+                >
+                  <XCircle size={16} />
+                  Cancel Subscription
+                </Button>
+              </div>
             )}
           </div>
         </Card>

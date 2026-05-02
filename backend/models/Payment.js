@@ -5,6 +5,7 @@ const PAYMENT_ROLES = [
   "recruiter",
   "admin",
   "university_admin",
+  "college_admin",
   "interviewer",
   "super_admin"
 ];

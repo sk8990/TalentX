@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import API, { getServerOrigin } from "../api/axios";
+import API from "../api/axios";
+import ProtectedUploadLink from "../components/ProtectedUploadLink";
 import toast from "react-hot-toast";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import LogoutIcon from "@mui/icons-material/Logout";
@@ -8,8 +9,6 @@ import GroupsIcon from "@mui/icons-material/Groups";
 import WorkIcon from "@mui/icons-material/Work";
 import DescriptionIcon from "@mui/icons-material/Description";
 import VerifiedUserIcon from "@mui/icons-material/VerifiedUser";
-import CheckIcon from "@mui/icons-material/Check";
-import CloseIcon from "@mui/icons-material/Close";
 import DeleteIcon from "@mui/icons-material/Delete";
 import SendIcon from "@mui/icons-material/Send";
 import DownloadIcon from "@mui/icons-material/Download";
@@ -39,17 +38,26 @@ const AUDIT_ENTITY_OPTIONS = ["APPLICATION", "INTERVIEW_SLOT", "BULK_ACTION"];
 const AUDIT_ROLE_OPTIONS = ["student", "recruiter", "admin", "system"];
 const AUDIT_LOG_ENDPOINTS = ["/admin/audit-logs", "/admin/audit/logs", "/admin/audit_logs"];
 
+function getCurrentUserRole() {
+  try {
+    const raw = localStorage.getItem("user");
+    const user = raw ? JSON.parse(raw) : null;
+    return String(user?.role || "").trim();
+  } catch {
+    return "";
+  }
+}
+
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
   const [jobs, setJobs] = useState([]);
-  const [pendingRecruiters, setPendingRecruiters] = useState([]);
   const [selectedCandidates, setSelectedCandidates] = useState([]);
   const [tickets, setTickets] = useState([]);
   const [replies, setReplies] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [activeTab, setActiveTab] = useState("recruiters");
+  const [activeTab, setActiveTab] = useState(() => getCurrentUserRole() === "university_admin" ? "users" : "recruiters");
   const [exporting, setExporting] = useState("");
   const [auditLogs, setAuditLogs] = useState([]);
   const [auditLoading, setAuditLoading] = useState(false);
@@ -68,7 +76,8 @@ export default function AdminDashboard() {
   });
   const [auditEndpoint, setAuditEndpoint] = useState(AUDIT_LOG_ENDPOINTS[0]);
   const { confirm, confirmDialog } = useConfirmDialog();
-  const serverOrigin = getServerOrigin();
+  const userRole = getCurrentUserRole();
+  const isUniversityAdmin = userRole === "university_admin";
 
   const computedStats = useMemo(() => {
     if (!stats) {
@@ -95,19 +104,17 @@ export default function AdminDashboard() {
       setLoading(true);
       setError("");
 
-      const [statsRes, usersRes, jobsRes, ticketsRes, pendingRes, selectedCandidatesRes] = await Promise.all([
+      const [statsRes, usersRes, jobsRes, ticketsRes, selectedCandidatesRes] = await Promise.all([
         API.get("/admin/stats"),
         API.get("/admin/users"),
         API.get("/admin/jobs"),
         API.get("/support/admin"),
-        API.get("/admin/pending-recruiters"),
         API.get("/admin/selected-candidates"),
       ]);
 
       setStats(statsRes.data || {});
       setUsers(usersRes.data || []);
       setJobs(jobsRes.data || []);
-      setPendingRecruiters(pendingRes.data || []);
       setSelectedCandidates(selectedCandidatesRes.data || []);
       setTickets(ticketsRes.data || []);
     } catch (err) {
@@ -271,14 +278,11 @@ export default function AdminDashboard() {
     }
   };
 
-  const reviewRecruiter = async (id, action) => {
-    try {
-      await API.put(`/admin/recruiter-review/${id}`, { action });
-      toast.success(action === "APPROVE" ? "Recruiter approved" : "Recruiter rejected");
-      fetchData();
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Operation failed");
-    }
+  // Recruiter approval is handled exclusively by Super Admin.
+  // This function is intentionally a no-op in the University Admin dashboard.
+  // eslint-disable-next-line no-unused-vars
+  const reviewRecruiter = (_id, _action) => {
+    toast.error("Recruiter approvals are managed by Super Admin.");
   };
 
   if (loading) {
@@ -313,7 +317,7 @@ export default function AdminDashboard() {
           <div>
             <h1 className="text-2xl font-bold text-slate-950 sm:text-3xl md:text-4xl">Admin Dashboard</h1>
             <p className="mt-1 max-w-xl text-xs text-slate-500 sm:mt-2 sm:text-sm">
-              Review platform health, user activity, recruiter approvals, and support operations.
+              Review platform health, user activity, jobs, and support operations.
             </p>
             </div>
             <div className="flex gap-2">
@@ -349,9 +353,11 @@ export default function AdminDashboard() {
 
         <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:rounded-3xl sm:p-4">
           <div className="flex flex-wrap gap-2">
-            <TabButton active={activeTab === "recruiters"} onClick={() => setActiveTab("recruiters")}>
-              Pending Recruiters ({pendingRecruiters.length})
-            </TabButton>
+            {!isUniversityAdmin ? (
+              <TabButton active={activeTab === "recruiters"} onClick={() => setActiveTab("recruiters")}>
+                Recruiter Approvals
+              </TabButton>
+            ) : null}
             <TabButton active={activeTab === "users"} onClick={() => setActiveTab("users")}>
               Users ({users.length})
             </TabButton>
@@ -380,41 +386,16 @@ export default function AdminDashboard() {
         </section>
 
         {activeTab === "recruiters" && (
-          <Section title="Pending Recruiter Approvals" subtitle="Approve verified recruiters or reject suspicious accounts.">
-            {pendingRecruiters.length === 0 ? (
-              <EmptyState message="No pending recruiters." />
-            ) : (
-              <DataTable headers={["Name", "Email", "Action"]}>
-                {pendingRecruiters.map((rec) => (
-                  <tr key={rec._id} className="border-b border-slate-100 last:border-none">
-                    <TD>{rec.name}</TD>
-                    <TD>{rec.email}</TD>
-                    <TD>
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          onClick={() => reviewRecruiter(rec._id, "APPROVE")}
-                          className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-700"
-                        >
-                          <span className="inline-flex items-center gap-1">
-                            <CheckIcon sx={{ fontSize: 14 }} />
-                            Approve
-                          </span>
-                        </button>
-                        <button
-                          onClick={() => reviewRecruiter(rec._id, "REJECT")}
-                          className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-rose-700"
-                        >
-                          <span className="inline-flex items-center gap-1">
-                            <CloseIcon sx={{ fontSize: 14 }} />
-                            Reject
-                          </span>
-                        </button>
-                      </div>
-                    </TD>
-                  </tr>
-                ))}
-              </DataTable>
-            )}
+          <Section title="Recruiter Approvals" subtitle="Recruiter approvals are managed by Super Admin.">
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-6 text-center">
+              <p className="text-sm font-semibold text-amber-900">
+                Recruiter approvals are managed by Super Admin.
+              </p>
+              <p className="mt-2 text-xs text-amber-700">
+                To approve, reject, or suspend a recruiter, log in as Super Admin and use the
+                Recruiter Approvals section in the Super Admin panel.
+              </p>
+            </div>
           </Section>
         )}
 
@@ -450,27 +431,36 @@ export default function AdminDashboard() {
         )}
 
         {activeTab === "jobs" && (
-          <Section title="Jobs" subtitle="Review all published jobs and remove outdated or invalid listings.">
+          <Section
+            title="Jobs"
+            subtitle={
+              isUniversityAdmin
+                ? "Review jobs visible to your university scope. Job deletion is Super Admin scope in this demo."
+                : "Review all published jobs and remove outdated or invalid listings."
+            }
+          >
             {jobs.length === 0 ? (
               <EmptyState message="No jobs found." />
             ) : (
-              <DataTable headers={["Title", "Company", "Recruiter", "Action"]}>
+              <DataTable headers={isUniversityAdmin ? ["Title", "Company", "Recruiter"] : ["Title", "Company", "Recruiter", "Action"]}>
                 {jobs.map((job) => (
                   <tr key={job._id} className="border-b border-slate-100 last:border-none">
                     <TD>{job.title}</TD>
                     <TD>{job.companyName || "N/A"}</TD>
                     <TD>{job.recruiterId?.name || "N/A"}</TD>
-                    <TD>
-                      <button
-                        onClick={() => deleteJob(job._id)}
-                        className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-rose-700"
-                      >
-                        <span className="inline-flex items-center gap-1">
-                          <DeleteIcon sx={{ fontSize: 14 }} />
-                          Delete
-                        </span>
-                      </button>
-                    </TD>
+                    {!isUniversityAdmin ? (
+                      <TD>
+                        <button
+                          onClick={() => deleteJob(job._id)}
+                          className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-rose-700"
+                        >
+                          <span className="inline-flex items-center gap-1">
+                            <DeleteIcon sx={{ fontSize: 14 }} />
+                            Delete
+                          </span>
+                        </button>
+                      </TD>
+                    ) : null}
                   </tr>
                 ))}
               </DataTable>
@@ -519,14 +509,12 @@ export default function AdminDashboard() {
                     </div>
 
                     {ticket.screenshotPath && (
-                      <a
-                        href={`${serverOrigin}${ticket.screenshotPath}`}
-                        target="_blank"
-                        rel="noreferrer"
+                      <ProtectedUploadLink
+                        uploadPath={ticket.screenshotPath}
                         className="mt-3 inline-block text-xs font-semibold text-indigo-600 hover:text-indigo-700"
                       >
                         View Screenshot
-                      </a>
+                      </ProtectedUploadLink>
                     )}
 
                     <div className="mt-4">

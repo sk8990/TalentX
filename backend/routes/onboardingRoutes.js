@@ -4,8 +4,10 @@ const onboardingAuth = require("../middleware/onboardingAuth");
 const role = require("../middleware/roleMiddleware");
 const upload = require("../middleware/onboardingUpload");
 const requireFeature = require("../middleware/requireFeature");
+const requireApprovedRecruiter = require("../middleware/requireApprovedRecruiter");
 const { enforceLimit } = require("../middleware/packageLimits");
 const { withUsageIncrement } = require("../middleware/usageTracker");
+const requireStudentOnboardingAccess = require("../middleware/requireStudentOnboardingAccess");
 const {
   initOnboarding,
   getOnboardingPortal,
@@ -47,23 +49,25 @@ function trackRecruiterOnboardingUsage(controller) {
   };
 }
 
-router.post("/init", auth, role("student"), initOnboarding);
+router.post("/init", auth, role("student"), requireStudentOnboardingAccess, initOnboarding);
 router.get(
   "/",
   onboardingAuth,
+  requireStudentOnboardingAccess,
+  requireApprovedRecruiter,
   requireRecruiterOnboardingManagement,
   requireRecruiterOnboardingLimit,
   trackRecruiterOnboardingUsage(getOnboardingPortal)
 );
-router.get("/companies", onboardingAuth, role("student"), getOnboardingCompanies);
-router.get("/stats", auth, role("recruiter"), requireOnboardingManagement, getStats);
-router.get("/learn-more/:instanceId/:sectionKey", onboardingAuth, role("student"), getLearnMoreSection);
-router.get("/pre-joining/:instanceId/content/:taskKey", onboardingAuth, role("student"), getPreJoiningReading);
-router.get("/pre-joining/:instanceId/video", onboardingAuth, role("student"), getPreJoiningVideo);
-router.post("/step/:id", onboardingAuth, role("student"), submitStep);
-router.get("/:companyOrApplicationId", onboardingAuth, role("student"), getOnboardingDetails);
-router.post("/:companyOrApplicationId/documents", onboardingAuth, role("student"), upload.single("file"), uploadOnboardingDocument);
-router.post("/:companyOrApplicationId/documents/:documentId/verify", onboardingAuth, role("student"), verifyOnboardingDocument);
-router.post("/:companyOrApplicationId/accept-offer", onboardingAuth, role("student"), acceptOffer);
+router.get("/companies", onboardingAuth, role("student"), requireStudentOnboardingAccess, getOnboardingCompanies);
+router.get("/stats", auth, role("recruiter"), requireApprovedRecruiter, requireOnboardingManagement, getStats);
+router.get("/learn-more/:instanceId/:sectionKey", onboardingAuth, role("student"), requireStudentOnboardingAccess, getLearnMoreSection);
+router.get("/pre-joining/:instanceId/content/:taskKey", onboardingAuth, role("student"), requireStudentOnboardingAccess, getPreJoiningReading);
+router.get("/pre-joining/:instanceId/video", onboardingAuth, role("student"), requireStudentOnboardingAccess, getPreJoiningVideo);
+router.post("/step/:id", onboardingAuth, role("student"), requireStudentOnboardingAccess, submitStep);
+router.get("/:companyOrApplicationId", onboardingAuth, role("student"), requireStudentOnboardingAccess, getOnboardingDetails);
+router.post("/:companyOrApplicationId/documents", onboardingAuth, role("student"), requireStudentOnboardingAccess, upload.single("file"), uploadOnboardingDocument);
+router.post("/:companyOrApplicationId/documents/:documentId/verify", onboardingAuth, role("student"), requireStudentOnboardingAccess, verifyOnboardingDocument);
+router.post("/:companyOrApplicationId/accept-offer", onboardingAuth, role("student"), requireStudentOnboardingAccess, acceptOffer);
 
 module.exports = router;

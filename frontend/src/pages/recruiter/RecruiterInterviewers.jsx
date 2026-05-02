@@ -72,6 +72,8 @@ export default function RecruiterInterviewers() {
         const res = await API.post("/recruiter/interviewers", payload);
         if (res.data?.emailSent) {
           toast.success("Interviewer created and credentials sent");
+        } else if (res.data?.emailWarning) {
+          toast.success(res.data.emailWarning);
         } else {
           toast.success("Interviewer created, but email could not be sent");
         }

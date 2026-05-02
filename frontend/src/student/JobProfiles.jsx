@@ -46,6 +46,16 @@ async function fetchJobProfilesBootstrapData() {
   return jobProfilesBootstrapInFlight;
 }
 
+function getVisibilityLabel(job) {
+  if (job?.visibleToOffCampus === true) {
+    return Array.isArray(job.targetColleges) && job.targetColleges.length > 0
+      ? "College + Off Campus"
+      : "All Students";
+  }
+
+  return "College Only";
+}
+
 export default function JobProfiles() {
   const navigate = useNavigate();
 
@@ -526,6 +536,9 @@ export default function JobProfiles() {
                     {alreadyApplied && (
                       <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">Applied</span>
                     )}
+                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                      {getVisibilityLabel(job)}
+                    </span>
                   </div>
                 </div>
 
@@ -628,6 +641,9 @@ export default function JobProfiles() {
                 {selectedJobAlreadyApplied && (
                   <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">Applied</span>
                 )}
+                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                  {getVisibilityLabel(selectedJob)}
+                </span>
               </div>
             </div>
 

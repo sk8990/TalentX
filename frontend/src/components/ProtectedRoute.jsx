@@ -7,14 +7,7 @@ function getAllowedRoles(requiredRole) {
   }
 
   const roleList = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
-  const allowedRoles = new Set(roleList);
-
-  if (allowedRoles.has("admin") || allowedRoles.has("university_admin")) {
-    allowedRoles.add("admin");
-    allowedRoles.add("university_admin");
-  }
-
-  return allowedRoles;
+  return new Set(roleList);
 }
 
 export default function ProtectedRoute({ children, role }) {

@@ -7,6 +7,7 @@ import DashboardIcon from "@mui/icons-material/Dashboard";
 import WorkIcon from "@mui/icons-material/Work";
 import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
 import PersonIcon from "@mui/icons-material/Person";
+import SettingsIcon from "@mui/icons-material/Settings";
 import VideocamIcon from "@mui/icons-material/Videocam";
 import QuizIcon from "@mui/icons-material/Quiz";
 import SupportAgentIcon from "@mui/icons-material/SupportAgent";
@@ -26,6 +27,7 @@ export default function StudentLayout() {
     { to: "/student/jobs", label: "Job Profiles", icon: WorkIcon },
     { to: "/student/applications", label: "Applications", icon: AssignmentTurnedInIcon },
     { to: "/student/profile", label: "My Profile", icon: PersonIcon },
+    { to: "/student/settings", label: "Settings", icon: SettingsIcon },
     { to: "/student/interviews", label: "Interviews", icon: VideocamIcon },
     { to: "/student/assessments", label: "Assessments", icon: QuizIcon },
     { to: "/onboarding", label: "Onboarding", icon: BadgeOutlinedIcon },
@@ -57,7 +59,7 @@ export default function StudentLayout() {
     <div className="tx-app-shell">
       <div className="mx-auto flex w-full max-w-[1440px]">
         {/* ── Desktop Sidebar ── */}
-        <aside className="sticky top-0 hidden h-screen w-72 flex-col overflow-y-auto border-r border-slate-200 bg-white px-6 py-7 lg:flex">
+        <aside className="sticky top-0 hidden h-screen w-72 shrink-0 flex-col overflow-y-auto border-r border-slate-200 bg-white px-6 py-7 lg:flex">
           <div className="mb-8 flex items-start justify-between gap-3">
             <TalentXBrand
               theme="light"
@@ -96,7 +98,7 @@ export default function StudentLayout() {
         </aside>
 
         {/* ── Main Content ── */}
-        <main className="min-h-screen flex-1">
+        <main className="min-h-screen flex-1 min-w-0">
           {/* ── Mobile Header ── */}
           <div className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur-md sm:px-6 lg:hidden">
             <div className="flex items-center justify-between gap-3">

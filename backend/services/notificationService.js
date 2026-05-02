@@ -110,7 +110,7 @@ async function notifyRecruiterApproved(userId, name) {
     title: "Account Approved!",
     message: "Your recruiter account has been approved. You can now post jobs.",
     link: "/recruiter/dashboard",
-    sendMail: true,
+    sendMail: false,
     emailData: email,
   });
 }

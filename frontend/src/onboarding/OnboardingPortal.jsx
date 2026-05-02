@@ -18,7 +18,7 @@ import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
 import LoginRoundedIcon from "@mui/icons-material/LoginRounded";
 import ApartmentRoundedIcon from "@mui/icons-material/ApartmentRounded";
-import onboardingAPI, { buildServerAssetUrl } from "./api";
+import onboardingAPI, { fetchOfferLetterBlob } from "./api";
 import {
   clearStoredOnboardingInstanceId,
   clearStoredOnboardingToken,
@@ -145,12 +145,38 @@ function buildLocalVideoFallback(companyName) {
   };
 }
 
-function OfferStepView({ step, onSubmit, isSubmitting }) {
+function OfferStepView({ step, authToken, onSubmit, isSubmitting }) {
   const [acceptedTerms, setAcceptedTerms] = useState(step.status === "completed" || step.status === "approved");
+  const [downloadingOffer, setDownloadingOffer] = useState(false);
 
   useEffect(() => {
     setAcceptedTerms(step.status === "completed" || step.status === "approved");
   }, [step.id, step.status]);
+
+  const downloadGeneratedOffer = async () => {
+    const applicationId = step.content.applicationId;
+    if (!applicationId || !authToken) {
+      toast.error("Offer letter is not available right now.");
+      return;
+    }
+
+    try {
+      setDownloadingOffer(true);
+      const blob = await fetchOfferLetterBlob(applicationId, authToken);
+      const url = window.URL.createObjectURL(new Blob([blob], { type: "application/pdf" }));
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `offer-${String(applicationId).slice(-6)}.pdf`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Unable to download offer letter.");
+    } finally {
+      setDownloadingOffer(false);
+    }
+  };
 
   return (
     <div className="space-y-5">
@@ -205,15 +231,15 @@ function OfferStepView({ step, onSubmit, isSubmitting }) {
         </div>
 
         {step.content.offerLetterUrl && (
-          <a
-            href={buildServerAssetUrl(step.content.offerLetterUrl)}
-            target="_blank"
-            rel="noreferrer"
+          <button
+            type="button"
+            onClick={downloadGeneratedOffer}
+            disabled={downloadingOffer}
             className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-indigo-600 hover:text-indigo-700"
           >
-            Open generated offer PDF
+            {downloadingOffer ? "Downloading offer PDF..." : "Download generated offer PDF"}
             <ArrowForwardRoundedIcon sx={{ fontSize: 16 }} />
-          </a>
+          </button>
         )}
       </div>
 
@@ -484,7 +510,7 @@ function PreJoiningStepView({
         if (!cancelled) {
           setVideoAsset(response.data?.video || null);
         }
-      } catch (_err) {
+      } catch {
         if (!cancelled) {
           setVideoAsset(step.content.video || buildLocalVideoFallback(companyName));
         }
@@ -539,7 +565,7 @@ function PreJoiningStepView({
         ...current,
         [task.key]: response.data?.reading || fallbackReading
       }));
-    } catch (_err) {
+    } catch {
       setReadingCache((current) => ({
         ...current,
         [task.key]: fallbackReading
@@ -1334,6 +1360,7 @@ export default function OnboardingPortal() {
             {activeStep.type === "offer_acceptance" && (
               <OfferStepView
                 step={activeStep}
+                authToken={activeAuthToken}
                 onSubmit={(payload) => submitStep(activeStep, payload, "Offer accepted successfully")}
                 isSubmitting={submittingStepId === activeStep.id}
               />

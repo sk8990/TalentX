@@ -9,7 +9,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 import SearchIcon from "@mui/icons-material/Search";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
-import { FormControl, MenuItem, Select } from "@mui/material";
+import { Checkbox, FormControl, ListItemText, MenuItem, Select } from "@mui/material";
 import toast from "react-hot-toast";
 import FeatureGate from "../../components/FeatureGate";
 import UpgradeCard from "../../components/UpgradeCard";
@@ -29,9 +29,49 @@ const initialForm = {
   eligibilityText: "",
   deadline: "",
   isActive: true,
+  targetColleges: [],
+  visibleToOffCampus: false,
 };
 
 const branchOptions = ["CS", "IT", "ENTC", "MECH", "CIVIL"];
+
+function getVisibilityLabel(job) {
+  const hasColleges = Array.isArray(job.targetColleges) && job.targetColleges.length > 0;
+  const visibilityType =
+    job.visibilityType ||
+    (hasColleges
+      ? job.visibleToOffCampus
+        ? "college_plus_off_campus"
+        : "college_only"
+      : job.visibleToOffCampus
+        ? "all_students"
+        : "college_only");
+
+  const labels = {
+    college_only: "College Only",
+    college_plus_off_campus: "College + Off Campus",
+    all_students: "All Students"
+  };
+
+  return labels[visibilityType] || "College Only";
+}
+
+function getTargetCollegeText(job) {
+  const colleges = Array.isArray(job.targetColleges) ? job.targetColleges : [];
+  const names = colleges
+    .map((college) => (typeof college === "string" ? "" : college?.name))
+    .filter(Boolean);
+
+  if (names.length) {
+    return names.join(", ");
+  }
+
+  if (job.visibleToOffCampus === true || job.visibilityType === "all_students") {
+    return "All Students";
+  }
+
+  return "No colleges selected";
+}
 
 export default function RecruiterJobs() {
   const [jobs, setJobs] = useState([]);
@@ -45,12 +85,14 @@ export default function RecruiterJobs() {
   const [isParsingJd, setIsParsingJd] = useState(false);
   const [jobSearch, setJobSearch] = useState("");
   const [jobCompanyFilter, setJobCompanyFilter] = useState("all");
+  const [activeColleges, setActiveColleges] = useState([]);
+  const [collegesLoading, setCollegesLoading] = useState(false);
   const navigate = useNavigate();
   const { confirm, confirmDialog } = useConfirmDialog();
   const { subscription } = useSubscription();
   const jobFormRef = useRef(null);
 
-  const [formData, setFormData] = useState(initialForm);
+  const [formData, setFormData] = useState(() => ({ ...initialForm, eligibleBranches: [], targetColleges: [] }));
 
   const totalApplicants = useMemo(
     () => jobs.reduce((sum, job) => sum + (job.applicationsCount || 0), 0),
@@ -65,13 +107,41 @@ export default function RecruiterJobs() {
     activeJobLimit === null || activeJobLimit === undefined
       ? "Unlimited"
       : `${activeJobCount}/${activeJobLimit}`;
+  const selectedTargetCollegeNames = useMemo(() => {
+    const selectedIds = new Set(formData.targetColleges);
+    return activeColleges
+      .filter((college) => selectedIds.has(college._id))
+      .map((college) => college.name);
+  }, [activeColleges, formData.targetColleges]);
+  const visibilityHelperText = useMemo(() => {
+    const hasColleges = formData.targetColleges.length > 0;
+
+    if (hasColleges && !formData.visibleToOffCampus) {
+      return "This job will be visible only to verified students from selected colleges.";
+    }
+
+    if (hasColleges && formData.visibleToOffCampus) {
+      return "This job will be visible to selected college students and all off-campus students.";
+    }
+
+    if (!hasColleges && formData.visibleToOffCampus) {
+      return "This job will be visible to everyone on the platform.";
+    }
+
+    return "Please select at least one college or enable Off Campus visibility.";
+  }, [formData.targetColleges.length, formData.visibleToOffCampus]);
 
   const setField = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
+  const setTargetColleges = (value) => {
+    const nextValue = typeof value === "string" ? value.split(",") : value;
+    setField("targetColleges", Array.isArray(nextValue) ? nextValue : []);
+  };
+
   const resetForm = useCallback(() => {
-    setFormData(initialForm);
+    setFormData({ ...initialForm, eligibleBranches: [], targetColleges: [] });
     setSelectedCompany("other");
     setSelectedJob(null);
     setJdUploadName("");
@@ -109,10 +179,24 @@ export default function RecruiterJobs() {
     }
   }, [showAlert]);
 
+  const fetchActiveColleges = useCallback(async () => {
+    try {
+      setCollegesLoading(true);
+      const res = await API.get("/recruiter/active-colleges");
+      setActiveColleges(Array.isArray(res.data?.colleges) ? res.data.colleges : []);
+    } catch {
+      setActiveColleges([]);
+      showAlert("error", "Failed to fetch active colleges");
+    } finally {
+      setCollegesLoading(false);
+    }
+  }, [showAlert]);
+
   useEffect(() => {
     fetchJobs();
     fetchCompanies();
-  }, [fetchCompanies, fetchJobs]);
+    fetchActiveColleges();
+  }, [fetchActiveColleges, fetchCompanies, fetchJobs]);
 
   useEffect(() => {
     if (!selectedJob || !jobFormRef.current) {
@@ -269,6 +353,8 @@ export default function RecruiterJobs() {
       eligibilityText: formData.eligibilityText.trim(),
       deadline: formData.deadline,
       isActive: formData.isActive,
+      targetColleges: formData.targetColleges,
+      visibleToOffCampus: formData.visibleToOffCampus,
     };
 
     if (!payload.eligibleBranches.length) {
@@ -278,6 +364,11 @@ export default function RecruiterJobs() {
 
     if (!payload.companyName) {
       showAlert("warning", "Company name is required");
+      return;
+    }
+
+    if (!payload.targetColleges.length && !payload.visibleToOffCampus) {
+      showAlert("warning", "Please select at least one college or enable Off Campus visibility.");
       return;
     }
 
@@ -353,6 +444,15 @@ export default function RecruiterJobs() {
       eligibilityText: job.eligibilityText || "",
       deadline: job.deadline?.split("T")[0] || "",
       isActive: typeof job.isActive === "boolean" ? job.isActive : true,
+      targetColleges: Array.isArray(job.targetColleges)
+        ? job.targetColleges
+            .map((college) => (typeof college === "string" ? college : college?._id))
+            .filter(Boolean)
+        : [],
+      visibleToOffCampus:
+        typeof job.visibleToOffCampus === "boolean"
+          ? job.visibleToOffCampus
+          : true,
     });
     setSelectedCompany(matchedCompany ? matchedCompany.name : "other");
   };
@@ -727,6 +827,60 @@ export default function RecruiterJobs() {
           </div>
 
           <div className="md:col-span-2">
+            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Target Colleges</label>
+            <FormControl fullWidth size="small">
+              <Select
+                multiple
+                value={formData.targetColleges}
+                onChange={(e) => setTargetColleges(e.target.value)}
+                displayEmpty
+                IconComponent={KeyboardArrowDownIcon}
+                MenuProps={dropdownMenuProps}
+                sx={selectSx}
+                renderValue={(selected) => {
+                  if (!selected.length) {
+                    return collegesLoading ? "Loading colleges..." : "Select colleges";
+                  }
+                  return selectedTargetCollegeNames.length
+                    ? selectedTargetCollegeNames.join(", ")
+                    : `${selected.length} college${selected.length === 1 ? "" : "s"} selected`;
+                }}
+              >
+                {activeColleges.map((college) => (
+                  <MenuItem key={college._id} value={college._id}>
+                    <Checkbox checked={formData.targetColleges.includes(college._id)} size="small" />
+                    <ListItemText
+                      primary={college.name}
+                      secondary={college.domain ? `@${college.domain}` : ""}
+                    />
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </div>
+
+          <div className="md:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <label className="flex items-start gap-3 text-sm font-semibold text-slate-800">
+              <input
+                type="checkbox"
+                checked={formData.visibleToOffCampus}
+                onChange={(e) => setField("visibleToOffCampus", e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <span>Make this job visible to Off Campus students also</span>
+            </label>
+            <p
+              className={`mt-2 text-xs ${
+                !formData.targetColleges.length && !formData.visibleToOffCampus
+                  ? "font-semibold text-rose-600"
+                  : "text-slate-500"
+              }`}
+            >
+              {visibilityHelperText}
+            </p>
+          </div>
+
+          <div className="md:col-span-2">
             <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Description</label>
             <textarea
               rows={5}
@@ -843,6 +997,15 @@ export default function RecruiterJobs() {
                   </p>
                   <p className="mt-1 text-xs text-slate-500">CTC: {job.ctc ?? "N/A"} LPA</p>
                   <p className="mt-1 text-xs text-slate-500">Status: {job.isActive ? "Active" : "Inactive"}</p>
+                  <p className="mt-2 text-xs text-slate-500">
+                    Visibility:{" "}
+                    <span className="rounded-full bg-indigo-50 px-2 py-1 font-semibold text-indigo-700">
+                      {getVisibilityLabel(job)}
+                    </span>
+                  </p>
+                  <p className="mt-2 max-w-xl text-xs text-slate-500">
+                    Colleges: {getTargetCollegeText(job)}
+                  </p>
                 </div>
 
                 <div className="flex flex-wrap gap-2">

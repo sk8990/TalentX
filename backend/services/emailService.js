@@ -1,254 +1,362 @@
-if (process.env.NO_COLOR) {
-  delete process.env.NO_COLOR;
-}
-if (!process.env.FORCE_COLOR) {
-  process.env.FORCE_COLOR = "3";
-}
-
 const nodemailer = require("nodemailer");
 
-// Creates a transporter — uses Ethereal for dev, real SMTP for production
+let transporter = null;
 
-const chalkLib = require("chalk");
-const chalk = chalkLib?.Instance ? new chalkLib.Instance({ level: 3 }) : chalkLib;
+function readEmailConfig() {
+  const host = String(process.env.EMAIL_HOST || process.env.SMTP_HOST || "").trim();
+  const port = Number(process.env.EMAIL_PORT || process.env.SMTP_PORT || 587);
+  const user = String(process.env.EMAIL_USER || process.env.SMTP_USER || "").trim();
+  const pass = String(process.env.EMAIL_PASS || process.env.SMTP_PASS || "");
+  const from = String(
+    process.env.EMAIL_FROM ||
+    process.env.SMTP_FROM ||
+    (user ? `TalentX <${user}>` : "TalentX <noreply@talentx.com>")
+  ).trim();
+  const secure = String(process.env.EMAIL_SECURE || process.env.SMTP_SECURE || "false")
+    .trim()
+    .toLowerCase() === "true";
 
-function logEmailSeparator() {
-  console.log(chalk.gray("------------------------------------------------------------"));
+  return { host, port: Number.isFinite(port) ? port : 587, user, pass, from, secure };
 }
 
-let transporter;
+function isEmailConfigured(config = readEmailConfig()) {
+  return Boolean(config.host && config.user && config.pass);
+}
+
+function safeEmailError(err) {
+  const message = String(err?.message || err || "Email send failed");
+  return message
+    .replaceAll(process.env.EMAIL_PASS || "__NO_EMAIL_PASS__", "[redacted]")
+    .replaceAll(process.env.SMTP_PASS || "__NO_SMTP_PASS__", "[redacted]");
+}
+
+function getLoginUrl(path = "/login") {
+  const base = String(process.env.FRONTEND_URL || "http://localhost:3000")
+    .trim()
+    .replace(/\/+$/, "");
+  return `${base}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
+function buildTransporter(config) {
+  return nodemailer.createTransport({
+    host: config.host,
+    port: config.port,
+    secure: config.secure,
+    auth: {
+      user: config.user,
+      pass: config.pass
+    }
+  });
+}
 
 async function getTransporter() {
-  if (transporter) return transporter;
-
-  if (process.env.SMTP_HOST) {
-    // Production: use real SMTP
-    transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || "587"),
-      secure: process.env.SMTP_SECURE === "true",
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
-  } else {
-    // Development: use Ethereal test account
-    const testAccount = await nodemailer.createTestAccount();
-    transporter = nodemailer.createTransport({
-      host: "smtp.ethereal.email",
-      port: 587,
-      secure: false,
-      auth: {
-        user: testAccount.user,
-        pass: testAccount.pass,
-      },
-    });
-    logEmailSeparator();
-    console.log(chalk.cyan(`[EMAIL] Using Ethereal test account: ${testAccount.user}`));
-    logEmailSeparator();
+  const config = readEmailConfig();
+  if (!isEmailConfigured(config)) {
+    return { transporter: null, config };
   }
 
-  return transporter;
+  if (!transporter) {
+    transporter = buildTransporter(config);
+  }
+
+  return { transporter, config };
 }
 
-async function sendEmail({ to, subject, html }) {
+async function sendEmail({ to, subject, html, text }) {
   try {
-    const t = await getTransporter();
-    const from = process.env.SMTP_FROM || "TalentX <noreply@talentx.com>";
-
-    const info = await t.sendMail({ from, to, subject, html });
-    const messageId = String(info?.messageId || "N/A");
-    logEmailSeparator();
-    console.log(chalk.green.bold("Email sent successfully!"));
-    console.log(chalk.cyan(`Message ID: ${messageId}`));
-
-    // In dev, log the preview URL
-    if (!process.env.SMTP_HOST) {
-      const previewUrl = nodemailer.getTestMessageUrl(info) || "N/A";
-      console.log(chalk.yellowBright.bold(`Preview URL: ${previewUrl}`));
+    const normalizedTo = String(to || "").trim();
+    const normalizedSubject = String(subject || "").trim();
+    if (!normalizedTo || !normalizedSubject) {
+      return { success: false, error: "Email recipient and subject are required" };
     }
-    logEmailSeparator();
 
-    return info;
+    const { transporter: activeTransporter, config } = await getTransporter();
+    if (!activeTransporter) {
+      console.warn("[EMAIL] Email not sent: SMTP not configured");
+      return { success: false, error: "SMTP not configured", skipped: true };
+    }
+
+    const info = await activeTransporter.sendMail({
+      from: config.from,
+      to: normalizedTo,
+      subject: normalizedSubject,
+      html,
+      text
+    });
+
+    const messageId = String(info?.messageId || "");
+    console.info(`[EMAIL] Email sent: ${messageId || "message accepted"}`);
+    return { success: true, messageId };
   } catch (err) {
-    logEmailSeparator();
-    console.error(chalk.red("Email send failed"));
-    console.error(chalk.red(err?.stack || err?.message || String(err)));
-    logEmailSeparator();
-    return null;
+    const error = safeEmailError(err);
+    console.error(`[EMAIL] Email send failed: ${error}`);
+    return { success: false, error };
   }
 }
 
-// Pre-built email templates
+function escapeHtml(value) {
+  return String(value || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function renderEmail({ title, intro, lines = [], ctaUrl, ctaLabel = "Open TalentX" }) {
+  const safeTitle = escapeHtml(title);
+  const safeIntro = escapeHtml(intro);
+  const safeCtaUrl = escapeHtml(ctaUrl);
+  const safeCtaLabel = escapeHtml(ctaLabel);
+  const htmlLines = lines
+    .filter((line) => line !== undefined && line !== null && String(line).trim())
+    .map((line) => `<p style="margin: 0 0 12px; color: #334155;">${escapeHtml(line)}</p>`)
+    .join("");
+
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 620px; margin: 0 auto; padding: 24px; color: #0f172a;">
+      <div style="border-radius: 14px; background: #243b95; padding: 24px; color: #ffffff;">
+        <h1 style="margin: 0; font-size: 24px;">${safeTitle}</h1>
+        <p style="margin: 8px 0 0; color: #dbeafe;">TalentX University Recruitment Portal</p>
+      </div>
+      <div style="padding: 24px 0;">
+        <p style="margin: 0 0 16px; color: #334155;">${safeIntro}</p>
+        ${htmlLines}
+        ${ctaUrl ? `
+          <p style="margin: 24px 0;">
+            <a href="${safeCtaUrl}" style="display: inline-block; border-radius: 10px; background: #243b95; color: #ffffff; padding: 12px 18px; text-decoration: none; font-weight: 700;">${safeCtaLabel}</a>
+          </p>
+          <p style="margin: 0; color: #64748b; font-size: 13px;">Login URL: <a href="${safeCtaUrl}">${safeCtaUrl}</a></p>
+        ` : ""}
+      </div>
+      <div style="border-top: 1px solid #e2e8f0; padding-top: 14px; color: #94a3b8; font-size: 12px;">
+        TalentX - Your Career, Accelerated.
+      </div>
+    </div>
+  `;
+}
+
+function renderText({ title, intro, lines = [], ctaUrl }) {
+  return [
+    title,
+    "",
+    intro,
+    ...lines.filter(Boolean),
+    ctaUrl ? `Login URL: ${ctaUrl}` : "",
+    "",
+    "TalentX - Your Career, Accelerated."
+  ].filter((line) => line !== "").join("\n");
+}
+
+function template({ subject, title, intro, lines, loginUrl, ctaLabel }) {
+  return {
+    subject,
+    html: renderEmail({ title, intro, lines, ctaUrl: loginUrl, ctaLabel }),
+    text: renderText({ title, intro, lines, ctaUrl: loginUrl })
+  };
+}
+
 const emailTemplates = {
+  collegeAdminCreatedEmail({ name, email, password, loginUrl = getLoginUrl() }) {
+    return template({
+      subject: "TalentX account created - College Admin",
+      title: "TalentX account created",
+      intro: `Hello ${name || "College Admin"}, your College Admin account has been created.`,
+      lines: [
+        `Login email: ${email}`,
+        password ? `Temporary password: ${password}` : "",
+        "Please change your password after your first login if prompted."
+      ],
+      loginUrl,
+      ctaLabel: "Log in to TalentX"
+    });
+  },
+
+  openStudentWelcomeEmail({ name, email, loginUrl = getLoginUrl() }) {
+    return template({
+      subject: "Welcome to TalentX",
+      title: "Welcome to TalentX",
+      intro: `Hi ${name || "Student"}, your TalentX account is ready.`,
+      lines: [
+        `Account email: ${email}`,
+        "You can now browse open and off-campus job opportunities."
+      ],
+      loginUrl,
+      ctaLabel: "Browse Jobs"
+    });
+  },
+
+  collegeStudentPendingEmail({ name, email, collegeName, loginUrl = getLoginUrl() }) {
+    return template({
+      subject: "TalentX registration received",
+      title: "Registration received",
+      intro: `Hi ${name || "Student"}, your college student registration has been received.`,
+      lines: [
+        `Account email: ${email}`,
+        `College: ${collegeName || "Your college"}`,
+        "Your College Admin needs to approve your account before full college access is activated."
+      ],
+      loginUrl,
+      ctaLabel: "View Account"
+    });
+  },
+
+  collegeStudentApprovedEmail({ name, email, collegeName, loginUrl = getLoginUrl() }) {
+    return template({
+      subject: "TalentX college access approved",
+      title: "College access activated",
+      intro: `Hi ${name || "Student"}, your TalentX college student account has been approved.`,
+      lines: [
+        `Account email: ${email}`,
+        `College: ${collegeName || "Your college"}`,
+        "Your college access is now active."
+      ],
+      loginUrl,
+      ctaLabel: "Log in to TalentX"
+    });
+  },
+
+  recruiterPendingEmail({ name, email, loginUrl = getLoginUrl() }) {
+    return template({
+      subject: "TalentX recruiter registration received",
+      title: "Recruiter registration received",
+      intro: `Hello ${name || "Recruiter"}, your recruiter registration has been received.`,
+      lines: [
+        `Account email: ${email}`,
+        "Your account is pending Super Admin approval."
+      ],
+      loginUrl,
+      ctaLabel: "View Account"
+    });
+  },
+
+  recruiterApprovedEmail({ name, email, loginUrl = getLoginUrl("/recruiter/dashboard") }) {
+    return template({
+      subject: "TalentX recruiter account approved",
+      title: "Recruiter account approved",
+      intro: `Hello ${name || "Recruiter"}, your recruiter account has been approved.`,
+      lines: [
+        email ? `Account email: ${email}` : "",
+        "You can now post jobs, create drives, and manage candidates."
+      ],
+      loginUrl,
+      ctaLabel: "Open Recruiter Dashboard"
+    });
+  },
+
+  interviewerCreatedEmail({ name, email, temporaryPassword, loginUrl = getLoginUrl("/interviewer") }) {
+    return template({
+      subject: "TalentX interviewer account created",
+      title: "Interviewer account created",
+      intro: `Hello ${name || "Interviewer"}, your TalentX interviewer account has been created.`,
+      lines: [
+        `Login email: ${email}`,
+        temporaryPassword ? `Temporary password: ${temporaryPassword}` : "",
+        "You must reset or change your password on first login."
+      ],
+      loginUrl,
+      ctaLabel: "Open Interviewer Panel"
+    });
+  },
+
   welcome(name, role) {
-    return {
-      subject: "Welcome to TalentX!",
-      html: `
-        <div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 32px;">
-          <div style="background: linear-gradient(135deg, #4f46e5, #0891b2); border-radius: 16px; padding: 32px; color: white; text-align: center;">
-            <h1 style="margin: 0; font-size: 28px;">Welcome to TalentX! 🚀</h1>
-          </div>
-          <div style="padding: 24px 0;">
-            <p>Hi <strong>${name}</strong>,</p>
-            <p>Your ${role} account has been created successfully.</p>
-            ${role === "recruiter" ? "<p>Your account is pending admin approval. You'll be notified once approved.</p>" : "<p>Complete your profile to start browsing and applying for jobs!</p>"}
-          </div>
-          <div style="text-align: center; padding: 16px; color: #94a3b8; font-size: 12px;">
-            TalentX — Your Career, Accelerated.
-          </div>
-        </div>
-      `,
-    };
+    return template({
+      subject: "Welcome to TalentX",
+      title: "Welcome to TalentX",
+      intro: `Hi ${name || "there"}, your ${role || "TalentX"} account has been created successfully.`,
+      lines: [
+        role === "recruiter"
+          ? "Your account is pending admin approval. You will be notified once approved."
+          : "Complete your profile to start browsing and applying for jobs."
+      ],
+      loginUrl: getLoginUrl(),
+      ctaLabel: "Log in to TalentX"
+    });
   },
 
   applicationStatusChange(studentName, jobTitle, companyName, newStatus) {
     const statusMessages = {
-      SHORTLISTED: "Congratulations! You've been shortlisted.",
+      SHORTLISTED: "Congratulations! You have been shortlisted.",
       ASSESSMENT_SENT: "An assessment has been sent to you.",
-      ASSESSMENT_PASSED: "You passed the assessment! 🎉",
-      ASSESSMENT_FAILED: "Unfortunately, you didn't pass the assessment.",
-      INTERVIEW_SCHEDULED: "Your interview has been scheduled!",
-      SELECTED: "Congratulations! You've been selected! 🎉🎉",
-      REJECTED: "We're sorry, your application was not selected.",
+      ASSESSMENT_PASSED: "You passed the assessment.",
+      ASSESSMENT_FAILED: "Unfortunately, you did not pass the assessment.",
+      INTERVIEW_SCHEDULED: "Your interview has been scheduled.",
+      SELECTED: "Congratulations! You have been selected.",
+      REJECTED: "Your application was not selected."
     };
-
-    return {
+    return template({
       subject: `Application Update: ${jobTitle} at ${companyName}`,
-      html: `
-        <div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 32px;">
-          <div style="background: linear-gradient(135deg, #4f46e5, #0891b2); border-radius: 16px; padding: 32px; color: white;">
-            <h1 style="margin: 0;">Application Update</h1>
-            <p style="margin: 8px 0 0;">${jobTitle} at ${companyName}</p>
-          </div>
-          <div style="padding: 24px 0;">
-            <p>Hi <strong>${studentName}</strong>,</p>
-            <p>${statusMessages[newStatus] || `Your application status has been updated to: ${newStatus}`}</p>
-            <p>Log in to TalentX to view the details.</p>
-          </div>
-        </div>
-      `,
-    };
+      title: "Application update",
+      intro: `Hi ${studentName || "Student"}, ${statusMessages[newStatus] || `your application status is ${newStatus}`}`,
+      lines: [`Role: ${jobTitle}`, `Company: ${companyName}`],
+      loginUrl: getLoginUrl("/student/applications"),
+      ctaLabel: "View Application"
+    });
   },
 
   recruiterApproved(name) {
-    return {
-      subject: "Your TalentX Account Has Been Approved!",
-      html: `
-        <div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 32px;">
-          <div style="background: linear-gradient(135deg, #059669, #0891b2); border-radius: 16px; padding: 32px; color: white; text-align: center;">
-            <h1 style="margin: 0;">Account Approved! ✅</h1>
-          </div>
-          <div style="padding: 24px 0;">
-            <p>Hi <strong>${name}</strong>,</p>
-            <p>Your recruiter account has been approved. You can now log in and start posting jobs!</p>
-          </div>
-        </div>
-      `,
-    };
+    return emailTemplates.recruiterApprovedEmail({ name });
   },
 
   interviewScheduled(studentName, jobTitle, date, mode, link) {
-    return {
+    return template({
       subject: `Interview Scheduled: ${jobTitle}`,
-      html: `
-        <div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 32px;">
-          <div style="background: linear-gradient(135deg, #7c3aed, #4f46e5); border-radius: 16px; padding: 32px; color: white;">
-            <h1 style="margin: 0;">Interview Scheduled 📅</h1>
-          </div>
-          <div style="padding: 24px 0;">
-            <p>Hi <strong>${studentName}</strong>,</p>
-            <p>Your interview for <strong>${jobTitle}</strong> has been scheduled:</p>
-            <ul>
-              <li><strong>Date:</strong> ${new Date(date).toLocaleString()}</li>
-              <li><strong>Mode:</strong> ${mode}</li>
-              ${link ? `<li><strong>Link:</strong> <a href="${link}">${link}</a></li>` : ""}
-            </ul>
-          </div>
-        </div>
-      `,
-    };
+      title: "Interview scheduled",
+      intro: `Hi ${studentName || "Student"}, your interview has been scheduled.`,
+      lines: [
+        `Role: ${jobTitle}`,
+        `Date: ${new Date(date).toLocaleString()}`,
+        `Mode: ${mode}`,
+        link ? `Link: ${link}` : ""
+      ],
+      loginUrl: getLoginUrl("/student/interviews"),
+      ctaLabel: "View Interview"
+    });
   },
 
   interviewSlotsPublished(studentName, jobTitle, slotCount) {
-    return {
+    return template({
       subject: `Interview Slots Available: ${jobTitle}`,
-      html: `
-        <div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 32px;">
-          <div style="background: linear-gradient(135deg, #0f766e, #0284c7); border-radius: 16px; padding: 32px; color: white;">
-            <h1 style="margin: 0;">Choose Your Interview Slot</h1>
-          </div>
-          <div style="padding: 24px 0;">
-            <p>Hi <strong>${studentName}</strong>,</p>
-            <p>${slotCount} interview slot(s) are now available for <strong>${jobTitle}</strong>.</p>
-            <p>Please log in to TalentX and book your preferred time slot.</p>
-          </div>
-        </div>
-      `,
-    };
+      title: "Choose your interview slot",
+      intro: `Hi ${studentName || "Student"}, ${slotCount} interview slot(s) are available.`,
+      lines: [`Role: ${jobTitle}`, "Please log in and book your preferred slot."],
+      loginUrl: getLoginUrl("/student/interviews"),
+      ctaLabel: "Book Slot"
+    });
   },
 
   interviewSlotBooked(recruiterName, jobTitle, candidateName, date, mode) {
-    return {
+    return template({
       subject: `Interview Slot Booked: ${jobTitle}`,
-      html: `
-        <div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 32px;">
-          <div style="background: linear-gradient(135deg, #1d4ed8, #0f766e); border-radius: 16px; padding: 32px; color: white;">
-            <h1 style="margin: 0;">Interview Slot Confirmed</h1>
-          </div>
-          <div style="padding: 24px 0;">
-            <p>Hi <strong>${recruiterName}</strong>,</p>
-            <p><strong>${candidateName}</strong> booked an interview slot for <strong>${jobTitle}</strong>.</p>
-            <ul>
-              <li><strong>Date:</strong> ${new Date(date).toLocaleString()}</li>
-              <li><strong>Mode:</strong> ${mode}</li>
-            </ul>
-          </div>
-        </div>
-      `,
-    };
+      title: "Interview slot booked",
+      intro: `Hi ${recruiterName || "Recruiter"}, ${candidateName || "A candidate"} booked an interview slot.`,
+      lines: [`Role: ${jobTitle}`, `Date: ${new Date(date).toLocaleString()}`, `Mode: ${mode}`],
+      loginUrl: getLoginUrl("/recruiter/applications"),
+      ctaLabel: "View Candidate"
+    });
   },
 
   onboardingDocumentsApproved(studentName, companyName) {
-    return {
+    return template({
       subject: `Onboarding Documents Approved - ${companyName}`,
-      html: `
-        <div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 32px;">
-          <div style="background: linear-gradient(135deg, #10b981, #059669); border-radius: 16px; padding: 32px; color: white;">
-            <h1 style="margin: 0;">Documents Approved! ✅</h1>
-          </div>
-          <div style="padding: 24px 0;">
-            <p>Hi <strong>${studentName}</strong>,</p>
-            <p>Great news! Your onboarding documents for <strong>${companyName}</strong> have been reviewed and approved.</p>
-            <p>You can now log in to the TalentX portal to proceed with your pre-joining steps.</p>
-          </div>
-        </div>
-      `,
-    };
+      title: "Documents approved",
+      intro: `Hi ${studentName || "Student"}, your onboarding documents have been approved.`,
+      lines: [`Company: ${companyName}`],
+      loginUrl: getLoginUrl(),
+      ctaLabel: "Open TalentX"
+    });
   },
 
   onboardingDocumentsRejected(studentName, companyName, rejectionReason) {
-    return {
+    return template({
       subject: `Action Required: Onboarding Documents - ${companyName}`,
-      html: `
-        <div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 32px;">
-          <div style="background: linear-gradient(135deg, #ef4444, #b91c1c); border-radius: 16px; padding: 32px; color: white;">
-            <h1 style="margin: 0;">Action Required ⚠️</h1>
-          </div>
-          <div style="padding: 24px 0;">
-            <p>Hi <strong>${studentName}</strong>,</p>
-            <p>There is an issue with the onboarding documents you submitted for <strong>${companyName}</strong>.</p>
-            <p><strong>Reviewer Notes:</strong></p>
-            <blockquote style="border-left: 4px solid #ef4444; padding-left: 16px; margin-left: 0; color: #475569;">
-              ${rejectionReason}
-            </blockquote>
-            <p>Please log in to the TalentX portal to resubmit the corrected documents.</p>
-          </div>
-        </div>
-      `,
-    };
-  },
+      title: "Action required",
+      intro: `Hi ${studentName || "Student"}, there is an issue with your onboarding documents.`,
+      lines: [`Company: ${companyName}`, `Reviewer notes: ${rejectionReason}`],
+      loginUrl: getLoginUrl(),
+      ctaLabel: "Open TalentX"
+    });
+  }
 };
 
-module.exports = { sendEmail, emailTemplates };
+module.exports = { sendEmail, emailTemplates, readEmailConfig, isEmailConfigured };

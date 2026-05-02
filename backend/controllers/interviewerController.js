@@ -3,7 +3,7 @@ const bcrypt = require("bcryptjs");
 const Application = require("../models/Application");
 const InterviewerProfile = require("../models/InterviewerProfile");
 const User = require("../models/User");
-const { sendEmail } = require("../services/emailService");
+const { sendEmail, emailTemplates } = require("../services/emailService");
 const { notify, notifyInterviewScheduled } = require("../services/notificationService");
 const { emitToRoom } = require("../services/realtimeService");
 const { writeAuditLog } = require("../services/auditService");
@@ -57,16 +57,6 @@ function normalizeExpertise(value) {
   return [];
 }
 
-function getFrontendBaseUrl() {
-  return String(process.env.FRONTEND_URL || "http://localhost:5173")
-    .trim()
-    .replace(/\/+$/, "");
-}
-
-function getInterviewerPanelLink() {
-  return `${getFrontendBaseUrl()}/interviewer`;
-}
-
 function getBackendOrigin(req) {
   const explicitOrigin = String(process.env.BACKEND_PUBLIC_URL || "").trim();
   if (explicitOrigin) {
@@ -76,33 +66,8 @@ function getBackendOrigin(req) {
   return `${req.protocol}://${req.get("host")}`;
 }
 
-function buildInterviewerCredentialEmail({
-  recruiterName,
-  interviewerName,
-  interviewerCode,
-  temporaryPassword
-}) {
-  const panelLink = getInterviewerPanelLink();
-  const safeRecruiterName = recruiterName || "Recruiter";
-  const safeInterviewerName = interviewerName || "Interviewer";
-
-  return {
-    subject: "TalentX Interviewer Account Credentials",
-    html: `
-      <div style="font-family: 'Segoe UI', sans-serif; max-width: 620px; margin: 0 auto; padding: 24px;">
-        <h2 style="margin: 0 0 12px;">Welcome to TalentX Interview Panel</h2>
-        <p>Hello <strong>${safeInterviewerName}</strong>,</p>
-        <p>${safeRecruiterName} created your interviewer account.</p>
-        <p>Use the following credentials to log in:</p>
-        <ul>
-          <li><strong>Interviewer ID:</strong> ${interviewerCode}</li>
-          <li><strong>Temporary Password:</strong> ${temporaryPassword}</li>
-          <li><strong>Panel Link:</strong> <a href="${panelLink}">${panelLink}</a></li>
-        </ul>
-        <p>You must change your password after your first login.</p>
-      </div>
-    `
-  };
+function emailWarningFor(result) {
+  return result?.success === false ? "Account created but email could not be sent." : undefined;
 }
 
 async function generateUniqueInterviewerCode() {
@@ -312,18 +277,13 @@ exports.createRecruiterInterviewer = async (req, res) => {
       isActive: true
     });
 
-    const recruiter = await User.findById(req.user.id).select("name");
-    const emailPayload = buildInterviewerCredentialEmail({
-      recruiterName: recruiter?.name || "Recruiter",
-      interviewerName: name,
-      interviewerCode,
-      temporaryPassword
-    });
-
     const emailResult = await sendEmail({
       to: email,
-      subject: emailPayload.subject,
-      html: emailPayload.html
+      ...emailTemplates.interviewerCreatedEmail({
+        name,
+        email,
+        temporaryPassword
+      })
     });
 
     await writeAuditLog({
@@ -342,12 +302,12 @@ exports.createRecruiterInterviewer = async (req, res) => {
       userId: req.user.id,
       type: "INTERVIEWER_CREATED",
       title: `Interviewer Added: ${name}`,
-      message: `Credentials have ${emailResult ? "been sent" : "not been sent"} to ${email}.`,
+      message: `Credentials have ${emailResult?.success ? "been sent" : "not been sent"} to ${email}.`,
       link: "/recruiter/interviewers",
       metadata: {
         interviewerCode,
         interviewerProfileId: profile._id,
-        emailSent: Boolean(emailResult)
+        emailSent: Boolean(emailResult?.success)
       },
       sendMail: false
     }).catch((notifyErr) => {
@@ -361,7 +321,8 @@ exports.createRecruiterInterviewer = async (req, res) => {
 
     res.status(201).json({
       interviewer: toInterviewerPayload(created, new Map()),
-      emailSent: Boolean(emailResult)
+      emailSent: Boolean(emailResult?.success),
+      emailWarning: emailWarningFor(emailResult)
     });
   } catch (err) {
     console.error("createRecruiterInterviewer error:", err);
@@ -525,18 +486,13 @@ exports.resendRecruiterInterviewerCredentials = async (req, res) => {
     profile.userId.mustChangePassword = true;
     await profile.userId.save();
 
-    const recruiter = await User.findById(req.user.id).select("name");
-    const emailPayload = buildInterviewerCredentialEmail({
-      recruiterName: recruiter?.name || "Recruiter",
-      interviewerName: profile.userId.name,
-      interviewerCode: profile.interviewerCode,
-      temporaryPassword
-    });
-
     const emailResult = await sendEmail({
       to: profile.userId.email,
-      subject: emailPayload.subject,
-      html: emailPayload.html
+      ...emailTemplates.interviewerCreatedEmail({
+        name: profile.userId.name,
+        email: profile.userId.email,
+        temporaryPassword
+      })
     });
 
     await writeAuditLog({
@@ -547,14 +503,16 @@ exports.resendRecruiterInterviewerCredentials = async (req, res) => {
       entityId: profile._id,
       metadata: {
         interviewerUserId: profile.userId._id,
-        emailSent: Boolean(emailResult)
+        emailSent: Boolean(emailResult?.success)
       }
     });
 
     res.json({
-      message: emailResult
+      message: emailResult?.success
         ? "Credentials sent successfully"
-        : "Credentials updated but email sending failed"
+        : "Credentials updated but email sending failed",
+      emailSent: Boolean(emailResult?.success),
+      emailWarning: emailResult?.success ? undefined : "Credentials updated but email could not be sent."
     });
   } catch (err) {
     console.error("resendRecruiterInterviewerCredentials error:", err);
@@ -640,7 +598,9 @@ exports.getMyInterviewRoomAccess = async (req, res) => {
 
     return res.json({
       applicationId: app._id,
+      roomId: accessResult.roomName,
       roomName: accessResult.roomName,
+      meetingLink: app.interview?.link || "",
       participant: {
         userId: req.user.id,
         role: accessResult.participantRole,
@@ -660,6 +620,8 @@ exports.getMyInterviewRoomAccess = async (req, res) => {
         date: app.interview?.date || null,
         endDate: app.interview?.endDate || null,
         mode: app.interview?.mode || "",
+        link: app.interview?.link || "",
+        panelType: "HUMAN",
         accessWindowStart: accessResult.access.accessWindowStart,
         accessWindowEnd: accessResult.access.accessWindowEnd
       },

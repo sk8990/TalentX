@@ -7,6 +7,9 @@ import InsightsRoundedIcon from "@mui/icons-material/InsightsRounded";
 import AssignmentTurnedInRoundedIcon from "@mui/icons-material/AssignmentTurnedInRounded";
 import ApartmentRoundedIcon from "@mui/icons-material/ApartmentRounded";
 import BusinessCenterRoundedIcon from "@mui/icons-material/BusinessCenterRounded";
+import SchoolRoundedIcon from "@mui/icons-material/SchoolRounded";
+import PersonAddAltRoundedIcon from "@mui/icons-material/PersonAddAltRounded";
+import HowToRegRoundedIcon from "@mui/icons-material/HowToRegRounded";
 import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 import LogoutIcon from "@mui/icons-material/Logout";
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
@@ -27,6 +30,9 @@ export default function SuperAdminLayout() {
     { to: "/super-admin/subscriptions", label: "Subscriptions", icon: AssignmentTurnedInRoundedIcon },
     { to: "/super-admin/universities", label: "Universities", icon: ApartmentRoundedIcon },
     { to: "/super-admin/recruiters", label: "Recruiters", icon: BusinessCenterRoundedIcon },
+    { to: "/super-admin/colleges", label: "Colleges", icon: SchoolRoundedIcon },
+    { to: "/super-admin/college-admins", label: "College Admins", icon: PersonAddAltRoundedIcon },
+    { to: "/super-admin/recruiter-approvals", label: "Recruiter Approvals", icon: HowToRegRoundedIcon },
     { to: "/super-admin/settings", label: "Settings", icon: SettingsRoundedIcon }
   ];
 
@@ -46,10 +52,10 @@ export default function SuperAdminLayout() {
 
   return (
     <div className="tx-app-shell">
-      <div className="mx-auto flex w-full max-w-400">
-        <aside className="sticky top-0 hidden h-screen w-80 flex-col overflow-y-auto border-r border-slate-200 bg-white px-6 py-7 lg:flex">
+      <div className="mx-auto flex w-full max-w-[1440px]">
+        <aside className="sticky top-0 hidden h-screen w-72 shrink-0 flex-col overflow-y-auto border-r border-slate-200 bg-white px-6 py-7 lg:flex">
           <div className="mb-8 flex items-start justify-between gap-3">
-            <TalentXBrand theme="light" size="sm" className="max-w-52.5" />
+            <TalentXBrand theme="light" size="sm" className="max-w-[210px]" />
             <NotificationBell />
           </div>
 
@@ -82,7 +88,7 @@ export default function SuperAdminLayout() {
           </div>
         </aside>
 
-        <main className="min-h-screen flex-1 bg-[#f4f6fb]">
+        <main className="min-h-screen flex-1 min-w-0 bg-[#f4f6fb]">
           <div className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur-md sm:px-6 lg:hidden">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
@@ -96,7 +102,7 @@ export default function SuperAdminLayout() {
                 <TalentXBrand
                   theme="light"
                   size="sm"
-                  className="max-w-45"
+                  className="max-w-[180px]"
                   textClassName="text-slate-500"
                 />
               </div>
@@ -121,13 +127,13 @@ export default function SuperAdminLayout() {
       )}
 
       <div
-        className={`fixed inset-y-0 left-0 z-50 w-80 transform bg-white shadow-2xl transition-transform duration-300 ease-in-out lg:hidden ${
+        className={`fixed inset-y-0 left-0 z-50 w-72 transform bg-white shadow-2xl transition-transform duration-300 ease-in-out lg:hidden ${
           drawerOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         <div className="flex h-full flex-col overflow-y-auto px-5 py-5">
           <div className="mb-5 flex items-center justify-between">
-            <TalentXBrand theme="light" size="sm" className="max-w-45" />
+            <TalentXBrand theme="light" size="sm" className="max-w-[180px]" />
             <button
               onClick={() => setDrawerOpen(false)}
               className="rounded-lg p-1 text-slate-500 transition hover:bg-slate-100"

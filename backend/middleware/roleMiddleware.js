@@ -1,6 +1,7 @@
 const ROLE_ALIASES = {
     admin: ["admin", "university_admin"],
-    university_admin: ["university_admin", "admin"]
+    university_admin: ["university_admin", "admin"],
+    college_admin: ["college_admin"]
 };
 
 module.exports = (...roles) => {

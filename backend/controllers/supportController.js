@@ -66,7 +66,7 @@ exports.createTicket = async (req, res) => {
     res.json(ticket);
 
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -86,7 +86,7 @@ exports.createRecruiterTicket = async (req, res) => {
 
     res.json(ticket);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -102,7 +102,7 @@ exports.getMyTickets = async (req, res) => {
 
     res.json(tickets);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -115,7 +115,7 @@ exports.getMyRecruiterTickets = async (req, res) => {
 
     res.json(tickets);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -131,7 +131,7 @@ exports.getAllTickets = async (req, res) => {
 
     res.json(tickets);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -183,6 +183,6 @@ exports.respondTicket = async (req, res) => {
 
     res.json(ticket);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };

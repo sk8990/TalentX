@@ -114,7 +114,7 @@ export default function PaymentsPage() {
             >
               <option value="">All</option>
               <option value="recruiter">Recruiter</option>
-              <option value="university_admin">University Admin</option>
+              <option value="college_admin">College Admin</option>
               <option value="student">Student</option>
             </select>
           </label>

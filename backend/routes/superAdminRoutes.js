@@ -22,6 +22,30 @@ const {
   enableRecruiter
 } = require("../controllers/superAdminController");
 
+const {
+  createCollege,
+  getColleges,
+  getCollegeById,
+  updateCollege,
+  deleteCollege
+} = require("../controllers/collegeController");
+
+const {
+  createCollegeAdmin,
+  getCollegeAdmins,
+  getCollegeAdminById
+} = require("../controllers/collegeAdminController");
+
+const {
+  getPendingRecruiters,
+  getApprovedRecruiters,
+  getRejectedRecruiters,
+  getSuspendedRecruiters,
+  approveRecruiter,
+  rejectRecruiter,
+  suspendRecruiter
+} = require("../controllers/recruiterApprovalController");
+
 router.use(auth, requireSuperAdmin);
 
 router.get("/dashboard", getDashboard);
@@ -38,8 +62,26 @@ router.post("/users/:userId/assign-package", assignPackageToUser);
 router.get("/universities", getUniversities);
 router.patch("/universities/:id/disable", disableUniversity);
 router.patch("/universities/:id/enable", enableUniversity);
+
+router.get("/recruiters/pending", getPendingRecruiters);
+router.get("/recruiters/approved", getApprovedRecruiters);
+router.get("/recruiters/rejected", getRejectedRecruiters);
+router.get("/recruiters/suspended", getSuspendedRecruiters);
 router.get("/recruiters", getRecruiters);
 router.patch("/recruiters/:id/disable", disableRecruiter);
 router.patch("/recruiters/:id/enable", enableRecruiter);
+router.post("/recruiters/:id/approve", approveRecruiter);
+router.post("/recruiters/:id/reject", rejectRecruiter);
+router.post("/recruiters/:id/suspend", suspendRecruiter);
+
+router.post("/colleges", createCollege);
+router.get("/colleges", getColleges);
+router.get("/colleges/:id", getCollegeById);
+router.put("/colleges/:id", updateCollege);
+router.delete("/colleges/:id", deleteCollege);
+
+router.post("/college-admins", createCollegeAdmin);
+router.get("/college-admins", getCollegeAdmins);
+router.get("/college-admins/:id", getCollegeAdminById);
 
 module.exports = router;

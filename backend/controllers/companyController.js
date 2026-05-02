@@ -1,12 +1,78 @@
+const mongoose = require("mongoose");
 const Company = require("../models/Company.js");
 const Job = require("../models/Job.js");
 const Application = require("../models/Application");
 const Student = require("../models/Student");
+const College = require("../models/College");
 const { expireJobsByDeadline } = require("../utils/jobExpiry");
 const seedCompanies = require("../data/companies.js");
 const { notify } = require("../services/notificationService");
 const { normalizeList } = require("../utils/jobMatch");
+const { canStudentViewJob } = require("../helpers/jobVisibilityHelper");
 const allowedBranches = ["CS", "IT", "ENTC", "MECH", "CIVIL"];
+
+async function validateAndComputeVisibility(targetColleges, visibleToOffCampus) {
+  if (!Array.isArray(targetColleges)) {
+    return { error: "targetColleges must be an array." };
+  }
+
+  if (typeof visibleToOffCampus !== "boolean") {
+    return { error: "visibleToOffCampus must be a boolean." };
+  }
+
+  const colleges = [
+    ...new Set(
+      targetColleges
+        .map((id) => String(id || "").trim())
+        .filter(Boolean)
+    )
+  ];
+  const offCampus = visibleToOffCampus;
+
+  if (colleges.length === 0 && !offCampus) {
+    return { error: "Please select at least one college or enable Off Campus visibility." };
+  }
+
+  let validatedCollegeIds = [];
+
+  if (colleges.length > 0) {
+    for (const id of colleges) {
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return { error: `Invalid college ID: ${id}` };
+      }
+    }
+
+    const foundColleges = await College.find({
+      _id: { $in: colleges },
+      enterprisePlanActive: true,
+      status: "active"
+    }).select("_id").lean();
+
+    if (foundColleges.length !== colleges.length) {
+      const foundIds = new Set(foundColleges.map((c) => c._id.toString()));
+      const invalid = colleges.find((id) => !foundIds.has(id.toString()));
+      return { error: `College ${invalid} is not active or does not have an Enterprise plan.` };
+    }
+
+    validatedCollegeIds = foundColleges.map((c) => c._id);
+  }
+
+  let visibilityType;
+  if (validatedCollegeIds.length > 0 && !offCampus) {
+    visibilityType = "college_only";
+  } else if (validatedCollegeIds.length > 0 && offCampus) {
+    visibilityType = "college_plus_off_campus";
+  } else {
+    visibilityType = "all_students";
+  }
+
+  return {
+    data: {
+      targetColleges: validatedCollegeIds,
+      visibilityType
+    }
+  };
+}
 
 function normalizeDomain(domainInput) {
   const raw = String(domainInput || "").trim().toLowerCase();
@@ -167,9 +233,15 @@ async function notifyStudentsForNewJob(job) {
     baseFilter.branch = { $in: job.eligibleBranches };
   }
 
-  const targetStudents = await Student.find(baseFilter).select("userId preferences");
+  const targetStudents = await Student.find(baseFilter).select(
+    "userId preferences studentType collegeId collegeVerificationStatus isCollegeVerified accessLevel"
+  );
   const tasks = targetStudents
-    .filter((student) => student.userId && studentWantsJobAlert(student, job))
+    .filter((student) => (
+      student.userId &&
+      canStudentViewJob(student, job, { user: { role: "student" } }) &&
+      studentWantsJobAlert(student, job)
+    ))
     .map((student) =>
       notify({
         userId: student.userId.toString(),
@@ -197,7 +269,7 @@ exports.createCompany = async (req, res) => {
     const company = await Company.create(req.body);
     res.status(201).json(company);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: "Unable to create company" });
   }
 };
 
@@ -212,7 +284,7 @@ exports.getCompanies = async (req, res) => {
 
     res.json(companies);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: "Unable to load companies" });
   }
 };
 
@@ -229,11 +301,21 @@ exports.postJob = async (req, res) => {
 
     const finalLogo = normalizeCompanyLogoUrl(parsed.data.companyLogo, finalDomain);
 
+    const visibility = await validateAndComputeVisibility(
+      req.body.targetColleges,
+      req.body.visibleToOffCampus
+    );
+    if (visibility.error) {
+      return res.status(400).json({ message: visibility.error });
+    }
+
     const job = await Job.create({
       ...parsed.data,
       companyDomain: finalDomain,
       companyLogo: finalLogo,
       recruiterId: req.user.id,
+      targetColleges: visibility.data.targetColleges,
+      visibilityType: visibility.data.visibilityType,
     });
 
     notifyStudentsForNewJob(job).catch((notifyErr) => {
@@ -252,7 +334,7 @@ exports.postJob = async (req, res) => {
       return res.status(400).json({ message: `Invalid value for ${err.path}` });
     }
     console.error("postJob error:", err);
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Unable to create job" });
   }
 };
 
@@ -262,7 +344,7 @@ exports.getAllJobs = async (req, res) => {
     const jobs = await Job.find().populate("recruiterId", "name email");
     res.json(jobs);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: "Unable to load jobs" });
   }
 };
 
@@ -270,10 +352,12 @@ exports.getAllJobs = async (req, res) => {
 exports.getRecruiterJobs = async (req, res) => {
   try {
     await expireJobsByDeadline();
-    const jobs = await Job.find({ recruiterId: req.user.id });
+    const jobs = await Job.find({ recruiterId: req.user.id })
+      .populate("targetColleges", "_id name domain")
+      .sort({ createdAt: -1 });
     res.json(jobs);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: "Unable to load jobs" });
   }
 };
 
@@ -291,12 +375,22 @@ exports.updateJob = async (req, res) => {
 
     const finalLogo = normalizeCompanyLogoUrl(parsed.data.companyLogo, finalDomain);
 
+    const visibility = await validateAndComputeVisibility(
+      req.body.targetColleges,
+      req.body.visibleToOffCampus
+    );
+    if (visibility.error) {
+      return res.status(400).json({ message: visibility.error });
+    }
+
     const job = await Job.findOneAndUpdate(
       { _id: jobId, recruiterId: req.user.id },
       {
         ...parsed.data,
         companyDomain: finalDomain,
         companyLogo: finalLogo,
+        targetColleges: visibility.data.targetColleges,
+        visibilityType: visibility.data.visibilityType,
       },
       { new: true }
     );
@@ -317,7 +411,7 @@ exports.updateJob = async (req, res) => {
       return res.status(400).json({ message: `Invalid value for ${err.path}` });
     }
     console.error("updateJob error:", err);
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Unable to update job" });
   }
 };
 
@@ -339,7 +433,7 @@ exports.deleteJob = async (req, res) => {
     if (err.name === "CastError") {
       return res.status(400).json({ message: "Invalid job id" });
     }
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Unable to delete job" });
   }
 };
 
@@ -361,9 +455,7 @@ exports.getRecruiterStats = async (req, res) => {
     });
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
+    console.error("getRecruiterStats error:", err);
+    res.status(500).json({ message: "Unable to load stats" });
   }
 };
-
-

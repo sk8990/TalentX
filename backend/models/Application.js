@@ -309,4 +309,10 @@ const applicationSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+applicationSchema.index({ studentId: 1 });
+applicationSchema.index({ jobId: 1 });
+applicationSchema.index({ status: 1 });
+applicationSchema.index({ createdAt: -1 });
+applicationSchema.index({ studentId: 1, jobId: 1 }, { unique: true });
+
 module.exports = mongoose.model("Application", applicationSchema);

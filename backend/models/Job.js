@@ -22,9 +22,32 @@ const jobSchema = new mongoose.Schema(
     },
     eligibilityText: { type: String },
     deadline: { type: Date, required: true },
-    isActive: { type: Boolean, default: true }
+    isActive: { type: Boolean, default: true },
+
+    targetColleges: {
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: "College" }],
+      default: []
+    },
+    visibilityType: {
+      type: String,
+      enum: ["college_only", "college_plus_off_campus", "all_students"],
+      default: "all_students"
+    }
   },
   { timestamps: true }
 );
+
+jobSchema.index({ targetColleges: 1 });
+jobSchema.index({ visibilityType: 1 });
+jobSchema.index({ recruiterId: 1 });
+jobSchema.index({ isActive: 1 });
+jobSchema.index({ createdAt: -1 });
+
+// Virtual: visibleToOffCampus derived from visibilityType for backward compatibility
+jobSchema.virtual("visibleToOffCampus").get(function () {
+  return this.visibilityType === "all_students" || this.visibilityType === "college_plus_off_campus";
+});
+jobSchema.set("toObject", { virtuals: true });
+jobSchema.set("toJSON", { virtuals: true });
 
 module.exports = mongoose.model("Job", jobSchema);

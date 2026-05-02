@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import API, { getServerOrigin } from "../api/axios";
+import API from "../api/axios";
+import ProtectedUploadLink from "../components/ProtectedUploadLink";
 import EditIcon from "@mui/icons-material/Edit";
 import SaveIcon from "@mui/icons-material/Save";
 import AutoFixHighIcon from "@mui/icons-material/AutoFixHigh";
@@ -26,7 +27,6 @@ function buildFormFromProfile(profile) {
 }
 
 export default function MyProfile() {
-  const serverOrigin = getServerOrigin();
   const [profile, setProfile] = useState(null);
   const [edit, setEdit] = useState(false);
   const [form, setForm] = useState(buildFormFromProfile(null));
@@ -159,15 +159,13 @@ export default function MyProfile() {
         )}
 
         {profile.resumeUrl && (
-          <a
-            href={`${serverOrigin}${profile.resumeUrl}`}
-            target="_blank"
-            rel="noreferrer"
+          <ProtectedUploadLink
+            uploadPath={profile.resumeUrl}
             className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-indigo-600 hover:text-indigo-700"
           >
             <UploadFileIcon sx={{ fontSize: 16 }} />
             View last parsed resume
-          </a>
+          </ProtectedUploadLink>
         )}
       </section>
 

@@ -24,10 +24,9 @@ import {
 } from "@mui/material";
 import ScreenLoader from "../../components/ScreenLoader";
 import FeatureGate from "../../components/FeatureGate";
+import ProtectedUploadLink from "../../components/ProtectedUploadLink";
 import { useSubscription } from "../../context/SubscriptionContext";
 
-const API_BASE_URL = API.defaults.baseURL || "";
-const SERVER_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, "");
 const COLUMN_PAGE_SIZE = 4;
 const STAGE_PAGE_SIZE = 3;
 const MAX_SLOT_ROWS = 8;
@@ -47,33 +46,6 @@ const getStagePageByStatus = (status) => {
   const index = STATUS_COLUMNS.indexOf(status);
   if (index < 0) return 1;
   return Math.floor(index / STAGE_PAGE_SIZE) + 1;
-};
-
-const getResumeUrl = (resumeUrl) => {
-  if (!resumeUrl || typeof resumeUrl !== "string") return "";
-
-  const trimmed = resumeUrl.trim();
-  if (!trimmed) return "";
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
-
-  const normalized = trimmed.replace(/\\/g, "/");
-  const uploadsIndex = normalized.toLowerCase().indexOf("uploads/");
-
-  if (uploadsIndex >= 0) {
-    return `${SERVER_ORIGIN}/${normalized.slice(uploadsIndex)}`;
-  }
-
-  return `${SERVER_ORIGIN}/${normalized.replace(/^\/+/, "")}`;
-};
-
-const getOfferUrl = (offerPath) => {
-  if (!offerPath || typeof offerPath !== "string") return "";
-
-  const trimmed = offerPath.trim();
-  if (!trimmed) return "";
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
-
-  return `${SERVER_ORIGIN}/${trimmed.replace(/^\/+/, "")}`;
 };
 
 const createEmptySlot = () => ({
@@ -107,6 +79,7 @@ function toDateTimeLocalValue(value) {
 
 export default function RecruiterApplications() {
   const [jobs, setJobs] = useState([]);
+  const [interviewers, setInterviewers] = useState([]);
   const [selectedJobId, setSelectedJobId] = useState("");
   const [applications, setApplications] = useState([]);
   const [assessmentSendingMap, setAssessmentSendingMap] = useState({});
@@ -115,6 +88,7 @@ export default function RecruiterApplications() {
   const [stagePage, setStagePage] = useState(1);
   const [selectedStage, setSelectedStage] = useState(STATUS_COLUMNS[0]);
   const [busy, setBusy] = useState(false);
+  const [downloadingOfferId, setDownloadingOfferId] = useState("");
   const [searchParams] = useSearchParams();
   const [inputDialog, setInputDialog] = useState({
     open: false,
@@ -129,7 +103,7 @@ export default function RecruiterApplications() {
   const [slotDialog, setSlotDialog] = useState({
     open: false,
     applicationId: "",
-    panelType: "AI",
+    panelType: "HUMAN",
     aiConfig: createDefaultAIConfig(),
     slots: [createEmptySlot()],
   });
@@ -141,6 +115,7 @@ export default function RecruiterApplications() {
 
   useEffect(() => {
     fetchJobs();
+    fetchInterviewers();
   }, []);
 
   useEffect(() => {
@@ -194,6 +169,15 @@ export default function RecruiterApplications() {
       setJobs(res.data || []);
     } catch {
       toast.error("Failed to load jobs");
+    }
+  };
+
+  const fetchInterviewers = async () => {
+    try {
+      const res = await API.get("/recruiter/interviewers");
+      setInterviewers((res.data || []).filter((item) => item.isActive && item.user?._id));
+    } catch {
+      setInterviewers([]);
     }
   };
 
@@ -332,7 +316,7 @@ export default function RecruiterApplications() {
     setSlotDialog({
       open: true,
       applicationId: id,
-      panelType: "AI",
+      panelType: "HUMAN",
       aiConfig: createDefaultAIConfig(),
       slots: [createEmptySlot()],
     });
@@ -342,7 +326,7 @@ export default function RecruiterApplications() {
     setSlotDialog({
       open: false,
       applicationId: "",
-      panelType: "AI",
+      panelType: "HUMAN",
       aiConfig: createDefaultAIConfig(),
       slots: [createEmptySlot()],
     });
@@ -496,14 +480,19 @@ export default function RecruiterApplications() {
         return;
       }
 
-      if (slot.mode !== "Online") {
+      // AI slots must be online; HUMAN online slots require a meeting link.
+      if (slotDialog.panelType === "AI" && slot.mode !== "Online") {
         toast.error(`Slot ${i + 1}: AI interviews must use Online mode`);
+        return;
+      }
+      if (slotDialog.panelType === "HUMAN" && slot.mode === "Online" && !slot.link.trim()) {
+        toast.error(`Slot ${i + 1}: a meeting link is required for Online interviews`);
         return;
       }
     }
 
     const payload = {
-      panelType: "AI",
+      panelType: slotDialog.panelType,
       slots: slotDialog.slots.map((slot) => ({
         start: toUtcIso(slot.start),
         end: toUtcIso(slot.end),
@@ -512,7 +501,7 @@ export default function RecruiterApplications() {
       })),
     };
 
-    if (hasFeature("assessmentPanel")) {
+    if (slotDialog.panelType === "AI" && hasFeature("assessmentPanel")) {
       payload.aiConfig = {
         ...slotDialog.aiConfig,
         focusAreas: slotDialog.aiConfig.focusAreas,
@@ -594,6 +583,51 @@ export default function RecruiterApplications() {
     );
   };
 
+  const assignInterviewer = async (app) => {
+    const availableInterviewers = interviewers.filter((item) => item.isActive && item.user?._id);
+    if (availableInterviewers.length === 0) {
+      toast.error("Create an active interviewer before assigning this round");
+      return;
+    }
+
+    const currentInterviewerId = String(app?.interviewerAssignment?.interviewerUserId?._id || "");
+    const values = await openInputDialog({
+      title: currentInterviewerId ? "Change Interviewer" : "Assign Interviewer",
+      description: "Select the human interviewer who will run this scheduled round.",
+      confirmText: "Assign",
+      fields: [
+        {
+          name: "interviewerUserId",
+          type: "select",
+          label: "Interviewer",
+          required: true,
+          defaultValue: currentInterviewerId || availableInterviewers[0]?.user?._id || "",
+          options: availableInterviewers.map((item) => ({
+            value: item.user._id,
+            label: `${item.user.name || "Interviewer"} (${item.user.email || item.interviewerCode})`
+          }))
+        }
+      ]
+    });
+
+    if (!values?.interviewerUserId) return;
+
+    await runAction(
+      () =>
+        API.put(`/application/${app._id}/interviewer/assign`, {
+          interviewerUserId: values.interviewerUserId
+        }),
+      "Interviewer assigned"
+    );
+  };
+
+  const unassignInterviewer = async (app) => {
+    await runAction(
+      () => API.put(`/application/${app._id}/interviewer/unassign`),
+      "Interviewer unassigned"
+    );
+  };
+
   const selectCandidate = (id) => runAction(() => API.put(`/application/${id}/select`), "Candidate selected");
 
   const generateOffer = async (id) => {
@@ -621,6 +655,29 @@ export default function RecruiterApplications() {
         }),
       "Offer generated"
     );
+  };
+
+  const downloadOfferLetter = async (id) => {
+    if (downloadingOfferId) return;
+
+    try {
+      setDownloadingOfferId(id);
+      const response = await API.get(`/application/${id}/offer/download`, {
+        responseType: "blob"
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: "application/pdf" }));
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `offer-${id.slice(-6)}.pdf`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to download offer letter");
+    } finally {
+      setDownloadingOfferId("");
+    }
   };
 
   const stageTotalPages = Math.max(1, Math.ceil(STATUS_COLUMNS.length / STAGE_PAGE_SIZE));
@@ -706,7 +763,7 @@ export default function RecruiterApplications() {
           <span className="rounded-lg bg-slate-100 px-3 py-1.5">Jobs: {jobs.length}</span>
           <span className="rounded-lg bg-slate-100 px-3 py-1.5">Selected: {selectedJob?.title || "None"}</span>
           <span className="rounded-lg bg-slate-100 px-3 py-1.5">Applications: {applications.length}</span>
-          <span className="rounded-lg bg-slate-100 px-3 py-1.5">Interview Mode: AI Only</span>
+          <span className="rounded-lg bg-slate-100 px-3 py-1.5">Interview Modes: Human or AI</span>
         </div>
       </div>
 
@@ -785,8 +842,6 @@ export default function RecruiterApplications() {
 
                   <div className="space-y-3">
                     {visibleItems.map((app) => {
-                      const resumeLink = getResumeUrl(app.resumeUrl);
-                      const offerLetterLink = getOfferUrl(app.offer?.pdfPath);
                       const openSlots = (app.interviewSlots || []).filter((slot) => !slot.bookedByStudent).length;
 
                       return (
@@ -805,7 +860,7 @@ export default function RecruiterApplications() {
 
                           {app.interview?.date ? (
                             <p className="mt-2 text-xs text-slate-600">
-                              Interview: {new Date(app.interview.date).toLocaleString()} ({formatPanelType("AI")})
+                              Interview: {new Date(app.interview.date).toLocaleString()} ({app.interview?.panelType === "HUMAN" ? "Human Panel" : "AI Panel"})
                             </p>
                           ) : null}
                           {status === "ASSESSMENT_PASSED" && openSlots > 0 ? (
@@ -865,7 +920,7 @@ export default function RecruiterApplications() {
                             </div>
                           ) : null}
 
-                          {status === "INTERVIEW_SCHEDULED" ? (
+                          {status === "INTERVIEW_SCHEDULED" && app.interview?.panelType === "AI" ? (
                             <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 p-2">
                               <label className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                                 AI Interview Configuration
@@ -889,19 +944,52 @@ export default function RecruiterApplications() {
                             </div>
                           ) : null}
 
+                          {status === "INTERVIEW_SCHEDULED" && app.interview?.panelType === "HUMAN" ? (
+                            <div className="mt-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-900">
+                              <p className="font-semibold">Human Interview Panel</p>
+                              <p className="mt-1">
+                                Interviewer: {app.interviewerAssignment?.interviewerUserId?.name || "Not assigned yet"}
+                              </p>
+                              {app.interview?.mode === "Online" ? (
+                                <p className="mt-1 break-all">
+                                  Meeting link: {app.interview?.link || "Not provided"}
+                                </p>
+                              ) : (
+                                <p className="mt-1">Venue: {app.interview?.link || "Not provided"}</p>
+                              )}
+                              <p className="mt-1 text-emerald-700">
+                                Student and interviewer join the same TalentX virtual room for this application.
+                              </p>
+                            </div>
+                          ) : null}
+
+                          {app?.interviewerFeedback?.submittedAt ? (
+                            <div className="mt-2 rounded-xl border border-violet-200 bg-violet-50 p-3 text-xs text-violet-900">
+                              <p className="font-semibold">Interviewer Feedback</p>
+                              <p className="mt-1">Recommendation: {formatRecommendation(app.interviewerFeedback.recommendation)}</p>
+                              <p className="mt-1">
+                                Ratings: Communication {app.interviewerFeedback.ratings?.communication || "-"},
+                                Technical {app.interviewerFeedback.ratings?.technical || "-"},
+                                Problem Solving {app.interviewerFeedback.ratings?.problemSolving || "-"},
+                                Culture Fit {app.interviewerFeedback.ratings?.cultureFit || "-"}
+                              </p>
+                              {app.interviewerFeedback.notes ? (
+                                <p className="mt-1 whitespace-pre-wrap">{app.interviewerFeedback.notes}</p>
+                              ) : null}
+                            </div>
+                          ) : null}
+
                           <div className="mt-3 flex flex-wrap gap-2">
-                            {resumeLink ? (
-                              <a
-                                href={resumeLink}
-                                target="_blank"
-                                rel="noreferrer"
+                            {app.resumeUrl ? (
+                              <ProtectedUploadLink
+                                uploadPath={app.resumeUrl}
                                 className="rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-900"
                               >
                                 <span className="inline-flex items-center gap-1">
                                   <DescriptionIcon sx={{ fontSize: 14 }} />
                                   Resume
                                 </span>
-                              </a>
+                              </ProtectedUploadLink>
                             ) : null}
 
                             {status === "APPLIED" ? (
@@ -941,6 +1029,19 @@ export default function RecruiterApplications() {
 
                             {status === "INTERVIEW_SCHEDULED" ? (
                               <>
+                                {app.interview?.panelType === "HUMAN" ? (
+                                  <>
+                                    <ActionButton
+                                      label={app.interviewerAssignment?.interviewerUserId ? "Change Interviewer" : "Assign Interviewer"}
+                                      tone="indigo"
+                                      onClick={() => assignInterviewer(app)}
+                                      disabled={Boolean(app?.interviewerFeedback?.submittedAt)}
+                                    />
+                                    {app.interviewerAssignment?.interviewerUserId && !app?.interviewerFeedback?.submittedAt ? (
+                                      <ActionButton label="Unassign Interviewer" tone="red" onClick={() => unassignInterviewer(app)} />
+                                    ) : null}
+                                  </>
+                                ) : null}
                                 <ActionButton label="Reschedule" tone="amber" onClick={() => rescheduleInterview(app)} />
                                 <ActionButton label="Select" tone="green" onClick={() => selectCandidate(app._id)} />
                                 <ActionButton label="Reject" tone="red" onClick={() => reject(app._id)} />
@@ -953,18 +1054,18 @@ export default function RecruiterApplications() {
                               </FeatureGate>
                             ) : null}
 
-                            {status === "SELECTED" && offerLetterLink ? (
-                              <a
-                                href={offerLetterLink}
-                                target="_blank"
-                                rel="noreferrer"
+                            {status === "SELECTED" && app.offer?.pdfPath ? (
+                              <button
+                                type="button"
+                                onClick={() => downloadOfferLetter(app._id)}
+                                disabled={downloadingOfferId === app._id}
                                 className="rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-800"
                               >
                                 <span className="inline-flex items-center gap-1">
                                   <DescriptionIcon sx={{ fontSize: 14 }} />
-                                  Offer
+                                  {downloadingOfferId === app._id ? "Downloading..." : "Offer"}
                                 </span>
-                              </a>
+                              </button>
                             ) : null}
                           </div>
                         </article>
@@ -1079,11 +1180,15 @@ export default function RecruiterApplications() {
                 }}
               >
                 {field.type === "select"
-                  ? field.options?.map((option) => (
-                      <MenuItem key={option} value={option}>
-                        {option}
+                  ? field.options?.map((option) => {
+                      const value = typeof option === "object" ? option.value : option;
+                      const label = typeof option === "object" ? option.label : option;
+                      return (
+                      <MenuItem key={value} value={value}>
+                        {label}
                       </MenuItem>
-                    ))
+                      );
+                    })
                   : null}
               </TextField>
             );
@@ -1121,16 +1226,47 @@ export default function RecruiterApplications() {
           },
         }}
       >
-        <DialogTitle sx={{ fontWeight: 700, color: "#0f172a", pb: 0.5 }}>Publish AI Interview Slots</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 700, color: "#0f172a", pb: 0.5 }}>
+          Publish Interview Slots — {slotDialog.panelType === "HUMAN" ? "Human Panel" : "AI Panel"}
+        </DialogTitle>
         <DialogContent sx={{ display: "grid", gap: 2, pt: 1 }}>
           <DialogContentText sx={{ color: "#475569", fontSize: "0.86rem" }}>
-            Share AI interview time options. Students will book one slot and complete the round inside the TalentX AI panel.
+            {slotDialog.panelType === "HUMAN"
+              ? "Share interview time options for a human panel. Students will book one slot. Assign an interviewer after the student books."
+              : "Share AI interview time options. Students will book one slot and complete the round inside the TalentX AI panel."}
           </DialogContentText>
+
+          {/* Panel type selector */}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setSlotDialog((prev) => ({ ...prev, panelType: "AI" }))}
+              className={`rounded-lg border px-4 py-2 text-xs font-semibold transition ${
+                slotDialog.panelType === "AI"
+                  ? "border-indigo-500 bg-indigo-600 text-white"
+                  : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              AI Panel
+            </button>
+            <button
+              type="button"
+              onClick={() => setSlotDialog((prev) => ({ ...prev, panelType: "HUMAN" }))}
+              className={`rounded-lg border px-4 py-2 text-xs font-semibold transition ${
+                slotDialog.panelType === "HUMAN"
+                  ? "border-emerald-500 bg-emerald-600 text-white"
+                  : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              Human Panel
+            </button>
+          </div>
 
           <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900">
             Basic scheduling is available on Starter. Advanced AI interview configuration unlocks on Recruiter Pro.
           </div>
 
+          {slotDialog.panelType === "AI" ? (
           <FeatureGate feature="assessmentPanel" compact>
           <div className="grid gap-3 rounded-2xl border border-indigo-100 bg-indigo-50 p-4 sm:grid-cols-2">
             <TextField
@@ -1173,6 +1309,7 @@ export default function RecruiterApplications() {
             />
           </div>
           </FeatureGate>
+          ) : null}
 
           <div className="max-h-[55vh] space-y-3 overflow-y-auto pr-1">
             {slotDialog.slots.map((slot, index) => (
@@ -1215,18 +1352,38 @@ export default function RecruiterApplications() {
                     sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2, backgroundColor: "#ffffff", opacity: 0.8 } }}
                   />
                   <TextField
+                    select={slotDialog.panelType === "HUMAN"}
                     label="Mode"
                     value={slot.mode}
+                    onChange={(e) => slotDialog.panelType === "HUMAN" && updateSlotField(index, "mode", e.target.value)}
                     size="small"
                     fullWidth
-                    disabled
+                    disabled={slotDialog.panelType === "AI"}
                     sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2, backgroundColor: "#ffffff" } }}
-                  />
+                  >
+                    {slotDialog.panelType === "HUMAN" ? (
+                      <>
+                        <MenuItem value="Online">Online</MenuItem>
+                        <MenuItem value="Offline">Offline</MenuItem>
+                      </>
+                    ) : null}
+                  </TextField>
                   <TextField
-                    label={slot.mode === "Online" ? "Optional Backup Link" : "Venue / Address"}
+                    label={
+                      slotDialog.panelType === "HUMAN" && slot.mode === "Offline"
+                        ? "Venue / Address"
+                        : slotDialog.panelType === "HUMAN"
+                        ? "Meeting Link (required)"
+                        : "Optional Backup Link"
+                    }
                     value={slot.link}
                     onChange={(e) => updateSlotField(index, "link", e.target.value)}
-                    placeholder={slot.mode === "Online" ? "Optional external link (fallback only)" : "Office / Campus location"}
+                    placeholder={
+                      slotDialog.panelType === "HUMAN" && slot.mode === "Offline"
+                        ? "Office / Campus location"
+                        : "https://meet.google.com/..."
+                    }
+                    required={slotDialog.panelType === "HUMAN" && slot.mode === "Online"}
                     size="small"
                     fullWidth
                     sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2, backgroundColor: "#ffffff" } }}
@@ -1428,6 +1585,9 @@ function ActionButton({ label, tone, onClick, disabled = false }) {
     "Mark Failed": CloseIcon,
     "Publish Slots": EventIcon,
     "Reschedule": EventIcon,
+    "Assign Interviewer": AssignmentIcon,
+    "Change Interviewer": AssignmentIcon,
+    "Unassign Interviewer": DeleteOutlineIcon,
     "Select": CheckIcon,
     "Generate Offer": DescriptionIcon,
   };
@@ -1447,10 +1607,6 @@ function ActionButton({ label, tone, onClick, disabled = false }) {
       </span>
     </button>
   );
-}
-
-function formatPanelType(value) {
-  return String(value || "HUMAN").trim().toUpperCase() === "AI" ? "AI Interview" : "Human Interview";
 }
 
 function formatRecommendation(value) {

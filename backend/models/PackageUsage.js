@@ -42,6 +42,17 @@ const PackageUsageSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-PackageUsageSchema.index({ userId: 1, usageType: 1 });
+PackageUsageSchema.index({ userId: 1, usageType: 1 }, { unique: true });
+// NOTE: If this index is being added to an existing collection that already
+// has duplicate (userId, usageType) pairs, the index creation will fail.
+// Run the deduplication query before deploying:
+//
+//   db.packageusages.aggregate([
+//     { $group: { _id: { userId: "$userId", usageType: "$usageType" },
+//                 ids: { $push: "$_id" }, count: { $sum: 1 } } },
+//     { $match: { count: { $gt: 1 } } }
+//   ]).forEach(group => {
+//     group.ids.slice(1).forEach(id => db.packageusages.deleteOne({ _id: id }));
+//   });
 
 module.exports = mongoose.model("PackageUsage", PackageUsageSchema);

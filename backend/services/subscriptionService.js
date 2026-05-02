@@ -110,7 +110,7 @@ function buildFeaturesFromPackage(packageDoc) {
     return features;
   }
 
-  if (roleTarget === "admin" || roleTarget === "university") {
+  if (roleTarget === "admin" || roleTarget === "university" || roleTarget === "university_admin") {
     features.adminDashboard = true;
     if (hasLimit(entitlements, "candidateManageLimit")) {
       features.bulkStudentManagement = true;

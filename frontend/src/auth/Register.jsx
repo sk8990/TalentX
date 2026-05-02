@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
@@ -27,8 +27,50 @@ export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState("student");
   const [loading, setLoading] = useState(false);
+  const [companyName, setCompanyName] = useState("");
+  const [companyWebsite, setCompanyWebsite] = useState("");
+
+  const [studentType, setStudentType] = useState("open_student");
+  const [collegeId, setCollegeId] = useState("");
+  const [colleges, setColleges] = useState([]);
+  const [collegesLoading, setCollegesLoading] = useState(false);
+
+  const selectedCollege = colleges.find((c) => c._id === collegeId);
+
+  useEffect(() => {
+    if (role === "student" && studentType === "college_student" && colleges.length === 0) {
+      setCollegesLoading(true);
+      API.get("/public/active-colleges")
+        .then((res) => setColleges(res.data?.colleges || []))
+        .catch(() => toast.error("Failed to load colleges"))
+        .finally(() => setCollegesLoading(false));
+    }
+  }, [role, studentType, colleges.length]);
 
   const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+
+  // Add custom scrollbar styles
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      .register-form-section::-webkit-scrollbar {
+        width: 8px;
+      }
+      .register-form-section::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 4px;
+      }
+      .register-form-section::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+      }
+      .register-form-section::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+      }
+    `;
+    document.head.appendChild(style);
+    return () => document.head.removeChild(style);
+  }, []);
 
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -45,17 +87,49 @@ export default function Register() {
       return;
     }
 
+    if (role === "student" && studentType === "college_student" && !collegeId) {
+      toast.error("Please select your college.");
+      return;
+    }
+
+    if (role === "recruiter") {
+      if (!companyName.trim()) {
+        toast.error("Company name is required");
+        return;
+      }
+
+      if (!companyWebsite.trim()) {
+        toast.error("Company website is required");
+        return;
+      }
+    }
+
     try {
       setLoading(true);
 
-      await API.post("/auth/register", {
+      const payload = {
         name: trimmedName,
         email: trimmedEmail,
         password,
         role,
-      });
+      };
 
-      toast.success("Registration successful. Please login.");
+      if (role === "student") {
+        payload.studentType = studentType;
+        if (studentType === "college_student") {
+          payload.collegeId = collegeId;
+        }
+      }
+
+      if (role === "recruiter") {
+        payload.companyName = companyName.trim();
+        payload.companyEmail = trimmedEmail;
+        payload.companyWebsite = companyWebsite.trim();
+      }
+
+      const res = await API.post("/auth/register", payload);
+
+      toast.success(res.data?.message || "Registration successful. Please login.");
       navigate(LOGIN_ROUTE);
     } catch (err) {
       toast.error(err.response?.data?.message || "Registration failed");
@@ -138,7 +212,7 @@ export default function Register() {
 
   return (
     <motion.div
-      className="relative flex min-h-[100dvh] items-center justify-center overflow-hidden bg-[#f4f6fb] px-4 py-6 sm:px-6 sm:py-10"
+      className="relative flex min-h-[100dvh] items-center justify-center bg-[#f4f6fb] px-4 py-6 sm:px-6 sm:py-10"
       initial={reduceMotion ? false : "hidden"}
       animate={reduceMotion ? undefined : "visible"}
       variants={authPageVariants}
@@ -146,7 +220,7 @@ export default function Register() {
       {/* Background gradient blobs */}
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_80%,rgba(36,59,149,0.12),transparent_35%),radial-gradient(circle_at_70%_20%,rgba(14,165,233,0.10),transparent_32%)]" />
 
-      <div className="relative mx-auto grid w-full max-w-[72rem] grid-cols-1 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl sm:rounded-3xl lg:grid-cols-2">
+      <div className="relative mx-auto grid w-full max-w-[72rem] grid-cols-1 rounded-2xl border border-slate-200/80 bg-white shadow-2xl sm:rounded-3xl lg:grid-cols-2 lg:overflow-hidden">
         {/* ── Sidebar (desktop) ── */}
         <motion.aside
           className="hidden bg-gradient-to-br from-[#243b95] via-[#314db8] to-[#1d2f80] p-8 text-white lg:flex lg:flex-col lg:justify-between lg:p-10"
@@ -193,7 +267,11 @@ export default function Register() {
 
         {/* ── Form side ── */}
         <motion.section
-          className="flex flex-col justify-center p-5 sm:p-8 md:p-10 lg:p-12"
+          className="register-form-section flex flex-col justify-start overflow-y-auto p-4 sm:p-5 md:p-6 lg:py-10 lg:px-12"
+          style={{
+            scrollbarWidth: 'thin',
+            scrollbarColor: '#cbd5e1 #f1f5f9'
+          }}
           initial={reduceMotion ? false : "hidden"}
           animate={reduceMotion ? undefined : "visible"}
           variants={authContentVariants}
@@ -213,15 +291,15 @@ export default function Register() {
               Start your TalentX journey in a minute.
             </motion.p>
 
-            <motion.form onSubmit={handleRegister} className="mt-5 space-y-4 sm:mt-8 sm:space-y-5" variants={authContentVariants}>
+            <motion.form onSubmit={handleRegister} className={`mt-4 sm:mt-6 ${role === "recruiter" ? "space-y-2.5 sm:space-y-3" : "space-y-3.5 sm:space-y-4"}`} variants={authContentVariants}>
               <motion.div variants={authItemVariants}>
                 <label htmlFor="register-name" className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Full Name
+                  {role === "recruiter" ? "Recruiter Name" : "Full Name"}
                 </label>
                 <input
                   id="register-name"
                   type="text"
-                  placeholder="John Doe"
+                  placeholder={role === "recruiter" ? "Recruiter name" : "John Doe"}
                   className={fieldClass}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -230,12 +308,12 @@ export default function Register() {
 
               <motion.div variants={authItemVariants}>
                 <label htmlFor="register-email" className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Email Address
+                  {role === "recruiter" ? "Company Email" : "Email Address"}
                 </label>
                 <input
                   id="register-email"
                   type="email"
-                  placeholder="you@example.com"
+                  placeholder={role === "recruiter" ? "recruiter@company.com" : "you@example.com"}
                   className={fieldClass}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -270,12 +348,52 @@ export default function Register() {
                 </div>
               </motion.div>
 
+              {role === "recruiter" && (
+                <>
+                  <motion.div variants={authItemVariants} initial="visible" animate="visible">
+                    <label htmlFor="register-company-name" className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Company Name
+                    </label>
+                    <input
+                      id="register-company-name"
+                      type="text"
+                      placeholder="TalentX Pvt Ltd"
+                      className={fieldClass}
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                    />
+                  </motion.div>
+
+                  <motion.div variants={authItemVariants} initial="visible" animate="visible">
+                    <label htmlFor="register-company-website" className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Company Website
+                    </label>
+                    <input
+                      id="register-company-website"
+                      type="text"
+                      placeholder="https://company.com"
+                      className={fieldClass}
+                      value={companyWebsite}
+                      onChange={(e) => setCompanyWebsite(e.target.value)}
+                    />
+                  </motion.div>
+                </>
+              )}
+
               <motion.div variants={authItemVariants}>
                 <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Register As</label>
                 <FormControl fullWidth size="small">
                   <Select
                     value={role}
-                    onChange={(e) => setRole(e.target.value)}
+                    onChange={(e) => {
+                      setRole(e.target.value);
+                      setStudentType("open_student");
+                      setCollegeId("");
+                      if (e.target.value !== "recruiter") {
+                        setCompanyName("");
+                        setCompanyWebsite("");
+                      }
+                    }}
                     IconComponent={KeyboardArrowDownRoundedIcon}
                     MenuProps={registerSelectMenuProps}
                     sx={registerSelectSx}
@@ -285,6 +403,62 @@ export default function Register() {
                   </Select>
                 </FormControl>
               </motion.div>
+
+              {role === "student" && (
+                <motion.div variants={authItemVariants} initial="visible" animate="visible">
+                  <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Student Type</label>
+                  <FormControl fullWidth size="small">
+                    <Select
+                      value={studentType}
+                      onChange={(e) => {
+                        setStudentType(e.target.value);
+                        setCollegeId("");
+                      }}
+                      IconComponent={KeyboardArrowDownRoundedIcon}
+                      MenuProps={registerSelectMenuProps}
+                      sx={registerSelectSx}
+                    >
+                      <MenuItem value="open_student">Open Student</MenuItem>
+                      <MenuItem value="college_student">College Student</MenuItem>
+                    </Select>
+                  </FormControl>
+                  {studentType === "open_student" && (
+                    <p className="mt-1.5 text-xs text-slate-400">
+                      Open Students can register with a personal email and get limited access.
+                    </p>
+                  )}
+                </motion.div>
+              )}
+
+              {role === "student" && studentType === "college_student" && (
+                <motion.div variants={authItemVariants} initial="visible" animate="visible">
+                  <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Select College</label>
+                  <FormControl fullWidth size="small">
+                    <Select
+                      value={collegeId}
+                      onChange={(e) => setCollegeId(e.target.value)}
+                      displayEmpty
+                      IconComponent={KeyboardArrowDownRoundedIcon}
+                      MenuProps={registerSelectMenuProps}
+                      sx={registerSelectSx}
+                    >
+                      <MenuItem value="" disabled>
+                        {collegesLoading ? "Loading colleges..." : "Choose your college"}
+                      </MenuItem>
+                      {colleges.map((c) => (
+                        <MenuItem key={c._id} value={c._id}>
+                          {c.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  {selectedCollege && (
+                    <p className="mt-1.5 text-xs font-medium text-[#243b95]">
+                      Use your official college email ending with @{selectedCollege.domain}
+                    </p>
+                  )}
+                </motion.div>
+              )}
 
               <motion.button
                 variants={authItemVariants}

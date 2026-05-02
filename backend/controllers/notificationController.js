@@ -15,7 +15,7 @@ exports.getMyNotifications = async (req, res) => {
 
     res.json({ notifications, unreadCount });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -38,7 +38,7 @@ exports.markAsRead = async (req, res) => {
 
     res.json(notification);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -52,6 +52,6 @@ exports.markAllAsRead = async (req, res) => {
 
     res.json({ message: "All notifications marked as read" });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };

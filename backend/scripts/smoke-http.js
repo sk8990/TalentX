@@ -246,12 +246,10 @@ const roleChecks = {
       path: "/api/admin/selected-candidates",
       expectedStatuses: [200],
     },
-    {
-      name: "Pending recruiters",
-      method: "get",
-      path: "/api/admin/pending-recruiters",
-      expectedStatuses: [200],
-    },
+    // NOTE: /api/admin/pending-recruiters is intentionally removed.
+    // Recruiter approval is handled exclusively by Super Admin via
+    // GET /api/super-admin/recruiters/pending (requires super_admin role).
+    // University Admin does not have access to recruiter approval endpoints.
     {
       name: "Support tickets",
       method: "get",

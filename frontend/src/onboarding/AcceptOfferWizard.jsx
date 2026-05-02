@@ -6,7 +6,8 @@ import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import BusinessCenterRoundedIcon from "@mui/icons-material/BusinessCenterRounded";
 import VerifiedRoundedIcon from "@mui/icons-material/VerifiedRounded";
 import { TalentXMark } from "../components/TalentXBrand";
-import { buildServerAssetUrl } from "./api";
+import SecureUploadImage from "../components/SecureUploadImage";
+import { fetchOfferLetterBlob } from "./api";
 import onboardingAPI from "./api";
 import { getInitials } from "./constants";
 import OnboardingStepper from "./OnboardingStepper";
@@ -46,6 +47,14 @@ function isDocumentAccepted(document) {
   return ["verified", "approved", "manual_review"].includes(document?.status);
 }
 
+function getOfferApplicationId(selectedInstance) {
+  return (
+    selectedInstance?.offer?.applicationId ||
+    selectedInstance?.applicationId ||
+    ""
+  );
+}
+
 function getVerificationLabel(status) {
   if (status === "verified") return "Verified";
   if (status === "manual_review") return "Manual Review";
@@ -53,19 +62,54 @@ function getVerificationLabel(status) {
   return "Pending";
 }
 
-function LetterPreview({ selectedInstance, user }) {
+function LetterPreview({ selectedInstance, user, authToken }) {
   const offerLetterUrl = selectedInstance?.offer?.offerLetterUrl;
+  const applicationId = getOfferApplicationId(selectedInstance);
+  const [previewUrl, setPreviewUrl] = useState("");
   const companyName = selectedInstance?.companyName || "Company";
   const role = selectedInstance?.job?.title || "Offered Role";
   const candidateName = selectedInstance?.acceptanceFlow?.candidateName || user?.name || "Candidate";
   const companyInitials = getInitials(companyName);
 
-  if (offerLetterUrl) {
+  useEffect(() => {
+    let active = true;
+    let objectUrl = "";
+
+    if (!offerLetterUrl || !applicationId || !authToken) {
+      Promise.resolve().then(() => {
+        if (active) {
+          setPreviewUrl("");
+        }
+      });
+      return undefined;
+    }
+
+    fetchOfferLetterBlob(applicationId, authToken)
+      .then((blob) => {
+        if (!active) return;
+        objectUrl = window.URL.createObjectURL(new Blob([blob], { type: "application/pdf" }));
+        setPreviewUrl(objectUrl);
+      })
+      .catch(() => {
+        if (active) {
+          setPreviewUrl("");
+        }
+      });
+
+    return () => {
+      active = false;
+      if (objectUrl) {
+        window.URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [offerLetterUrl, applicationId, authToken]);
+
+  if (offerLetterUrl && previewUrl) {
     return (
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-100 p-2 shadow-sm sm:p-4">
         <iframe
           title={`${companyName} offer letter`}
-          src={buildServerAssetUrl(offerLetterUrl)}
+          src={previewUrl}
           className="h-[360px] w-full rounded-lg border border-slate-200 bg-white sm:h-[560px]"
         />
       </div>
@@ -111,12 +155,29 @@ function LetterPreview({ selectedInstance, user }) {
   );
 }
 
-function OfficialLetterStep({ selectedInstance, user, onAgree, onCancel }) {
+function OfficialLetterStep({ selectedInstance, user, authToken, onAgree, onCancel }) {
   const offerLetterUrl = selectedInstance?.offer?.offerLetterUrl;
+  const applicationId = getOfferApplicationId(selectedInstance);
+  const [downloading, setDownloading] = useState(false);
 
-  const handleDownload = () => {
-    if (offerLetterUrl) {
-      window.open(buildServerAssetUrl(offerLetterUrl), "_blank", "noopener,noreferrer");
+  const handleDownload = async () => {
+    if (offerLetterUrl && applicationId && authToken) {
+      try {
+        setDownloading(true);
+        const blob = await fetchOfferLetterBlob(applicationId, authToken);
+        const url = window.URL.createObjectURL(new Blob([blob], { type: "application/pdf" }));
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = `offer-${String(applicationId).slice(-6)}.pdf`;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        window.URL.revokeObjectURL(url);
+      } catch (err) {
+        toast.error(err.response?.data?.message || "Unable to download offer letter.");
+      } finally {
+        setDownloading(false);
+      }
       return;
     }
 
@@ -136,17 +197,18 @@ function OfficialLetterStep({ selectedInstance, user, onAgree, onCancel }) {
         <div className="mx-auto max-w-5xl">
           <h2 className="text-center text-xl font-semibold text-slate-950">Letter Of Intent</h2>
           <div className="mt-6">
-            <LetterPreview selectedInstance={selectedInstance} user={user} />
+            <LetterPreview selectedInstance={selectedInstance} user={user} authToken={authToken} />
           </div>
 
           <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <button
               type="button"
               onClick={handleDownload}
+              disabled={downloading}
               className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
             >
               <DownloadRoundedIcon sx={{ fontSize: 16 }} />
-              Download As PDF
+              {downloading ? "Downloading..." : "Download As PDF"}
             </button>
 
             <div className="flex flex-col gap-3 sm:flex-row">
@@ -337,7 +399,6 @@ export default function AcceptOfferWizard({
   }, [selectedInstance]);
 
   const hasLogo = Boolean(selectedInstance?.companyLogo);
-  const companyLogoUrl = hasLogo ? buildServerAssetUrl(selectedInstance.companyLogo) : "";
   const documentStep = useMemo(() => findStep(selectedInstance, "document_collection"), [selectedInstance]);
 
   const handleDocumentChange = (key, document) => {
@@ -395,8 +456,8 @@ export default function AcceptOfferWizard({
             </div>
           </div>
           <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2">
-            {companyLogoUrl ? (
-              <img src={companyLogoUrl} alt={companyName} className="h-8 w-8 rounded bg-white object-contain" />
+            {hasLogo ? (
+              <SecureUploadImage src={selectedInstance.companyLogo} alt={companyName} className="h-8 w-8 rounded bg-white object-contain" />
             ) : (
               <span className="inline-flex h-8 w-8 items-center justify-center rounded bg-indigo-50 text-xs font-semibold text-indigo-700">
                 {getInitials(companyName)}
@@ -418,6 +479,7 @@ export default function AcceptOfferWizard({
         <OfficialLetterStep
           selectedInstance={selectedInstance}
           user={user}
+          authToken={authToken}
           onAgree={() => setActiveStep(1)}
           onCancel={onCancel}
         />

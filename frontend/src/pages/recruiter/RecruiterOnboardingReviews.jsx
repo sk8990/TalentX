@@ -10,7 +10,8 @@ import TrendingUpRoundedIcon from "@mui/icons-material/TrendingUpRounded";
 import TaskAltRoundedIcon from "@mui/icons-material/TaskAltRounded";
 import PendingActionsRoundedIcon from "@mui/icons-material/PendingActionsRounded";
 import API from "../../api/axios";
-import { buildServerAssetUrl } from "../../onboarding/api";
+import ProtectedUploadLink from "../../components/ProtectedUploadLink";
+import SecureUploadImage from "../../components/SecureUploadImage";
 import ScreenLoader from "../../components/ScreenLoader";
 
 // Phase 4.1: Stats card for the analytics bar
@@ -30,15 +31,13 @@ function StatCard({ icon, label, value, bgColor, textColor }) {
 
 function FilePill({ item }) {
   return (
-    <a
-      href={buildServerAssetUrl(item.url)}
-      target="_blank"
-      rel="noreferrer"
+    <ProtectedUploadLink
+      uploadPath={item.url}
       className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-indigo-300 hover:text-indigo-700"
     >
       <DescriptionOutlinedIcon sx={{ fontSize: 16 }} />
       {item.label}
-    </a>
+    </ProtectedUploadLink>
   );
 }
 
@@ -141,7 +140,7 @@ export default function RecruiterOnboardingReviews() {
           reviewNotes: notes[item.instanceId] || ""
         });
         successCount++;
-      } catch (_err) { /* continue */ }
+      } catch { /* continue */ }
     }
     toast.success(`${successCount} of ${items.length} submissions approved`);
     setBusyKey("");
@@ -300,7 +299,7 @@ export default function RecruiterOnboardingReviews() {
                     <div className="flex items-start gap-4">
                       <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-3xl border border-slate-200 bg-slate-50">
                         {item.companyLogo ? (
-                          <img src={buildServerAssetUrl(item.companyLogo)} alt={item.companyName} className="h-full w-full object-cover" />
+                          <SecureUploadImage src={item.companyLogo} alt={item.companyName} className="h-full w-full object-cover" />
                         ) : (
                           <span className="text-xl font-semibold text-indigo-600">{item.companyName.slice(0, 1)}</span>
                         )}

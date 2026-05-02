@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import API, { getServerOrigin } from "../api/axios";
+import API from "../api/axios";
+import ProtectedUploadLink from "../components/ProtectedUploadLink";
 import toast from "react-hot-toast";
 import SmartToyIcon from "@mui/icons-material/SmartToy";
 import SendIcon from "@mui/icons-material/Send";
@@ -8,7 +9,6 @@ import AddPhotoAlternateIcon from "@mui/icons-material/AddPhotoAlternate";
 import CloseIcon from "@mui/icons-material/Close";
 
 export default function StudentSupport() {
-  const serverOrigin = getServerOrigin();
   const [question, setQuestion] = useState("");
   const [chat, setChat] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -203,15 +203,13 @@ export default function StudentSupport() {
                 </div>
 
                 {ticket?.screenshotPath && (
-                  <a
-                    href={`${serverOrigin}${ticket?.screenshotPath}`}
-                    target="_blank"
-                    rel="noreferrer"
+                  <ProtectedUploadLink
+                    uploadPath={ticket.screenshotPath}
                     className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-700"
                   >
                     <AddPhotoAlternateIcon sx={{ fontSize: 14 }} />
                     View Screenshot
-                  </a>
+                  </ProtectedUploadLink>
                 )}
 
                 {ticket?.adminResponse ? (

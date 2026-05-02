@@ -9,6 +9,40 @@ const studentSchema = new mongoose.Schema(
       unique: true
     },
 
+    studentType: {
+      type: String,
+      enum: ["college_student", "open_student"],
+      default: "open_student"
+    },
+
+    collegeId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "College",
+      default: null
+    },
+
+    collegeName: {
+      type: String,
+      default: null
+    },
+
+    collegeVerificationStatus: {
+      type: String,
+      enum: ["not_required", "pending", "approved", "rejected"],
+      default: "not_required"
+    },
+
+    isCollegeVerified: {
+      type: Boolean,
+      default: false
+    },
+
+    accessLevel: {
+      type: String,
+      enum: ["limited", "full"],
+      default: "limited"
+    },
+
     branch: {
       type: String,
       enum: ["CS", "IT", "ENTC", "MECH", "CIVIL"],
@@ -68,5 +102,10 @@ const studentSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+studentSchema.index({ collegeId: 1 });
+studentSchema.index({ studentType: 1 });
+studentSchema.index({ collegeVerificationStatus: 1 });
+studentSchema.index({ accessLevel: 1 });
 
 module.exports = mongoose.model("Student", studentSchema);

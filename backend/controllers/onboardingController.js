@@ -13,6 +13,7 @@ const {
   verifyOnboardingDocument,
   acceptOnboardingOffer
 } = require("../services/onboarding/service");
+const { checkStudentLimit } = require("../helpers/studentAccessHelper");
 
 function isValidObjectId(value) {
   return mongoose.Types.ObjectId.isValid(value);
@@ -46,7 +47,7 @@ exports.initOnboarding = async (req, res) => {
     });
   } catch (err) {
     const statusCode = err.statusCode || 500;
-    res.status(statusCode).json({ message: err.message });
+    res.status(statusCode).json({ message: statusCode < 500 ? err.message : "Internal server error" });
   }
 };
 
@@ -61,6 +62,13 @@ exports.getOnboardingPortal = async (req, res) => {
       return res.status(403).json({ message: "Only students can access the onboarding portal" });
     }
 
+    const limitCheck = await checkStudentLimit(req.user, "onboarding");
+    if (!limitCheck.allowed) {
+      return res.status(403).json({
+        message: "Onboarding access is available only for verified Enterprise college students."
+      });
+    }
+
     const payload = await buildStudentPortalPayload({
       userId: req.user.id,
       selectedInstanceId: req.query?.instanceId
@@ -69,7 +77,7 @@ exports.getOnboardingPortal = async (req, res) => {
     res.json(payload);
   } catch (err) {
     const statusCode = err.statusCode || 500;
-    res.status(statusCode).json({ message: err.message });
+    res.status(statusCode).json({ message: statusCode < 500 ? err.message : "Internal server error" });
   }
 };
 
@@ -88,7 +96,7 @@ exports.getOnboardingCompanies = async (req, res) => {
     });
   } catch (err) {
     const statusCode = err.statusCode || 500;
-    res.status(statusCode).json({ message: err.message });
+    res.status(statusCode).json({ message: statusCode < 500 ? err.message : "Internal server error" });
   }
 };
 
@@ -106,7 +114,7 @@ exports.getOnboardingDetails = async (req, res) => {
     res.json(payload);
   } catch (err) {
     const statusCode = err.statusCode || 500;
-    res.status(statusCode).json({ message: err.message });
+    res.status(statusCode).json({ message: statusCode < 500 ? err.message : "Internal server error" });
   }
 };
 
@@ -132,7 +140,7 @@ exports.uploadOnboardingDocument = async (req, res) => {
       require("fs").unlink(req.file.path, () => {});
     }
     const statusCode = err.statusCode || 500;
-    res.status(statusCode).json({ message: err.message });
+    res.status(statusCode).json({ message: statusCode < 500 ? err.message : "Internal server error" });
   }
 };
 
@@ -151,7 +159,7 @@ exports.verifyOnboardingDocument = async (req, res) => {
     res.json(payload);
   } catch (err) {
     const statusCode = err.statusCode || 500;
-    res.status(statusCode).json({ message: err.message });
+    res.status(statusCode).json({ message: statusCode < 500 ? err.message : "Internal server error" });
   }
 };
 
@@ -172,7 +180,7 @@ exports.acceptOffer = async (req, res) => {
     });
   } catch (err) {
     const statusCode = err.statusCode || 500;
-    res.status(statusCode).json({ message: err.message });
+    res.status(statusCode).json({ message: statusCode < 500 ? err.message : "Internal server error" });
   }
 };
 
@@ -191,7 +199,7 @@ exports.submitStep = async (req, res) => {
     res.json(payload);
   } catch (err) {
     const statusCode = err.statusCode || 500;
-    res.status(statusCode).json({ message: err.message });
+    res.status(statusCode).json({ message: statusCode < 500 ? err.message : "Internal server error" });
   }
 };
 
@@ -210,7 +218,7 @@ exports.getPreJoiningReading = async (req, res) => {
     res.json({ reading });
   } catch (err) {
     const statusCode = err.statusCode || 500;
-    res.status(statusCode).json({ message: err.message });
+    res.status(statusCode).json({ message: statusCode < 500 ? err.message : "Internal server error" });
   }
 };
 
@@ -228,7 +236,7 @@ exports.getPreJoiningVideo = async (req, res) => {
     res.json({ video });
   } catch (err) {
     const statusCode = err.statusCode || 500;
-    res.status(statusCode).json({ message: err.message });
+    res.status(statusCode).json({ message: statusCode < 500 ? err.message : "Internal server error" });
   }
 };
 
@@ -247,7 +255,7 @@ exports.getLearnMoreSection = async (req, res) => {
     res.json(payload);
   } catch (err) {
     const statusCode = err.statusCode || 500;
-    res.status(statusCode).json({ message: err.message });
+    res.status(statusCode).json({ message: statusCode < 500 ? err.message : "Internal server error" });
   }
 };
 
@@ -257,6 +265,6 @@ exports.getStats = async (req, res) => {
     res.json(stats);
   } catch (err) {
     const statusCode = err.statusCode || 500;
-    res.status(statusCode).json({ message: err.message });
+    res.status(statusCode).json({ message: statusCode < 500 ? err.message : "Internal server error" });
   }
 };
