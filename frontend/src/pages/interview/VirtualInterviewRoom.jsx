@@ -14,6 +14,7 @@ import API, { getServerOrigin } from "../../api/axios";
 import InterviewerFeedbackForm, {
   getDefaultInterviewerFeedbackForm
 } from "../../components/interviewer/InterviewerFeedbackForm";
+import JitsiMeetingRoom from "./JitsiMeetingRoom";
 
 const RTC_CONFIG = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
 const REASONS = ["STUDENT_NO_SHOW", "INTERVIEWER_UNAVAILABLE", "OTHER"];
@@ -173,6 +174,8 @@ export default function VirtualInterviewRoom({ role, initialRoomData = null }) {
   const joinStatus = joinRequest.status;
   const studentRequiresApproval = role === "student";
   const hasSubmittedFeedback = Boolean(roomData?.interviewerFeedback?.submittedAt);
+  const isHumanPanel = String(roomData?.interview?.panelType || "HUMAN").trim().toUpperCase() === "HUMAN";
+  const jitsiMeetingLink = roomData?.interview?.link || roomData?.meetingLink || "";
   const title = useMemo(() => {
     const job = roomData?.job?.title || "Interview";
     const company = roomData?.job?.companyName || "";
@@ -356,6 +359,8 @@ export default function VirtualInterviewRoom({ role, initialRoomData = null }) {
 
   useEffect(() => {
     if (!sessionStarted) return undefined;
+    // Jitsi handles all media for Human panel interviews — skip WebRTC.
+    if (isHumanPanel) return undefined;
     let cancelled = false;
     const startSession = async () => {
       try {
@@ -449,7 +454,7 @@ export default function VirtualInterviewRoom({ role, initialRoomData = null }) {
   }, [sessionStarted, applicationId]);
 
   useEffect(() => {
-    if (!sessionStarted) return undefined;
+    if (!sessionStarted || isHumanPanel) return undefined;
     const onVisibility = () => {
       if (document.hidden) {
         setViolationCount((v) => v + 1);
@@ -476,7 +481,7 @@ export default function VirtualInterviewRoom({ role, initialRoomData = null }) {
       document.removeEventListener("webkitfullscreenchange", onFullscreen);
       window.removeEventListener("beforeunload", onUnload);
     };
-  }, [sessionStarted]);
+  }, [sessionStarted, isHumanPanel]);
 
   useEffect(() => {
     if (role !== "student" || sessionStarted || joinStatus !== JOIN_STATUS.PENDING) return undefined;
@@ -520,9 +525,11 @@ export default function VirtualInterviewRoom({ role, initialRoomData = null }) {
   }, [role, applicationId]);
 
   const enterSession = async () => {
-    const full = await requestFullscreenSafe();
-    if (!full) {
-      setViolation("Fullscreen permission denied. Protected mode requires fullscreen.");
+    if (!isHumanPanel) {
+      const full = await requestFullscreenSafe();
+      if (!full) {
+        setViolation("Fullscreen permission denied. Protected mode requires fullscreen.");
+      }
     }
     setRoomClosed(false);
     setSessionStarted(true);
@@ -599,7 +606,7 @@ export default function VirtualInterviewRoom({ role, initialRoomData = null }) {
   };
 
   const startInterview = async () => {
-    if (!allChecksPassed) return toast.error("Please pass all system checks first");
+    if (!isHumanPanel && !allChecksPassed) return toast.error("Please pass all system checks first");
     if (studentRequiresApproval && joinStatus !== JOIN_STATUS.APPROVED) {
       await sendJoinRequest();
       return;
@@ -745,50 +752,97 @@ export default function VirtualInterviewRoom({ role, initialRoomData = null }) {
           <p className="mt-2 text-sm text-slate-300">Scheduled: {formatDateTime(roomData?.interview?.date)} to {formatDateTime(roomData?.interview?.endDate)}</p>
         </section>
         <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">System Check Before Start</h2>
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">{Object.entries(checks).map(([key, value]) => <div key={key} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2"><p className="text-xs font-semibold uppercase text-slate-500">{key}</p><p className={`mt-1 text-sm font-semibold ${statusBadge(value)}`}>{value.toUpperCase()}</p></div>)}</div>
-          {checkError ? (
-            <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">
-              {checkError}
-            </div>
-          ) : null}
-          {role === "student" ? (
-            <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Interviewer Approval</p>
-              <p className="mt-1 text-sm font-semibold text-slate-800">
-                Status: {joinStatus === JOIN_STATUS.PENDING ? "Pending" : joinStatus === JOIN_STATUS.APPROVED ? "Approved" : joinStatus === JOIN_STATUS.REJECTED ? "Rejected" : "Not Requested"}
+          {isHumanPanel ? (
+            <>
+              <h2 className="text-lg font-semibold text-slate-900">Join Interview Room</h2>
+              <p className="mt-2 text-sm text-slate-600">
+                This interview uses Jitsi Meet. Your camera and microphone permissions will be requested when you join.
               </p>
-              {joinStatus === JOIN_STATUS.PENDING ? (
-                <p className="mt-1 text-xs text-amber-700">Your request has been sent. Waiting for interviewer decision.</p>
+              {role === "student" ? (
+                <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Interviewer Approval</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-800">
+                    Status: {joinStatus === JOIN_STATUS.PENDING ? "Pending" : joinStatus === JOIN_STATUS.APPROVED ? "Approved" : joinStatus === JOIN_STATUS.REJECTED ? "Rejected" : "Not Requested"}
+                  </p>
+                  {joinStatus === JOIN_STATUS.PENDING ? (
+                    <p className="mt-1 text-xs text-amber-700">Your request has been sent. Waiting for interviewer decision.</p>
+                  ) : null}
+                  {joinStatus === JOIN_STATUS.REJECTED ? (
+                    <p className="mt-1 text-xs text-rose-700">{joinRequest.rejectReason || "The interviewer rejected your join request. You can request again."}</p>
+                  ) : null}
+                </div>
               ) : null}
-              {joinStatus === JOIN_STATUS.REJECTED ? (
-                <p className="mt-1 text-xs text-rose-700">{joinRequest.rejectReason || "The interviewer rejected your join request. You can request again."}</p>
+              {role === "interviewer" && joinStatus === JOIN_STATUS.PENDING ? (
+                <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">Student Join Request</p>
+                  <p className="mt-1 text-sm font-semibold text-amber-900">A student is requesting entry to this interview room.</p>
+                  <TextField
+                    value={rejectReason}
+                    onChange={(event) => setRejectReason(event.target.value)}
+                    size="small"
+                    fullWidth
+                    placeholder="Optional rejection reason"
+                    sx={{ mt: 1, bgcolor: "#fff" }}
+                  />
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <button onClick={() => decideJoinRequest("APPROVE")} disabled={decidingJoin} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60">{decidingJoin ? "Saving..." : "Approve Join"}</button>
+                    <button onClick={() => decideJoinRequest("REJECT")} disabled={decidingJoin} className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 disabled:cursor-not-allowed disabled:opacity-60">Reject</button>
+                  </div>
+                </div>
               ) : null}
-            </div>
-          ) : null}
-          {role === "interviewer" && joinStatus === JOIN_STATUS.PENDING ? (
-            <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">Student Join Request</p>
-              <p className="mt-1 text-sm font-semibold text-amber-900">A student is requesting entry to this interview room.</p>
-              <TextField
-                value={rejectReason}
-                onChange={(event) => setRejectReason(event.target.value)}
-                size="small"
-                fullWidth
-                placeholder="Optional rejection reason"
-                sx={{ mt: 1, bgcolor: "#fff" }}
-              />
-              <div className="mt-2 flex flex-wrap gap-2">
-                <button onClick={() => decideJoinRequest("APPROVE")} disabled={decidingJoin} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60">{decidingJoin ? "Saving..." : "Approve Join"}</button>
-                <button onClick={() => decideJoinRequest("REJECT")} disabled={decidingJoin} className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 disabled:cursor-not-allowed disabled:opacity-60">Reject</button>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button onClick={startInterview} disabled={requestingJoin || (role === "student" && joinStatus === JOIN_STATUS.PENDING)} className="rounded-xl bg-indigo-600 px-5 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600">{role === "student" ? (joinStatus === JOIN_STATUS.APPROVED ? "Join Jitsi Meeting" : joinStatus === JOIN_STATUS.PENDING ? "Waiting for Approval..." : requestingJoin ? "Sending Request..." : "Request Join Access") : "Join Jitsi Meeting"}</button>
+                <button onClick={() => navigate(backPath)} className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700">Cancel</button>
               </div>
-            </div>
-          ) : null}
-          <div className="mt-4 flex flex-wrap gap-2">
-            <button onClick={runSystemCheck} disabled={checkRunning} className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold">{checkRunning ? "Running..." : "Retry Checks"}</button>
-            <button onClick={startInterview} disabled={!allChecksPassed || checkRunning || requestingJoin || (role === "student" && joinStatus === JOIN_STATUS.PENDING)} className="rounded-xl bg-indigo-600 px-5 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600">{role === "student" ? (joinStatus === JOIN_STATUS.APPROVED ? "Start Interview (Fullscreen)" : joinStatus === JOIN_STATUS.PENDING ? "Waiting for Approval..." : requestingJoin ? "Sending Request..." : "Request Join Access") : "Start Interview (Fullscreen)"}</button>
-            <button onClick={() => navigate(backPath)} className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700">Cancel</button>
-          </div>
+            </>
+          ) : (
+            <>
+              <h2 className="text-lg font-semibold text-slate-900">System Check Before Start</h2>
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">{Object.entries(checks).map(([key, value]) => <div key={key} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2"><p className="text-xs font-semibold uppercase text-slate-500">{key}</p><p className={`mt-1 text-sm font-semibold ${statusBadge(value)}`}>{value.toUpperCase()}</p></div>)}</div>
+              {checkError ? (
+                <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">
+                  {checkError}
+                </div>
+              ) : null}
+              {role === "student" ? (
+                <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Interviewer Approval</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-800">
+                    Status: {joinStatus === JOIN_STATUS.PENDING ? "Pending" : joinStatus === JOIN_STATUS.APPROVED ? "Approved" : joinStatus === JOIN_STATUS.REJECTED ? "Rejected" : "Not Requested"}
+                  </p>
+                  {joinStatus === JOIN_STATUS.PENDING ? (
+                    <p className="mt-1 text-xs text-amber-700">Your request has been sent. Waiting for interviewer decision.</p>
+                  ) : null}
+                  {joinStatus === JOIN_STATUS.REJECTED ? (
+                    <p className="mt-1 text-xs text-rose-700">{joinRequest.rejectReason || "The interviewer rejected your join request. You can request again."}</p>
+                  ) : null}
+                </div>
+              ) : null}
+              {role === "interviewer" && joinStatus === JOIN_STATUS.PENDING ? (
+                <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">Student Join Request</p>
+                  <p className="mt-1 text-sm font-semibold text-amber-900">A student is requesting entry to this interview room.</p>
+                  <TextField
+                    value={rejectReason}
+                    onChange={(event) => setRejectReason(event.target.value)}
+                    size="small"
+                    fullWidth
+                    placeholder="Optional rejection reason"
+                    sx={{ mt: 1, bgcolor: "#fff" }}
+                  />
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <button onClick={() => decideJoinRequest("APPROVE")} disabled={decidingJoin} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60">{decidingJoin ? "Saving..." : "Approve Join"}</button>
+                    <button onClick={() => decideJoinRequest("REJECT")} disabled={decidingJoin} className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 disabled:cursor-not-allowed disabled:opacity-60">Reject</button>
+                  </div>
+                </div>
+              ) : null}
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button onClick={runSystemCheck} disabled={checkRunning} className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold">{checkRunning ? "Running..." : "Retry Checks"}</button>
+                <button onClick={startInterview} disabled={!allChecksPassed || checkRunning || requestingJoin || (role === "student" && joinStatus === JOIN_STATUS.PENDING)} className="rounded-xl bg-indigo-600 px-5 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600">{role === "student" ? (joinStatus === JOIN_STATUS.APPROVED ? "Start Interview (Fullscreen)" : joinStatus === JOIN_STATUS.PENDING ? "Waiting for Approval..." : requestingJoin ? "Sending Request..." : "Request Join Access") : "Start Interview (Fullscreen)"}</button>
+                <button onClick={() => navigate(backPath)} className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700">Cancel</button>
+              </div>
+            </>
+          )}
         </section>
       </div>
     );
@@ -816,17 +870,40 @@ export default function VirtualInterviewRoom({ role, initialRoomData = null }) {
         </section>
       ) : null}
 
-      <section className="grid gap-4 lg:grid-cols-2">
-        <article className="relative overflow-hidden rounded-3xl border border-slate-200 bg-black"><video ref={remoteVideoRef} autoPlay playsInline className="h-[360px] w-full object-cover" />{!remoteName ? <div className="absolute inset-0 grid place-items-center bg-slate-950/70 text-sm text-slate-200">Waiting for participant...</div> : null}<div className="absolute bottom-3 left-3 rounded-lg bg-black/55 px-3 py-1.5 text-xs font-semibold text-white">{remoteName || "Remote"}</div></article>
-        <article className="relative overflow-hidden rounded-3xl border border-slate-200 bg-black"><video ref={localVideoRef} autoPlay playsInline muted className="h-[360px] w-full object-cover" /><div className="absolute bottom-3 left-3 rounded-lg bg-black/55 px-3 py-1.5 text-xs font-semibold text-white">You ({role})</div></article>
-      </section>
+      {isHumanPanel && jitsiMeetingLink ? (
+        <section className="overflow-hidden rounded-3xl border border-slate-200 bg-black">
+          <JitsiMeetingRoom
+            meetingLink={jitsiMeetingLink}
+            displayName={roomData?.participant?.name || role}
+            height="520px"
+            onLeave={() => leaveRoom()}
+          />
+        </section>
+      ) : (
+        <section className="grid gap-4 lg:grid-cols-2">
+          <article className="relative overflow-hidden rounded-3xl border border-slate-200 bg-black"><video ref={remoteVideoRef} autoPlay playsInline className="h-90 w-full object-cover" />{!remoteName ? <div className="absolute inset-0 grid place-items-center bg-slate-950/70 text-sm text-slate-200">Waiting for participant...</div> : null}<div className="absolute bottom-3 left-3 rounded-lg bg-black/55 px-3 py-1.5 text-xs font-semibold text-white">{remoteName || "Remote"}</div></article>
+          <article className="relative overflow-hidden rounded-3xl border border-slate-200 bg-black"><video ref={localVideoRef} autoPlay playsInline muted className="h-90 w-full object-cover" /><div className="absolute bottom-3 left-3 rounded-lg bg-black/55 px-3 py-1.5 text-xs font-semibold text-white">You ({role})</div></article>
+        </section>
+      )}
 
       <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-        <p className="text-sm font-semibold text-slate-700">Status: <span className="text-slate-900">{connecting ? "Connecting..." : connectionState === "connected" ? "Live" : connectionState === "waiting" ? "Waiting for participant" : connectionState === "ended" ? "Interview ended" : "Ready"}</span></p>
-        <p className="mt-1 text-xs font-semibold text-amber-700">Violation Count: {violationCount}</p>
+        {isHumanPanel && jitsiMeetingLink ? (
+          <p className="text-sm font-semibold text-slate-700">
+            Jitsi Meet room is active. Use the controls inside the video panel.
+          </p>
+        ) : (
+          <>
+            <p className="text-sm font-semibold text-slate-700">Status: <span className="text-slate-900">{connecting ? "Connecting..." : connectionState === "connected" ? "Live" : connectionState === "waiting" ? "Waiting for participant" : connectionState === "ended" ? "Interview ended" : "Ready"}</span></p>
+            <p className="mt-1 text-xs font-semibold text-amber-700">Violation Count: {violationCount}</p>
+          </>
+        )}
         <div className="mt-3 flex flex-wrap gap-2">
-          <button onClick={toggleAudio} className={`rounded-xl px-4 py-2 text-sm font-semibold ${audioEnabled ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>{audioEnabled ? "Mic On" : "Mic Off"}</button>
-          <button onClick={toggleVideo} className={`rounded-xl px-4 py-2 text-sm font-semibold ${videoEnabled ? "bg-indigo-100 text-indigo-700" : "bg-amber-100 text-amber-700"}`}>{videoEnabled ? "Camera On" : "Camera Off"}</button>
+          {!isHumanPanel ? (
+            <>
+              <button onClick={toggleAudio} className={`rounded-xl px-4 py-2 text-sm font-semibold ${audioEnabled ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>{audioEnabled ? "Mic On" : "Mic Off"}</button>
+              <button onClick={toggleVideo} className={`rounded-xl px-4 py-2 text-sm font-semibold ${videoEnabled ? "bg-indigo-100 text-indigo-700" : "bg-amber-100 text-amber-700"}`}>{videoEnabled ? "Camera On" : "Camera Off"}</button>
+            </>
+          ) : null}
           {role === "student" ? <button onClick={() => setSupportOpen(true)} className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-700">Need Help?</button> : null}
           {role === "interviewer" ? (
             <button onClick={() => setEndConfirmOpen(true)} className="rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white">

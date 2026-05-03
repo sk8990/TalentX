@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const Application = require("../models/Application");
 const Job = require("../models/Job");
 const Student = require("../models/Student");
@@ -36,6 +37,7 @@ const {
   notifyInterviewSlotBooked,
   notifyOfferReceived
 } = require("../services/notificationService");
+const { emailTemplates } = require("../services/emailService");
 const {
   checkStudentLimit,
   incrementStudentUsage,
@@ -60,6 +62,11 @@ function normalizeWebLink(value) {
   const raw = String(value || "").trim();
   if (!raw) return "";
   return /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+}
+
+function generateJitsiRoomName(applicationId) {
+  const token = crypto.randomBytes(6).toString("hex");
+  return `TalentX-${applicationId}-${token}`;
 }
 
 function parseOptionalCoordinate(value) {
@@ -735,11 +742,10 @@ exports.scheduleInterview = async (req, res) => {
       return res.status(400).json({ message: "AI interviews must use Online mode" });
     }
 
-    // Online HUMAN interviews require a meeting link so the interviewer and
-    // candidate can join the same call.
-    if (panelType === "HUMAN" && mode === "Online" && !link) {
-      return res.status(400).json({ message: "A meeting link is required for Online interviews" });
-    }
+    // For HUMAN Online interviews, auto-generate a Jitsi room if no link is provided.
+    const resolvedLink = (panelType === "HUMAN" && mode === "Online" && !link)
+      ? `https://meet.jit.si/${generateJitsiRoomName(req.params.applicationId)}`
+      : link;
 
     const endDate = providedEndDate || new Date(startDate.getTime() + 30 * 60 * 1000);
     if (endDate.getTime() <= startDate.getTime()) {
@@ -767,7 +773,7 @@ exports.scheduleInterview = async (req, res) => {
       startDate,
       endDate,
       mode,
-      link,
+      link: resolvedLink,
       panelType,
       aiConfig
     });
@@ -1006,8 +1012,13 @@ exports.publishInterviewSlots = async (req, res) => {
         return res.status(400).json({ message: `Slot ${i + 1}: AI interviews must use Online mode` });
       }
 
+      // For HUMAN Online slots, auto-generate a Jitsi meeting room if no link is provided.
+      const resolvedLink = (panelType === "HUMAN" && slotMode === "Online" && !link)
+        ? `https://meet.jit.si/${generateJitsiRoomName(req.params.applicationId)}`
+        : link;
+
       // Online HUMAN slots require a meeting link.
-      if (panelType === "HUMAN" && slotMode === "Online" && !link) {
+      if (panelType === "HUMAN" && slotMode === "Online" && !resolvedLink) {
         return res.status(400).json({ message: `Slot ${i + 1}: a meeting link is required for Online interviews` });
       }
 
@@ -1015,7 +1026,7 @@ exports.publishInterviewSlots = async (req, res) => {
         start,
         end,
         mode: slotMode,
-        link,
+        link: resolvedLink,
         bookedByStudent: false,
         bookedAt: null,
         bookedBy: null,
@@ -1299,18 +1310,32 @@ exports.assignInterviewerToApplication = async (req, res) => {
     clearInterviewSession(app);
     await app.save();
 
+    const interviewerName = interviewerProfile.userId.name || "Interviewer";
+    const candidateName = app.studentId?.userId?.name || "Candidate";
+    const jobTitle = app.jobId?.title || "Interview";
+    const companyName = app.jobId?.companyName || "";
+    const interviewDate = app.interview.date;
+    const assignEmail = emailTemplates.interviewerAssigned(
+      interviewerName,
+      jobTitle,
+      companyName,
+      interviewDate,
+      candidateName
+    );
+
     notify({
       userId: interviewerProfile.userId._id.toString(),
       type: "INTERVIEWER_ASSIGNED",
-      title: `Interview Assigned: ${app.jobId?.title || "Interview"}`,
-      message: `You have a new interview scheduled on ${new Date(app.interview.date).toLocaleString()}.`,
+      title: `Interview Assigned: ${jobTitle}`,
+      message: `You have a new interview scheduled on ${new Date(interviewDate).toLocaleString()}.`,
       link: "/interviewer",
       metadata: {
         applicationId: app._id,
-        interviewDate: app.interview.date,
-        companyName: app.jobId?.companyName || ""
+        interviewDate,
+        companyName
       },
-      sendMail: false
+      sendMail: true,
+      emailData: assignEmail
     }).catch((err) => logNotificationError("interviewer assignment", err));
 
     await writeApplicationAudit({

@@ -480,13 +480,9 @@ export default function RecruiterApplications() {
         return;
       }
 
-      // AI slots must be online; HUMAN online slots require a meeting link.
+      // AI slots must be online.
       if (slotDialog.panelType === "AI" && slot.mode !== "Online") {
         toast.error(`Slot ${i + 1}: AI interviews must use Online mode`);
-        return;
-      }
-      if (slotDialog.panelType === "HUMAN" && slot.mode === "Online" && !slot.link.trim()) {
-        toast.error(`Slot ${i + 1}: a meeting link is required for Online interviews`);
         return;
       }
     }
@@ -1354,42 +1350,44 @@ export default function RecruiterApplications() {
                     sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2, backgroundColor: "#ffffff", opacity: 0.8 } }}
                   />
                   <TextField
-                    select={slotDialog.panelType === "HUMAN"}
+                    select
                     label="Mode"
                     value={slot.mode}
-                    onChange={(e) => slotDialog.panelType === "HUMAN" && updateSlotField(index, "mode", e.target.value)}
+                    onChange={(e) => updateSlotField(index, "mode", e.target.value)}
                     size="small"
                     fullWidth
                     disabled={slotDialog.panelType === "AI"}
                     sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2, backgroundColor: "#ffffff" } }}
                   >
-                    {slotDialog.panelType === "HUMAN" ? (
-                      <>
-                        <MenuItem value="Online">Online</MenuItem>
-                        <MenuItem value="Offline">Offline</MenuItem>
-                      </>
-                    ) : null}
+                    <MenuItem value="Online">Online</MenuItem>
+                    <MenuItem value="Offline">Offline</MenuItem>
                   </TextField>
-                  <TextField
-                    label={
-                      slotDialog.panelType === "HUMAN" && slot.mode === "Offline"
-                        ? "Venue / Address"
-                        : slotDialog.panelType === "HUMAN"
-                        ? "Meeting Link (required)"
-                        : "Optional Backup Link"
-                    }
-                    value={slot.link}
-                    onChange={(e) => updateSlotField(index, "link", e.target.value)}
-                    placeholder={
-                      slotDialog.panelType === "HUMAN" && slot.mode === "Offline"
-                        ? "Office / Campus location"
-                        : "https://meet.google.com/..."
-                    }
-                    required={slotDialog.panelType === "HUMAN" && slot.mode === "Online"}
-                    size="small"
-                    fullWidth
-                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2, backgroundColor: "#ffffff" } }}
-                  />
+                  {slotDialog.panelType === "HUMAN" && slot.mode === "Online" ? (
+                    <div className="flex items-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+                      <span className="mr-1.5 text-base">📹</span>
+                      Jitsi Meet room will be auto-created when published
+                    </div>
+                  ) : slotDialog.panelType === "HUMAN" && slot.mode === "Offline" ? (
+                    <TextField
+                      label="Venue / Address"
+                      value={slot.link}
+                      onChange={(e) => updateSlotField(index, "link", e.target.value)}
+                      placeholder="Office / Campus location"
+                      size="small"
+                      fullWidth
+                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2, backgroundColor: "#ffffff" } }}
+                    />
+                  ) : (
+                    <TextField
+                      label="Optional Backup Link"
+                      value={slot.link}
+                      onChange={(e) => updateSlotField(index, "link", e.target.value)}
+                      placeholder="https://meet.google.com/..."
+                      size="small"
+                      fullWidth
+                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2, backgroundColor: "#ffffff" } }}
+                    />
+                  )}
                 </div>
               </div>
             ))}

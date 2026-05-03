@@ -336,6 +336,22 @@ const emailTemplates = {
     });
   },
 
+  interviewerAssigned(interviewerName, jobTitle, companyName, date, candidateName) {
+    return template({
+      subject: `Interview Assigned: ${jobTitle}`,
+      title: "New interview assigned",
+      intro: `Hi ${interviewerName || "Interviewer"}, you have been assigned a new interview.`,
+      lines: [
+        `Role: ${jobTitle}`,
+        `Company: ${companyName}`,
+        `Candidate: ${candidateName}`,
+        `Date: ${new Date(date).toLocaleString()}`
+      ],
+      loginUrl: getLoginUrl("/interviewer"),
+      ctaLabel: "Open Interviewer Panel"
+    });
+  },
+
   onboardingDocumentsApproved(studentName, companyName) {
     return template({
       subject: `Onboarding Documents Approved - ${companyName}`,
