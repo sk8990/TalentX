@@ -534,7 +534,8 @@ export default function RecruiterApplications() {
           type: "datetime-local",
           label: "New Start Time",
           required: true,
-          defaultValue: toDateTimeLocalValue(app?.interview?.date)
+          defaultValue: toDateTimeLocalValue(app?.interview?.date),
+          linkedEndField: "newEndDate"
         },
         {
           name: "newEndDate",
@@ -1160,10 +1161,18 @@ export default function RecruiterApplications() {
                 label={field.label}
                 value={inputValues[field.name] || ""}
                 onChange={(e) =>
-                  setInputValues((prev) => ({
-                    ...prev,
-                    [field.name]: e.target.value,
-                  }))
+                  setInputValues((prev) => {
+                    const next = { ...prev, [field.name]: e.target.value };
+                    if (field.linkedEndField && field.type === "datetime-local" && e.target.value) {
+                      const startMs = new Date(e.target.value).getTime();
+                      if (Number.isFinite(startMs)) {
+                        const endDate = new Date(startMs + 30 * 60 * 1000);
+                        const pad = (n) => String(n).padStart(2, "0");
+                        next[field.linkedEndField] = `${endDate.getFullYear()}-${pad(endDate.getMonth() + 1)}-${pad(endDate.getDate())}T${pad(endDate.getHours())}:${pad(endDate.getMinutes())}`;
+                      }
+                    }
+                    return next;
+                  })
                 }
                 placeholder={field.placeholder || ""}
                 size="small"

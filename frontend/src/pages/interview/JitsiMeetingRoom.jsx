@@ -21,6 +21,7 @@ export default function JitsiMeetingRoom({
 }) {
   const containerRef = useRef(null);
   const apiRef = useRef(null);
+  const loadingTimerRef = useRef(null);
   const roomName = extractJitsiRoomName(meetingLink);
   const [loading, setLoading] = useState(Boolean(roomName));
   const [error, setError] = useState(roomName ? "" : "No meeting room available.");
@@ -64,13 +65,20 @@ export default function JitsiMeetingRoom({
             startWithAudioMuted: false,
             startWithVideoMuted: false,
             disableDeepLinking: true,
-            prejoinPageEnabled: false,
+            prejoinPageEnabled: true,
             enableClosePage: false,
             disableInviteFunctions: true,
+            analytics: {
+              disabled: true,
+              amplitudeAPPKey: null,
+              googleAnalyticsTrackingId: null,
+            },
+            disableThirdPartyRequests: true,
           },
           interfaceConfigOverwrite: {
             SHOW_JITSI_WATERMARK: false,
             SHOW_WATERMARK_FOR_GUESTS: false,
+            SHOW_PROMOTIONAL_CLOSE_PAGE: false,
             TOOLBAR_BUTTONS: [
               "microphone",
               "camera",
@@ -80,6 +88,7 @@ export default function JitsiMeetingRoom({
               "tileview",
               "hangup",
               "fullscreen",
+              "settings",
             ],
             DISABLE_JOIN_LEAVE_NOTIFICATIONS: true,
           },
@@ -91,7 +100,17 @@ export default function JitsiMeetingRoom({
           if (!cancelled) setLoading(false);
         });
 
+        // Fallback: clear loading after iframe loads even if the
+        // videoConferenceJoined event is delayed (e.g. prejoin page).
+        api.addEventListener("browserSupport", () => {
+          if (!cancelled) setLoading(false);
+        });
+        loadingTimerRef.current = setTimeout(() => {
+          if (!cancelled) setLoading(false);
+        }, 8000);
+
         api.addEventListener("readyToClose", () => {
+          clearTimeout(loadingTimerRef.current);
           if (onLeave) onLeave();
         });
       } catch (err) {
@@ -106,6 +125,7 @@ export default function JitsiMeetingRoom({
 
     return () => {
       cancelled = true;
+      clearTimeout(loadingTimerRef.current);
       if (apiRef.current) {
         try {
           apiRef.current.dispose();
