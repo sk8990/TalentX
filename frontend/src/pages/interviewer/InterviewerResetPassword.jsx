@@ -48,7 +48,7 @@ export default function InterviewerResetPassword() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#f4f6fb] px-4 py-10 sm:px-8">
+    <div className="flex min-h-screen items-center justify-center bg-[#f4f6fb] px-4 py-10 dark:bg-slate-950 sm:px-8">
       <div className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:rounded-3xl sm:p-8">
         <div className="mb-6 flex items-center gap-3">
           <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#eef3ff] text-[#243b95]">
@@ -71,7 +71,7 @@ export default function InterviewerResetPassword() {
               type="password"
               value={currentPassword}
               onChange={(event) => setCurrentPassword(event.target.value)}
-              className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[#243b95] focus:ring-4 focus:ring-[#eef3ff]"
+              className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[#243b95] focus:ring-4 focus:ring-[#eef3ff] dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:ring-indigo-900/40"
               placeholder="Enter temporary password"
             />
           </div>
@@ -84,7 +84,7 @@ export default function InterviewerResetPassword() {
               type="password"
               value={newPassword}
               onChange={(event) => setNewPassword(event.target.value)}
-              className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[#243b95] focus:ring-4 focus:ring-[#eef3ff]"
+              className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[#243b95] focus:ring-4 focus:ring-[#eef3ff] dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:ring-indigo-900/40"
               placeholder="Enter new password"
             />
           </div>
@@ -97,7 +97,7 @@ export default function InterviewerResetPassword() {
               type="password"
               value={confirmPassword}
               onChange={(event) => setConfirmPassword(event.target.value)}
-              className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[#243b95] focus:ring-4 focus:ring-[#eef3ff]"
+              className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[#243b95] focus:ring-4 focus:ring-[#eef3ff] dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:ring-indigo-900/40"
               placeholder="Confirm new password"
             />
           </div>

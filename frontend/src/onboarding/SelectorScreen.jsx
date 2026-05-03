@@ -77,6 +77,15 @@ export default function SelectorScreen({ data, onSelectCompany }) {
     return normalizedDomain ? `https://img.logo.dev/${normalizedDomain}` : "";
   };
 
+  const buildInstanceLabel = (company) => {
+    const applicationId = String(company?.applicationId || "").trim();
+    if (!applicationId) {
+      return company?.instanceLabel || "Onboarding instance";
+    }
+
+    return `Application ${applicationId.slice(-6).toUpperCase()}`;
+  };
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-[linear-gradient(160deg,#eef2ff_0%,#f4f5f8_38%,#eef3ff_100%)] px-3 py-6 sm:px-4 sm:py-10">
       <div className="w-full max-w-6xl">
@@ -116,12 +125,12 @@ export default function SelectorScreen({ data, onSelectCompany }) {
                 <p className="text-[24px] font-semibold tracking-tight text-slate-950">TalentX Onboarding Portal</p>
               </div>
               <h1 className="mt-4 text-2xl font-semibold tracking-tight text-slate-950 sm:mt-6 sm:text-4xl">
-                {companies.length === 1 ? "Continue Your Onboarding" : "Select Company to Continue"}
+                {companies.length === 1 ? "Continue Your Onboarding" : "Select Onboarding Instance"}
               </h1>
               <p className="mt-2 text-base text-slate-600 sm:mt-3 sm:text-lg">
                 {companies.length === 1
                   ? "You have one offer. Continue onboarding with this company."
-                  : "You have multiple offers. Choose a company to continue onboarding."}
+                  : "You have multiple offers. Choose the onboarding instance you want to continue."}
               </p>
             </div>
 
@@ -162,6 +171,9 @@ export default function SelectorScreen({ data, onSelectCompany }) {
                         <BusinessCenterRoundedIcon sx={{ fontSize: 18 }} />
                         {jobRole}
                       </p>
+                      <p className="mt-2 text-sm font-medium uppercase tracking-[0.18em] text-slate-500">
+                        {buildInstanceLabel(company)}
+                      </p>
                     </div>
 
                     <div className="mt-auto pt-5">
@@ -175,13 +187,22 @@ export default function SelectorScreen({ data, onSelectCompany }) {
                         </div>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => onSelectCompany(company.id)}
-                        className={`mt-6 w-full rounded-[10px] px-4 py-3 text-lg font-semibold text-white transition ${theme.button}`}
-                      >
-                        Continue Onboarding
-                      </button>
+                      {company.status === "completed" ? (
+                        <button
+                          disabled
+                          className="mt-6 w-full rounded-[10px] bg-slate-300 px-4 py-3 text-lg font-semibold text-slate-600 cursor-not-allowed"
+                        >
+                          Onboarding Completed
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => onSelectCompany(company.id)}
+                          className={`mt-6 w-full rounded-[10px] px-4 py-3 text-lg font-semibold text-white transition ${theme.button}`}
+                        >
+                          Continue Onboarding
+                        </button>
+                      )}
                     </div>
                   </article>
                 );

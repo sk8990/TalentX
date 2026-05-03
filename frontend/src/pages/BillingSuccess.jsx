@@ -14,8 +14,8 @@ export default function BillingSuccess() {
   }, [refreshSubscription]);
 
   return (
-    <main className="flex min-h-[100dvh] items-center justify-center bg-[#f4f6fb] px-4 py-10 sm:px-6">
-      <section className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-xl sm:rounded-[2rem] sm:p-10">
+    <main className="flex min-h-[100dvh] items-center justify-center bg-[#f4f6fb] px-4 py-10 dark:bg-slate-950 sm:px-6">
+      <section className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-xl dark:border-slate-700 dark:bg-slate-900 sm:rounded-[2rem] sm:p-10">
         <div className="mx-auto inline-flex rounded-2xl bg-[#eef3ff] px-4 py-3 text-[#243b95]">
           <TalentXBrand theme="light" size="sm" />
         </div>
@@ -27,10 +27,10 @@ export default function BillingSuccess() {
         <p className="mt-6 text-xs font-semibold uppercase tracking-[0.24em] text-indigo-600">
           Payment successful
         </p>
-        <h1 className="mt-3 text-2xl font-black tracking-tight text-slate-950 sm:text-4xl">
+        <h1 className="mt-3 text-2xl font-black tracking-tight text-slate-950 dark:text-slate-100 sm:text-4xl">
           Your TalentX recruiter plan is now active.
         </h1>
-        <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-slate-500 sm:text-base sm:leading-8">
+        <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-slate-500 dark:text-slate-400 sm:text-base sm:leading-8">
           You can continue to your recruiter workspace and manage jobs, applicants, interviews,
           offers, and onboarding from one place.
         </p>
@@ -45,7 +45,7 @@ export default function BillingSuccess() {
           </Link>
           <Link
             to="/#pricing"
-            className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-700 transition-all duration-200 hover:border-slate-400 hover:bg-slate-50"
+            className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-700 transition-all duration-200 hover:border-slate-400 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
           >
             <ArrowBackRoundedIcon sx={{ fontSize: 18 }} />
             Back to Pricing

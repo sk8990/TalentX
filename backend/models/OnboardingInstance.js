@@ -40,6 +40,18 @@ const instanceStepSchema = new mongoose.Schema(
   { _id: true }
 );
 
+const onboardingOfficeLocationSchema = new mongoose.Schema(
+  {
+    address: { type: String, default: "" },
+    city: { type: String, default: "" },
+    state: { type: String, default: "" },
+    country: { type: String, default: "" },
+    lat: { type: Number, default: null },
+    lng: { type: Number, default: null }
+  },
+  { _id: false }
+);
+
 const onboardingInstanceSchema = new mongoose.Schema(
   {
     studentId: {
@@ -83,6 +95,14 @@ const onboardingInstanceSchema = new mongoose.Schema(
     },
     onboardingStartedAt: { type: Date, default: null },
     completedAt: { type: Date, default: null },
+    joiningDetails: {
+      joiningDate: { type: Date, default: null },
+      reportingTime: { type: String, default: "9:00 AM" },
+      officeLocation: {
+        type: onboardingOfficeLocationSchema,
+        default: () => ({})
+      }
+    },
     // Phase 4.5: Onboarding deadline for SLA tracking
     deadline: { type: Date, default: null },
     steps: {

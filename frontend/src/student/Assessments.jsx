@@ -28,10 +28,7 @@ function getAssessmentDateValue(app) {
 }
 
 function getAssessmentUiStatus(app, nowMs) {
-  if (String(app?.uiStatus || "").trim()) {
-    return String(app.uiStatus).trim().toUpperCase();
-  }
-
+  const serverStatus = String(app?.uiStatus || "").trim().toUpperCase();
   const status = String(app?.status || "").trim().toUpperCase();
   if (status === "ASSESSMENT_PASSED" || status === "ASSESSMENT_FAILED") {
     return "COMPLETED";
@@ -39,8 +36,9 @@ function getAssessmentUiStatus(app, nowMs) {
 
   const assessmentDate = getAssessmentDateValue(app);
   const ts = assessmentDate ? new Date(assessmentDate).getTime() : NaN;
-  if (Number.isFinite(ts) && ts < nowMs) return "MISSED";
-  return "UPCOMING";
+  if (Number.isFinite(ts) && ts > nowMs) return "UPCOMING";
+  if (serverStatus && serverStatus !== "UPCOMING") return serverStatus;
+  return "AVAILABLE";
 }
 
 function formatDateTime(date) {
@@ -127,23 +125,38 @@ export default function Assessments() {
   }, []);
 
   const upcomingAssessments = useMemo(
-    () => (assessments || []).filter((app) => getAssessmentUiStatus(app, nowMs) === "UPCOMING"),
+    () => (assessments || []).filter((app) => ["UPCOMING", "AVAILABLE"].includes(getAssessmentUiStatus(app, nowMs))),
     [assessments, nowMs]
   );
 
   const pastAssessments = useMemo(
-    () => (assessments || []).filter((app) => getAssessmentUiStatus(app, nowMs) !== "UPCOMING"),
+    () => (assessments || []).filter((app) => !["UPCOMING", "AVAILABLE"].includes(getAssessmentUiStatus(app, nowMs))),
     [assessments, nowMs]
   );
 
   const visibleItems = activeTab === "upcoming" ? upcomingAssessments : pastAssessments;
 
-  const openAssessment = (assessmentLink) => {
-    if (!assessmentLink) {
-      toast.error("Assessment link unavailable");
-      return;
+  const openAssessment = async (app) => {
+    const pendingWindow = window.open("", "_blank", "noopener,noreferrer");
+
+    try {
+      const res = await API.post(`/application/${app._id}/assessment/start`);
+      const assessmentLink = normalizeAssessmentLink(res.data?.assessmentLink);
+      if (!assessmentLink) {
+        pendingWindow?.close();
+        toast.error("Assessment link unavailable");
+        return;
+      }
+
+      if (pendingWindow) {
+        pendingWindow.location.href = assessmentLink;
+      } else {
+        window.open(assessmentLink, "_blank", "noopener,noreferrer");
+      }
+    } catch (err) {
+      pendingWindow?.close();
+      toast.error(err.response?.data?.message || "Assessment is not available yet.");
     }
-    window.open(assessmentLink, "_blank", "noopener,noreferrer");
   };
 
   if (loading) {
@@ -205,10 +218,9 @@ export default function Assessments() {
           {visibleItems.map((app) => {
             const status = getAssessmentUiStatus(app, nowMs);
             const assessmentDate = getAssessmentDateValue(app);
-            const assessmentLink = normalizeAssessmentLink(app?.assessment?.link);
             const jobTitle = app?.jobId?.title || "Assessment";
             const companyName = app?.jobId?.companyName?.trim() || "";
-            const canStart = status === "UPCOMING" && Boolean(assessmentLink);
+            const canStart = Boolean(app?.canStartAssessment) && status === "AVAILABLE";
             const canViewResult = status === "COMPLETED";
             const passed = Boolean(app?.assessment?.passed);
 
@@ -225,12 +237,12 @@ export default function Assessments() {
                     className={`rounded-full px-3 py-1 text-xs font-semibold ${
                       status === "UPCOMING"
                         ? "bg-indigo-100 text-indigo-700"
-                        : status === "MISSED"
-                        ? "bg-rose-100 text-rose-700"
+                        : status === "AVAILABLE"
+                        ? "bg-emerald-100 text-emerald-700"
                         : "bg-emerald-100 text-emerald-700"
                     }`}
                   >
-                    {status === "UPCOMING" ? "Upcoming" : status === "MISSED" ? "Missed" : "Completed"}
+                    {status === "UPCOMING" ? "Upcoming" : status === "AVAILABLE" ? "Available" : "Completed"}
                   </span>
                 </div>
 
@@ -248,13 +260,23 @@ export default function Assessments() {
                   {canStart ? (
                     <button
                       type="button"
-                      onClick={() => openAssessment(assessmentLink)}
+                      onClick={() => openAssessment(app)}
                       className="rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700"
                     >
                       <span className="inline-flex items-center gap-1">
                         Start Assessment
                         <OpenInNewIcon sx={{ fontSize: 16 }} />
                       </span>
+                    </button>
+                  ) : null}
+
+                  {status === "UPCOMING" ? (
+                    <button
+                      type="button"
+                      disabled
+                      className="cursor-not-allowed rounded-xl bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-500"
+                    >
+                      Available at {formatDateTime(assessmentDate)}
                     </button>
                   ) : null}
 
@@ -269,12 +291,6 @@ export default function Assessments() {
                         <VisibilityIcon sx={{ fontSize: 16 }} />
                       </span>
                     </button>
-                  ) : null}
-
-                  {status === "MISSED" ? (
-                    <span className="rounded-xl bg-rose-50 px-4 py-2.5 text-sm font-semibold text-rose-700">
-                      Assessment window passed
-                    </span>
                   ) : null}
 
                   {status === "COMPLETED" ? (

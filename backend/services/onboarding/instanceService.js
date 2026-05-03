@@ -108,6 +108,46 @@ function createStepsFromTemplate(template, application) {
     });
 }
 
+function parseOptionalCoordinate(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function getTemplateReportingTime(template) {
+  const dayOneStep = (template?.steps || []).find((step) => step.type === STEP_TYPES.DAY_ONE_INFO);
+  return String(dayOneStep?.content?.reportingTime || "9:00 AM").trim() || "9:00 AM";
+}
+
+function normalizeOfficeLocationFromOffer(offer = {}) {
+  const rawLocation = offer.officeLocation?.toObject
+    ? offer.officeLocation.toObject()
+    : (offer.officeLocation || {});
+  const address = String(rawLocation.address || offer.location || "").trim();
+
+  return {
+    address,
+    city: String(rawLocation.city || "").trim(),
+    state: String(rawLocation.state || "").trim(),
+    country: String(rawLocation.country || "").trim(),
+    lat: parseOptionalCoordinate(rawLocation.lat),
+    lng: parseOptionalCoordinate(rawLocation.lng)
+  };
+}
+
+function syncJoiningDetailsWithApplication(instance, application, template) {
+  const offer = application?.offer || {};
+  const existing = instance.joiningDetails?.toObject
+    ? instance.joiningDetails.toObject()
+    : (instance.joiningDetails || {});
+
+  instance.joiningDetails = {
+    joiningDate: offer.joiningDate || existing.joiningDate || null,
+    reportingTime: String(offer.reportingTime || existing.reportingTime || getTemplateReportingTime(template)).trim() || "9:00 AM",
+    officeLocation: normalizeOfficeLocationFromOffer(offer)
+  };
+  instance.markModified("joiningDetails");
+}
+
 function syncOfferStepWithApplication(instance, application) {
   const offerStep = instance.steps.find((step) => step.type === STEP_TYPES.OFFER_ACCEPTANCE);
   const documentsStep = instance.steps.find((step) => step.type === STEP_TYPES.DOCUMENT_COLLECTION);
@@ -178,6 +218,7 @@ async function ensureOnboardingInstanceForApplication({ application, student }) 
     };
   }
 
+  syncJoiningDetailsWithApplication(instance, application, template);
   syncOfferStepWithApplication(instance, application);
   recalculateInstanceState(instance);
   await instance.save();

@@ -7,7 +7,9 @@ const {
   getApprovedStudents,
   getRejectedStudents,
   approveStudent,
-  rejectStudent
+  rejectStudent,
+  disableStudent,
+  enableStudent
 } = require("../controllers/collegeAdminStudentController");
 
 const {
@@ -31,6 +33,8 @@ router.get("/approved-students", getApprovedStudents);
 router.get("/rejected-students", getRejectedStudents);
 router.post("/students/:id/approve", approveStudent);
 router.post("/students/:id/reject", rejectStudent);
+router.post("/students/:id/disable", disableStudent);
+router.post("/students/:id/enable", enableStudent);
 
 // College jobs / drives
 router.get("/jobs", getCollegeJobs);

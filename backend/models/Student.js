@@ -43,6 +43,11 @@ const studentSchema = new mongoose.Schema(
       default: "limited"
     },
 
+    isDisabled: {
+      type: Boolean,
+      default: false
+    },
+
     branch: {
       type: String,
       enum: ["CS", "IT", "ENTC", "MECH", "CIVIL"],

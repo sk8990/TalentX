@@ -20,7 +20,7 @@ function buildStudentQuery(collegeId, verificationStatus) {
 }
 
 const SAFE_STUDENT_SELECT =
-  "userId studentType collegeId collegeName collegeVerificationStatus isCollegeVerified accessLevel createdAt";
+  "userId studentType collegeId collegeName collegeVerificationStatus isCollegeVerified accessLevel isDisabled createdAt";
 
 function emailWarningFor(result) {
   return result?.success === false ? "Student approved but email could not be sent." : undefined;
@@ -213,3 +213,100 @@ exports.rejectStudent = async (req, res) => {
     return res.status(500).json({ message: "Unable to reject student." });
   }
 };
+
+// ─── POST /api/college-admin/students/:id/disable ───
+exports.disableStudent = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const collegeId = req.collegeAdminUser.collegeId;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid student ID." });
+    }
+
+    const student = await Student.findById(id).populate("userId", "_id role name");
+
+    if (!student) {
+      return res.status(404).json({ message: "Student not found." });
+    }
+
+    if (student.studentType !== "college_student") {
+      return res.status(400).json({ message: "Only college students can be disabled." });
+    }
+
+    if (!student.collegeId || student.collegeId.toString() !== collegeId.toString()) {
+      return res.status(403).json({ message: "You can only disable students from your own college." });
+    }
+
+    student.isDisabled = true;
+    await student.save();
+
+    // Send notification to student
+    try {
+      await notify({
+        userId: student.userId._id,
+        type: "GENERAL",
+        title: "Account Disabled",
+        message: "Your account has been disabled by your college admin. Please contact your college for more information.",
+        link: "/student/dashboard",
+        sendMail: false
+      });
+    } catch (_notifErr) {
+      // Non-critical
+    }
+
+    return res.json({ message: "Student account disabled successfully." });
+  } catch (err) {
+    console.error("disableStudent error:", err);
+    return res.status(500).json({ message: "Unable to disable student." });
+  }
+};
+
+// ─── POST /api/college-admin/students/:id/enable ───
+exports.enableStudent = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const collegeId = req.collegeAdminUser.collegeId;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid student ID." });
+    }
+
+    const student = await Student.findById(id).populate("userId", "_id role name");
+
+    if (!student) {
+      return res.status(404).json({ message: "Student not found." });
+    }
+
+    if (student.studentType !== "college_student") {
+      return res.status(400).json({ message: "Only college students can be enabled." });
+    }
+
+    if (!student.collegeId || student.collegeId.toString() !== collegeId.toString()) {
+      return res.status(403).json({ message: "You can only enable students from your own college." });
+    }
+
+    student.isDisabled = false;
+    await student.save();
+
+    // Send notification to student
+    try {
+      await notify({
+        userId: student.userId._id,
+        type: "GENERAL",
+        title: "Account Enabled",
+        message: "Your account has been re-enabled by your college admin. You can now access TalentX.",
+        link: "/student/dashboard",
+        sendMail: false
+      });
+    } catch (_notifErr) {
+      // Non-critical
+    }
+
+    return res.json({ message: "Student account enabled successfully." });
+  } catch (err) {
+    console.error("enableStudent error:", err);
+    return res.status(500).json({ message: "Unable to enable student." });
+  }
+};
+

@@ -139,7 +139,7 @@ export default function Register() {
   };
 
   const fieldClass =
-    "mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-[#243b95] focus:ring-4 focus:ring-[#eef3ff] sm:py-3 sm:text-base";
+    "mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-[#243b95] focus:ring-4 focus:ring-[#eef3ff] dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-indigo-400 dark:focus:ring-indigo-900/40 sm:py-3 sm:text-base";
 
   const registerSelectMenuProps = {
     PaperProps: {
@@ -212,7 +212,7 @@ export default function Register() {
 
   return (
     <motion.div
-      className="relative flex min-h-[100dvh] items-center justify-center bg-[#f4f6fb] px-4 py-6 sm:px-6 sm:py-10"
+      className="relative flex min-h-[100dvh] items-center justify-center bg-[#f4f6fb] px-4 py-6 dark:bg-slate-950 sm:px-6 sm:py-10"
       initial={reduceMotion ? false : "hidden"}
       animate={reduceMotion ? undefined : "visible"}
       variants={authPageVariants}
@@ -220,7 +220,7 @@ export default function Register() {
       {/* Background gradient blobs */}
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_80%,rgba(36,59,149,0.12),transparent_35%),radial-gradient(circle_at_70%_20%,rgba(14,165,233,0.10),transparent_32%)]" />
 
-      <div className="relative mx-auto grid w-full max-w-[72rem] grid-cols-1 rounded-2xl border border-slate-200/80 bg-white shadow-2xl sm:rounded-3xl lg:grid-cols-2 lg:overflow-hidden">
+      <div className="relative mx-auto grid w-full max-w-[72rem] grid-cols-1 rounded-2xl border border-slate-200/80 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900 sm:rounded-3xl lg:grid-cols-2 lg:overflow-hidden">
         {/* ── Sidebar (desktop) ── */}
         <motion.aside
           className="hidden bg-gradient-to-br from-[#243b95] via-[#314db8] to-[#1d2f80] p-8 text-white lg:flex lg:flex-col lg:justify-between lg:p-10"
@@ -284,16 +284,16 @@ export default function Register() {
               </div>
             </motion.div>
 
-            <motion.h2 variants={authItemVariants} className="text-2xl font-black text-slate-900 sm:text-3xl">
+            <motion.h2 variants={authItemVariants} className="text-2xl font-black text-slate-900 dark:text-slate-100 sm:text-3xl">
               Create your account
             </motion.h2>
-            <motion.p variants={authItemVariants} className="mt-1.5 text-sm text-slate-500 sm:mt-2">
+            <motion.p variants={authItemVariants} className="mt-1.5 text-sm text-slate-500 dark:text-slate-400 sm:mt-2">
               Start your TalentX journey in a minute.
             </motion.p>
 
             <motion.form onSubmit={handleRegister} className={`mt-4 sm:mt-6 ${role === "recruiter" ? "space-y-2.5 sm:space-y-3" : "space-y-3.5 sm:space-y-4"}`} variants={authContentVariants}>
               <motion.div variants={authItemVariants}>
-                <label htmlFor="register-name" className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <label htmlFor="register-name" className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                   {role === "recruiter" ? "Recruiter Name" : "Full Name"}
                 </label>
                 <input
@@ -307,7 +307,7 @@ export default function Register() {
               </motion.div>
 
               <motion.div variants={authItemVariants}>
-                <label htmlFor="register-email" className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <label htmlFor="register-email" className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                   {role === "recruiter" ? "Company Email" : "Email Address"}
                 </label>
                 <input
@@ -321,7 +321,7 @@ export default function Register() {
               </motion.div>
 
               <motion.div variants={authItemVariants}>
-                <label htmlFor="register-password" className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <label htmlFor="register-password" className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                   Password
                 </label>
                 <div className="relative">
@@ -351,7 +351,7 @@ export default function Register() {
               {role === "recruiter" && (
                 <>
                   <motion.div variants={authItemVariants} initial="visible" animate="visible">
-                    <label htmlFor="register-company-name" className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <label htmlFor="register-company-name" className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                       Company Name
                     </label>
                     <input
@@ -365,7 +365,7 @@ export default function Register() {
                   </motion.div>
 
                   <motion.div variants={authItemVariants} initial="visible" animate="visible">
-                    <label htmlFor="register-company-website" className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <label htmlFor="register-company-website" className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                       Company Website
                     </label>
                     <input
@@ -381,7 +381,7 @@ export default function Register() {
               )}
 
               <motion.div variants={authItemVariants}>
-                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Register As</label>
+                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Register As</label>
                 <FormControl fullWidth size="small">
                   <Select
                     value={role}
@@ -406,7 +406,7 @@ export default function Register() {
 
               {role === "student" && (
                 <motion.div variants={authItemVariants} initial="visible" animate="visible">
-                  <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Student Type</label>
+                  <label className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Student Type</label>
                   <FormControl fullWidth size="small">
                     <Select
                       value={studentType}
@@ -432,7 +432,7 @@ export default function Register() {
 
               {role === "student" && studentType === "college_student" && (
                 <motion.div variants={authItemVariants} initial="visible" animate="visible">
-                  <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Select College</label>
+                  <label className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Select College</label>
                   <FormControl fullWidth size="small">
                     <Select
                       value={collegeId}
@@ -473,13 +473,13 @@ export default function Register() {
             </motion.form>
 
             <motion.div variants={authItemVariants} className="mt-5 space-y-1.5 sm:mt-6 sm:space-y-2">
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
                 Already have an account?{" "}
                 <Link to={LOGIN_ROUTE} className="font-semibold text-[#243b95] hover:text-[#1d2f80] hover:underline">
                   Login
                 </Link>
               </p>
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
                 Explore the platform{" "}
                 <Link to="/" className="font-semibold text-[#243b95] hover:text-[#1d2f80] hover:underline">
                   TalentX Home

@@ -18,6 +18,7 @@ export default function RecruiterInterviewers() {
   const [interviewers, setInterviewers] = useState([]);
   const [form, setForm] = useState(getInitialForm());
   const [editingId, setEditingId] = useState("");
+  const [createdCredentials, setCreatedCredentials] = useState(null);
 
   const activeInterviewers = useMemo(
     () => interviewers.filter((item) => item.isActive),
@@ -70,6 +71,14 @@ export default function RecruiterInterviewers() {
         toast.success("Interviewer updated");
       } else {
         const res = await API.post("/recruiter/interviewers", payload);
+        if (res.data?.temporaryPassword) {
+          setCreatedCredentials({
+            email: res.data?.interviewer?.user?.email || payload.email,
+            password: res.data.temporaryPassword
+          });
+        } else {
+          setCreatedCredentials(null);
+        }
         if (res.data?.emailSent) {
           toast.success("Interviewer created and credentials sent");
         } else if (res.data?.emailWarning) {
@@ -113,7 +122,13 @@ export default function RecruiterInterviewers() {
 
   const resendCredentials = async (item) => {
     try {
-      await API.post(`/recruiter/interviewers/${item._id}/resend-credentials`);
+      const res = await API.post(`/recruiter/interviewers/${item._id}/resend-credentials`);
+      if (res.data?.temporaryPassword) {
+        setCreatedCredentials({
+          email: item.user?.email || "",
+          password: res.data.temporaryPassword
+        });
+      }
       toast.success("Credentials resent");
       fetchInterviewers();
     } catch (err) {
@@ -199,6 +214,24 @@ export default function RecruiterInterviewers() {
             ) : null}
           </div>
         </form>
+
+        {createdCredentials ? (
+          <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            <p className="font-semibold">Temporary credentials</p>
+            <p className="mt-1 break-all">Email: {createdCredentials.email}</p>
+            <p className="mt-1 break-all">Password: {createdCredentials.password}</p>
+            <button
+              type="button"
+              onClick={() => {
+                navigator.clipboard?.writeText(`${createdCredentials.email}\n${createdCredentials.password}`);
+                toast.success("Credentials copied");
+              }}
+              className="mt-3 rounded-xl bg-amber-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-amber-700"
+            >
+              Copy Credentials
+            </button>
+          </div>
+        ) : null}
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:rounded-3xl sm:p-6">

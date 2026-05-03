@@ -87,7 +87,7 @@ export default function Login() {
 
   return (
     <motion.div
-      className="relative flex min-h-[100dvh] items-center justify-center overflow-hidden bg-[#f4f6fb] px-4 py-6 sm:px-6 sm:py-10"
+      className="relative flex min-h-[100dvh] items-center justify-center overflow-hidden bg-[#f4f6fb] px-4 py-6 dark:bg-slate-950 sm:px-6 sm:py-10"
       initial={reduceMotion ? false : "hidden"}
       animate={reduceMotion ? undefined : "visible"}
       variants={authPageVariants}
@@ -95,7 +95,7 @@ export default function Login() {
       {/* Background gradient blobs */}
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(36,59,149,0.14),transparent_35%),radial-gradient(circle_at_80%_10%,rgba(49,77,184,0.12),transparent_32%),radial-gradient(circle_at_60%_80%,rgba(14,165,233,0.10),transparent_36%)]" />
 
-      <div className="relative mx-auto grid w-full max-w-[72rem] grid-cols-1 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl sm:rounded-3xl lg:grid-cols-2">
+      <div className="relative mx-auto grid w-full max-w-[72rem] grid-cols-1 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900 sm:rounded-3xl lg:grid-cols-2">
         {/* ── Sidebar (desktop) ── */}
         <motion.section
           className="hidden bg-gradient-to-br from-[#243b95] via-[#314db8] to-[#1d2f80] p-8 text-white lg:flex lg:flex-col lg:justify-between lg:p-12"
@@ -167,10 +167,10 @@ export default function Login() {
             </div>
           </motion.div>
 
-          <motion.h2 variants={authItemVariants} className="text-2xl font-black text-slate-900 sm:text-3xl">
+          <motion.h2 variants={authItemVariants} className="text-2xl font-black text-slate-900 dark:text-slate-100 sm:text-3xl">
             Sign in
           </motion.h2>
-          <motion.p variants={authItemVariants} className="mt-1.5 text-sm text-slate-500 sm:mt-2">
+          <motion.p variants={authItemVariants} className="mt-1.5 text-sm text-slate-500 dark:text-slate-400 sm:mt-2">
             Access your dashboard and continue your journey.
           </motion.p>
 
@@ -186,7 +186,7 @@ export default function Login() {
 
           <motion.form onSubmit={handleLogin} className="mt-5 space-y-4 sm:mt-6 sm:space-y-5" variants={authContentVariants}>
             <motion.div variants={authItemVariants}>
-              <label htmlFor="login-email" className="mb-1 block text-sm font-semibold text-slate-700">
+              <label htmlFor="login-email" className="mb-1 block text-sm font-semibold text-slate-700 dark:text-slate-300">
                 Email address
               </label>
               <input
@@ -196,12 +196,12 @@ export default function Login() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 placeholder="you@example.com"
-                className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none transition focus:border-[#243b95] focus:ring-4 focus:ring-[#eef3ff] sm:py-3 sm:text-base"
+                className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none transition focus:border-[#243b95] focus:ring-4 focus:ring-[#eef3ff] dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500 dark:focus:border-indigo-400 dark:focus:ring-indigo-900/40 sm:py-3 sm:text-base"
               />
             </motion.div>
 
             <motion.div variants={authItemVariants}>
-              <label htmlFor="login-password" className="mb-1 block text-sm font-semibold text-slate-700">
+              <label htmlFor="login-password" className="mb-1 block text-sm font-semibold text-slate-700 dark:text-slate-300">
                 Password
               </label>
               <div className="relative">
@@ -212,7 +212,7 @@ export default function Login() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   placeholder="At least 8 characters"
-                  className="w-full rounded-xl border border-slate-300 px-4 py-2.5 pr-12 text-sm text-slate-800 placeholder-slate-400 outline-none transition focus:border-[#243b95] focus:ring-4 focus:ring-[#eef3ff] sm:py-3 sm:text-base"
+                  className="w-full rounded-xl border border-slate-300 px-4 py-2.5 pr-12 text-sm text-slate-800 placeholder-slate-400 outline-none transition focus:border-[#243b95] focus:ring-4 focus:ring-[#eef3ff] dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500 dark:focus:border-indigo-400 dark:focus:ring-indigo-900/40 sm:py-3 sm:text-base"
                 />
                 <button
                   type="button"
@@ -230,7 +230,7 @@ export default function Login() {
             </motion.div>
 
             <motion.div variants={authItemVariants} className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <label className="flex items-center gap-2 text-sm text-slate-600">
+              <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
                 <input type="checkbox" className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
                 Remember me
               </label>
@@ -252,13 +252,13 @@ export default function Login() {
           </motion.form>
 
           <motion.div variants={authItemVariants} className="mt-5 space-y-1.5 sm:mt-6 sm:space-y-2">
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-slate-600 dark:text-slate-400">
               Don't have an account?{" "}
               <Link to="/register" className="font-semibold text-[#243b95] hover:text-[#1d2f80]">
                 Create one
               </Link>
             </p>
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-slate-600 dark:text-slate-400">
               Explore the platform{" "}
               <Link to="/" className="font-semibold text-[#243b95] hover:text-[#1d2f80]">
                 TalentX Home

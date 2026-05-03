@@ -7,7 +7,9 @@ import {
   getApprovedStudents,
   getRejectedStudents,
   approveStudent,
-  rejectStudent
+  rejectStudent,
+  disableStudent,
+  enableStudent
 } from "../../api/collegeAdminApi";
 
 const TABS = [
@@ -75,6 +77,42 @@ export default function StudentVerificationPage() {
     }
   };
 
+  const handleDisable = async (id) => {
+    const shouldDisable = await confirm({
+      title: "Disable Student Account",
+      message: "Disable this student's account? They will not be able to access the platform.",
+      confirmText: "Disable",
+      cancelText: "Cancel",
+      tone: "danger"
+    });
+    if (!shouldDisable) return;
+    try {
+      await disableStudent(id);
+      toast.success("Student account disabled successfully.");
+      fetchStudents();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to disable student.");
+    }
+  };
+
+  const handleEnable = async (id) => {
+    const shouldEnable = await confirm({
+      title: "Enable Student Account",
+      message: "Enable this student's account? They will regain full access.",
+      confirmText: "Enable",
+      cancelText: "Cancel",
+      tone: "primary"
+    });
+    if (!shouldEnable) return;
+    try {
+      await enableStudent(id);
+      toast.success("Student account enabled successfully.");
+      fetchStudents();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to enable student.");
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -128,8 +166,9 @@ export default function StudentVerificationPage() {
                   <th className="px-5 py-3">Email</th>
                   <th className="px-5 py-3">Status</th>
                   {tab !== "pending" && <th className="px-5 py-3">Access Level</th>}
+                  {tab === "approved" && <th className="px-5 py-3">Account Status</th>}
                   <th className="px-5 py-3">Signup Date</th>
-                  {(tab === "pending" || tab === "rejected") && (
+                  {(tab === "pending" || tab === "rejected" || tab === "approved") && (
                     <th className="px-5 py-3 text-right">Actions</th>
                   )}
                 </tr>
@@ -157,24 +196,57 @@ export default function StudentVerificationPage() {
                         </span>
                       </td>
                     )}
+                    {tab === "approved" && (
+                      <td className="px-5 py-3.5">
+                        <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                          s.isDisabled
+                            ? "bg-rose-100 text-rose-700"
+                            : "bg-emerald-100 text-emerald-700"
+                        }`}>
+                          {s.isDisabled ? "Disabled" : "Active"}
+                        </span>
+                      </td>
+                    )}
                     <td className="px-5 py-3.5 text-slate-500">
                       {s.userId?.createdAt ? new Date(s.userId.createdAt).toLocaleDateString() : "—"}
                     </td>
-                    {(tab === "pending" || tab === "rejected") && (
+                    {(tab === "pending" || tab === "rejected" || tab === "approved") && (
                       <td className="px-5 py-3.5 text-right">
                         <div className="flex justify-end gap-2">
-                          <button
-                            onClick={() => handleApprove(s._id)}
-                            className="rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-700"
-                          >
-                            Approve
-                          </button>
                           {tab === "pending" && (
+                            <>
+                              <button
+                                onClick={() => handleApprove(s._id)}
+                                className="rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-700"
+                              >
+                                Approve
+                              </button>
+                              <button
+                                onClick={() => handleReject(s._id)}
+                                className="rounded-lg bg-rose-600 px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-rose-700"
+                              >
+                                Reject
+                              </button>
+                            </>
+                          )}
+                          {tab === "rejected" && (
                             <button
-                              onClick={() => handleReject(s._id)}
-                              className="rounded-lg bg-rose-600 px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-rose-700"
+                              onClick={() => handleApprove(s._id)}
+                              className="rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-700"
                             >
-                              Reject
+                              Approve
+                            </button>
+                          )}
+                          {tab === "approved" && (
+                            <button
+                              onClick={() => s.isDisabled ? handleEnable(s._id) : handleDisable(s._id)}
+                              className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold text-white transition ${
+                                s.isDisabled
+                                  ? "bg-emerald-600 hover:bg-emerald-700"
+                                  : "bg-rose-600 hover:bg-rose-700"
+                              }`}
+                            >
+                              {s.isDisabled ? "Enable" : "Disable"}
                             </button>
                           )}
                         </div>

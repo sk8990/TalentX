@@ -5,6 +5,7 @@ import LockResetIcon from "@mui/icons-material/LockReset";
 import EmailIcon from "@mui/icons-material/Email";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
 import LightModeIcon from "@mui/icons-material/LightMode";
+import SettingsBrightnessIcon from "@mui/icons-material/SettingsBrightness";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import { ThemeContext } from "../utils/themeContextObject";
@@ -256,39 +257,38 @@ function ChangeEmailSection() {
 // ── Theme section ─────────────────────────────────────────────────────────────
 
 function ThemeSection() {
-  const { darkMode, toggleDarkMode } = useContext(ThemeContext);
+  const { theme, setTheme } = useContext(ThemeContext);
+
+  const options = [
+    { value: "light", label: "Light", Icon: LightModeIcon },
+    { value: "dark",  label: "Dark",  Icon: DarkModeIcon },
+    { value: "system", label: "System", Icon: SettingsBrightnessIcon },
+  ];
+
+  const currentIcon = theme === "dark" ? DarkModeIcon : theme === "system" ? SettingsBrightnessIcon : LightModeIcon;
 
   return (
     <SettingsSection
-      icon={darkMode ? DarkModeIcon : LightModeIcon}
+      icon={currentIcon}
       title="Appearance"
-      subtitle="Choose between light and dark mode."
+      subtitle="Choose light, dark, or sync with your system."
     >
-      <div className="flex items-center gap-4">
-        <button
-          type="button"
-          onClick={() => !darkMode || toggleDarkMode()}
-          className={`flex items-center gap-2 rounded-xl border px-5 py-2.5 text-sm font-semibold transition ${
-            !darkMode
-              ? "border-indigo-500 bg-indigo-600 text-white"
-              : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
-          }`}
-        >
-          <LightModeIcon sx={{ fontSize: 18 }} />
-          Light
-        </button>
-        <button
-          type="button"
-          onClick={() => darkMode || toggleDarkMode()}
-          className={`flex items-center gap-2 rounded-xl border px-5 py-2.5 text-sm font-semibold transition ${
-            darkMode
-              ? "border-indigo-500 bg-indigo-600 text-white"
-              : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
-          }`}
-        >
-          <DarkModeIcon sx={{ fontSize: 18 }} />
-          Dark
-        </button>
+      <div className="flex flex-wrap items-center gap-3">
+        {options.map(({ value, label, Icon }) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => setTheme(value)}
+            className={`flex items-center gap-2 rounded-xl border px-5 py-2.5 text-sm font-semibold transition ${
+              theme === value
+                ? "border-indigo-500 bg-indigo-600 text-white"
+                : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
+            }`}
+          >
+            <Icon sx={{ fontSize: 18 }} />
+            {label}
+          </button>
+        ))}
       </div>
     </SettingsSection>
   );

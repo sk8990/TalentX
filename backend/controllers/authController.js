@@ -222,6 +222,15 @@ exports.login = async (req, res) => {
               message: reason ? `Account disabled: ${reason}` : "Account disabled by admin"
             });
         }
+        // Check if student account is disabled by college admin
+        if (user.role === "student") {
+          const student = await Student.findOne({ userId: user._id }).select("isDisabled").lean();
+          if (student && student.isDisabled) {
+            return res.status(403).json({
+              message: "Your account has been disabled by your college admin. Please contact your college for more information."
+            });
+          }
+        }
         const isMatch = await bcrypt.compare(password, user.password);
         if(!isMatch)
             return res.status(401).json({message: 'Invalid Credentials'});

@@ -26,6 +26,27 @@ const {
   findOnboardingInstanceForStudentUser
 } = require("./instanceService");
 
+/**
+ * Validates that student can complete this instance.
+ * Prevents completing multiple company onboardings.
+ */
+async function validateCanCompleteInstance(studentId, currentInstanceId) {
+  const completedInstance = await OnboardingInstance.findOne({
+    studentId,
+    _id: { $ne: currentInstanceId },
+    status: "completed"
+  }).select("_id companyName").lean();
+
+  if (completedInstance) {
+    const error = new Error(
+      `You have already completed onboarding for ${completedInstance.companyName}. ` +
+      `You can only complete onboarding for one company.`
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+}
+
 async function findInstanceByStepIdForStudent({ userId, stepId }) {
   const student = await findStudentForUser(userId);
   const instance = await OnboardingInstance.findOne({
@@ -327,13 +348,19 @@ async function submitDayOneInfo({ userId, instance, step, payload }) {
 }
 
 async function submitOnboardingStep({ userId, stepId, payload }) {
-  const { instance } = await findInstanceByStepIdForStudent({ userId, stepId });
+  const { student, instance } = await findInstanceByStepIdForStudent({ userId, stepId });
   const step = instance.steps.id(stepId);
 
   if (!step || step.status === "locked") {
     const error = new Error("This step is locked");
     error.statusCode = 400;
     throw error;
+  }
+
+  // Check if this is the last step and would result in completion
+  const isLastStep = step.type === STEP_TYPES.DAY_ONE_INFO;
+  if (isLastStep) {
+    await validateCanCompleteInstance(student._id, instance._id);
   }
 
   if (step.type === STEP_TYPES.OFFER_ACCEPTANCE) {

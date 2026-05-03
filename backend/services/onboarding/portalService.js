@@ -188,11 +188,98 @@ function buildPreJoiningStepContent({ step, templateStep, submission }) {
   };
 }
 
+function normalizeOfficeLocation(rawLocation, fallbackAddress = "") {
+  const source = rawLocation?.toObject ? rawLocation.toObject() : (rawLocation || {});
+  const address = String(source.address || fallbackAddress || "").trim();
+
+  return {
+    address,
+    city: String(source.city || "").trim(),
+    state: String(source.state || "").trim(),
+    country: String(source.country || "").trim(),
+    lat: Number.isFinite(Number(source.lat)) ? Number(source.lat) : null,
+    lng: Number.isFinite(Number(source.lng)) ? Number(source.lng) : null
+  };
+}
+
+function buildAddressLines(location) {
+  const lines = [];
+  if (location.address) {
+    lines.push(location.address);
+  }
+
+  const regionLine = [location.city, location.state, location.country]
+    .map((part) => String(part || "").trim())
+    .filter(Boolean)
+    .join(", ");
+  if (regionLine && !lines.some((line) => line.toLowerCase().includes(regionLine.toLowerCase()))) {
+    lines.push(regionLine);
+  }
+
+  return [...new Set(lines)];
+}
+
+function isDefaultPlaceholderLocation(location) {
+  const name = String(location?.name || "").toLowerCase();
+  const addressLines = Array.isArray(location?.addressLines) ? location.addressLines : [];
+  const joinedAddress = addressLines.join(" ").toLowerCase();
+
+  return (
+    name.includes("location will be shared") ||
+    name.includes("headquarters") && joinedAddress.includes("123 technology drive") ||
+    joinedAddress.includes("san francisco, ca 94105")
+  );
+}
+
+function buildDayOneLocation({ templateStep, application, instance }) {
+  const companyName = normalizeCompanyName(instance.companyName);
+  const joiningDetails = instance.joiningDetails?.toObject
+    ? instance.joiningDetails.toObject()
+    : (instance.joiningDetails || {});
+  const offerLocation = normalizeOfficeLocation(
+    joiningDetails.officeLocation || application?.offer?.officeLocation,
+    application?.offer?.location || ""
+  );
+
+  if (offerLocation.address) {
+    return {
+      name: `${companyName} Office`,
+      addressLines: buildAddressLines(offerLocation),
+      mapLabel: "Offer office location",
+      city: offerLocation.city,
+      state: offerLocation.state,
+      country: offerLocation.country,
+      lat: offerLocation.lat,
+      lng: offerLocation.lng
+    };
+  }
+
+  const templateLocation = templateStep?.content?.location || null;
+  if (templateLocation && !isDefaultPlaceholderLocation(templateLocation)) {
+    return templateLocation;
+  }
+
+  return {
+    name: "Location will be shared by recruiter",
+    addressLines: [],
+    mapLabel: "Office location pending",
+    city: "",
+    state: "",
+    country: "",
+    lat: null,
+    lng: null
+  };
+}
+
 function buildDayOneStepContent({ templateStep, application, instance }) {
-  const joiningDate = application?.offer?.joiningDate
-    ? new Date(application.offer.joiningDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+  const joiningDetails = instance.joiningDetails?.toObject
+    ? instance.joiningDetails.toObject()
+    : (instance.joiningDetails || {});
+  const joiningDateValue = joiningDetails.joiningDate || application?.offer?.joiningDate || null;
+  const joiningDate = joiningDateValue
+    ? new Date(joiningDateValue).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
     : "To be announced";
-  const reportingTime = templateStep?.content?.reportingTime || "9:00 AM";
+  const reportingTime = joiningDetails.reportingTime || application?.offer?.reportingTime || templateStep?.content?.reportingTime || "9:00 AM";
   const passCode = buildPassCode(instance);
 
   return {
@@ -200,7 +287,7 @@ function buildDayOneStepContent({ templateStep, application, instance }) {
     celebrationMessage: "You've completed the required pre-joining formalities. We are excited to welcome you to the team.",
     joiningDate,
     reportingTime,
-    location: templateStep?.content?.location || null,
+    location: buildDayOneLocation({ templateStep, application, instance }),
     instructions: templateStep?.content?.instructions || [],
     agenda: templateStep?.content?.agenda || [],
     passLabel: templateStep?.content?.passLabel || "Digital Joining Pass",
@@ -271,10 +358,13 @@ function serializeInstanceSummary({ instance, application }) {
 
   return {
     id: instance._id,
+    instanceId: instance._id,
+    applicationId: application?._id || instance.applicationId,
     companyName: instance.companyName,
     companyLogo: instance.companyLogo || "",
     companyDomain: application?.jobId?.companyDomain || "",
     jobRole: application?.jobId?.title || "Offer",
+    instanceLabel: `${application?.jobId?.title || "Offer"} onboarding instance`,
     progress: { completed: completedSteps, total: totalSteps, label: `${completedSteps}/${totalSteps} steps` },
     status: instance.status,
     currentStepLabel: currentStep?.title || "Onboarding",
@@ -406,6 +496,11 @@ async function buildStudentPortalPayload({ userId, selectedInstanceId }) {
         applicationId: application?._id || selectedInstance.applicationId,
         salary: application?.offer?.salary || "",
         location: application?.offer?.location || "",
+        officeLocation: normalizeOfficeLocation(
+          selectedInstance.joiningDetails?.officeLocation || application?.offer?.officeLocation,
+          application?.offer?.location || ""
+        ),
+        reportingTime: selectedInstance.joiningDetails?.reportingTime || application?.offer?.reportingTime || "9:00 AM",
         joiningDate: application?.offer?.joiningDate || null,
         generatedAt: application?.offer?.generatedAt || null,
         offerLetterUrl: application?.offer?.pdfPath || "",
@@ -575,10 +670,25 @@ function dedupeLocationEntries(locations) {
 function buildKnownOfficeLocations({ template, application, companyName }) {
   const fallbackLocations = [];
   const safeCompanyName = normalizeCompanyName(companyName);
+  const offerOfficeLocation = normalizeOfficeLocation(application?.offer?.officeLocation, application?.offer?.location || "");
+
+  if (offerOfficeLocation.address) {
+    fallbackLocations.push({
+      officeName: `${safeCompanyName} Office`,
+      city: offerOfficeLocation.city || parseCityFromAddress(offerOfficeLocation.address),
+      country: offerOfficeLocation.country,
+      countryCode: "",
+      address: buildAddressLines(offerOfficeLocation).join(", "),
+      latitude: offerOfficeLocation.lat,
+      longitude: offerOfficeLocation.lng,
+      sourceUrl: ""
+    });
+  }
+
   const dayOneStep = (template?.steps || []).find((candidate) => candidate.type === STEP_TYPES.DAY_ONE_INFO);
   const templateLocation = dayOneStep?.content?.location || null;
 
-  if (templateLocation) {
+  if (templateLocation && !isDefaultPlaceholderLocation(templateLocation)) {
     const addressLines = Array.isArray(templateLocation.addressLines)
       ? templateLocation.addressLines.map((line) => String(line || "").trim()).filter(Boolean)
       : [];
@@ -590,20 +700,6 @@ function buildKnownOfficeLocations({ template, application, companyName }) {
       country: "",
       countryCode: "",
       address,
-      latitude: null,
-      longitude: null,
-      sourceUrl: ""
-    });
-  }
-
-  const offerLocation = String(application?.offer?.location || "").trim();
-  if (offerLocation) {
-    fallbackLocations.push({
-      officeName: `${safeCompanyName} Office`,
-      city: parseCityFromAddress(offerLocation),
-      country: "",
-      countryCode: "",
-      address: offerLocation,
       latitude: null,
       longitude: null,
       sourceUrl: ""

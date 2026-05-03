@@ -31,7 +31,14 @@ module.exports = (application, outputPath) => {
 
     doc.text(`Salary: ₹${application.offer.salary} per annum`);
     doc.text(`Joining Date: ${new Date(application.offer.joiningDate).toDateString()}`);
-    doc.text(`Location: ${application.offer.location}`);
+    const officeLocation = application.offer?.officeLocation || {};
+    const locationParts = [
+      officeLocation.address || application.offer.location,
+      officeLocation.city,
+      officeLocation.state,
+      officeLocation.country
+    ].filter(Boolean);
+    doc.text(`Location: ${locationParts.length ? [...new Set(locationParts)].join(", ") : "To be confirmed"}`);
 
     doc.moveDown(2);
 

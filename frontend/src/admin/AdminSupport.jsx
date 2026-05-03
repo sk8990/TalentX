@@ -69,17 +69,28 @@ export default function AdminSupport() {
                 key={ticket._id}
                 className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition dark:border-slate-600 dark:bg-slate-700/50 sm:p-5"
               >
+                {(() => {
+                  const requesterName =
+                    ticket.requesterRole === "recruiter"
+                      ? ticket.recruiterId?.name || ticket.requesterId?.name || "Unknown Recruiter"
+                      : ticket.requesterRole === "student"
+                        ? ticket.studentId?.userId?.name || ticket.requesterId?.name || "Unknown Student"
+                        : ticket.requesterId?.name || "Unknown Requester";
+                  const requesterEmail =
+                    ticket.requesterRole === "recruiter"
+                      ? ticket.recruiterId?.email || ticket.requesterId?.email
+                      : ticket.requesterRole === "student"
+                        ? ticket.studentId?.userId?.email || ticket.requesterId?.email
+                        : ticket.requesterId?.email;
+
+                  return (
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                      {ticket.requesterRole === "recruiter"
-                        ? ticket.recruiterId?.name || "Unknown Recruiter"
-                        : ticket.studentId?.userId?.name || "Unknown Student"}
+                      {requesterName}
                     </h4>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
-                      {ticket.requesterRole === "recruiter"
-                        ? ticket.recruiterId?.email
-                        : ticket.studentId?.userId?.email}
+                      {requesterEmail}
                     </p>
                     <span className="mt-1 inline-block rounded-full bg-indigo-100 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">
                       {ticket.requesterRole || "student"}
@@ -95,6 +106,8 @@ export default function AdminSupport() {
                     {ticket.status}
                   </span>
                 </div>
+                  );
+                })()}
 
                 <div className="mt-4 grid gap-3 sm:gap-4 md:grid-cols-2">
                   <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-600 dark:bg-slate-800">
@@ -120,7 +133,7 @@ export default function AdminSupport() {
                 )}
 
                 <div className="mt-4">
-                  {ticket.status === "ANSWERED" || ticket.status === "OPEN" && ticket.adminResponse ? (
+                  {ticket.status === "ANSWERED" || ticket.status === "CLOSED" || ticket.adminResponse ? (
                     <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-800 dark:bg-emerald-900/30">
                       <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">Admin Response</p>
                       <p className="mt-1 text-sm text-emerald-800 dark:text-emerald-200">{ticket.adminResponse || "N/A"}</p>

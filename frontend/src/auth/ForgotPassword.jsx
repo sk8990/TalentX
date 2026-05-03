@@ -79,11 +79,11 @@ export default function ForgotPassword() {
   };
 
   const inputClass =
-    "w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none transition focus:border-[#243b95] focus:ring-4 focus:ring-[#eef3ff] sm:py-3 sm:text-base";
+    "w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none transition focus:border-[#243b95] focus:ring-4 focus:ring-[#eef3ff] dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500 dark:focus:border-indigo-400 dark:focus:ring-indigo-900/40 sm:py-3 sm:text-base";
 
   return (
     <motion.div
-      className="relative flex min-h-[100dvh] items-center justify-center overflow-hidden bg-[#f4f6fb] px-4 py-6 sm:px-6 sm:py-10"
+      className="relative flex min-h-[100dvh] items-center justify-center overflow-hidden bg-[#f4f6fb] px-4 py-6 dark:bg-slate-950 sm:px-6 sm:py-10"
       initial={reduceMotion ? false : "hidden"}
       animate={reduceMotion ? undefined : "visible"}
       variants={authPageVariants}
@@ -91,7 +91,7 @@ export default function ForgotPassword() {
       {/* Background gradient blobs */}
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(36,59,149,0.14),transparent_35%),radial-gradient(circle_at_80%_10%,rgba(49,77,184,0.12),transparent_32%),radial-gradient(circle_at_60%_80%,rgba(14,165,233,0.10),transparent_36%)]" />
 
-      <div className="relative mx-auto grid w-full max-w-[72rem] grid-cols-1 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl sm:rounded-3xl lg:grid-cols-2">
+      <div className="relative mx-auto grid w-full max-w-[72rem] grid-cols-1 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900 sm:rounded-3xl lg:grid-cols-2">
         {/* ── Sidebar (desktop) ── */}
         <motion.section
           className="hidden bg-gradient-to-br from-[#243b95] via-[#314db8] to-[#1d2f80] p-8 text-white lg:flex lg:flex-col lg:justify-between lg:p-12"
@@ -140,10 +140,10 @@ export default function ForgotPassword() {
             </div>
           </motion.div>
 
-          <motion.h2 variants={authItemVariants} className="text-2xl font-black text-slate-900 sm:text-3xl">
+          <motion.h2 variants={authItemVariants} className="text-2xl font-black text-slate-900 dark:text-slate-100 sm:text-3xl">
             Forgot Password?
           </motion.h2>
-          <motion.p variants={authItemVariants} className="mt-1.5 text-sm text-slate-500 sm:mt-2">
+          <motion.p variants={authItemVariants} className="mt-1.5 text-sm text-slate-500 dark:text-slate-400 sm:mt-2">
             {step === 1 ? "Enter your email to generate reset token." : "Use token and set your new password."}
           </motion.p>
 
@@ -177,7 +177,7 @@ export default function ForgotPassword() {
                 exit={reduceMotion ? undefined : "exit"}
               >
                 <motion.div variants={authItemVariants}>
-                  <label htmlFor="forgot-email" className="mb-1 block text-sm font-semibold text-slate-700">
+                  <label htmlFor="forgot-email" className="mb-1 block text-sm font-semibold text-slate-700 dark:text-slate-300">
                     Email address
                   </label>
                   <input
@@ -211,7 +211,7 @@ export default function ForgotPassword() {
                 exit={reduceMotion ? undefined : "exit"}
               >
                 <motion.div variants={authItemVariants}>
-                  <label htmlFor="forgot-token" className="mb-1 block text-sm font-semibold text-slate-700">
+                  <label htmlFor="forgot-token" className="mb-1 block text-sm font-semibold text-slate-700 dark:text-slate-300">
                     Reset Token
                   </label>
                   <input
@@ -224,7 +224,7 @@ export default function ForgotPassword() {
                 </motion.div>
 
                 <motion.div variants={authItemVariants}>
-                  <label htmlFor="forgot-new-password" className="mb-1 block text-sm font-semibold text-slate-700">
+                  <label htmlFor="forgot-new-password" className="mb-1 block text-sm font-semibold text-slate-700 dark:text-slate-300">
                     New Password
                   </label>
                   <div className="relative">

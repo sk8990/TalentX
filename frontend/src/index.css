@@ -1,5 +1,6 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap");
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
 :root {
   --tx-bg: #f4f6fb;
@@ -53,6 +54,23 @@ body {
 /* Dark mode base styles */
 .dark {
   color-scheme: dark;
+  --tx-bg: #0f172a;
+  --tx-bg-soft: #131c31;
+  --tx-surface: #1e293b;
+  --tx-text: #f1f5f9;
+  --tx-secondary: #cbd5e1;
+  --tx-muted: #94a3b8;
+  --tx-border: #334155;
+  --tx-border-strong: #475569;
+  --tx-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --tx-shadow-card: 0 12px 34px rgba(0, 0, 0, 0.25);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
 }
 
 /* ── Scrollbar ── */
@@ -93,6 +111,9 @@ body {
   border: 1px solid var(--tx-border);
   border-radius: 1.125rem;
   background: #f8fafc;
+}
+.dark .tx-card-muted {
+  background: #1e293b;
 }
 
 .tx-page-header {
@@ -150,6 +171,15 @@ body {
   border-color: rgba(36, 59, 149, 0.28);
   background: #eef3ff;
 }
+.dark .tx-button-secondary {
+  border-color: var(--tx-border-strong);
+  background: var(--tx-surface);
+  color: #a5b4fc;
+}
+.dark .tx-button-secondary:hover {
+  border-color: rgba(99, 102, 241, 0.4);
+  background: rgba(99, 102, 241, 0.1);
+}
 
 .tx-status-success,
 .tx-status-warning,
@@ -168,25 +198,45 @@ body {
   background: #ecfdf5;
   color: #047857;
 }
+.dark .tx-status-success {
+  background: rgba(16, 185, 129, 0.15);
+  color: #6ee7b7;
+}
 
 .tx-status-warning {
   background: #fffbeb;
   color: #b45309;
+}
+.dark .tx-status-warning {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fcd34d;
 }
 
 .tx-status-danger {
   background: #fef2f2;
   color: #b91c1c;
 }
+.dark .tx-status-danger {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+}
 
 .tx-status-info {
   background: #eef2ff;
   color: var(--tx-primary);
 }
+.dark .tx-status-info {
+  background: rgba(99, 102, 241, 0.15);
+  color: #a5b4fc;
+}
 
 .tx-status-muted {
   background: #f1f5f9;
   color: var(--tx-muted);
+}
+.dark .tx-status-muted {
+  background: rgba(100, 116, 139, 0.15);
+  color: #94a3b8;
 }
 
 .tx-app-shell aside {
@@ -227,6 +277,9 @@ body {
 
 .tx-app-shell .bg-indigo-50 {
   background-color: #eef3ff !important;
+}
+.dark .tx-app-shell .bg-indigo-50 {
+  background-color: rgba(99, 102, 241, 0.1) !important;
 }
 
 .tx-app-shell .text-indigo-600,

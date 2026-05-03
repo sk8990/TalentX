@@ -56,6 +56,16 @@ import CollegeAdminDashboard from "./pages/college-admin/CollegeAdminDashboard";
 import StudentVerificationPage from "./pages/college-admin/StudentVerificationPage";
 import CollegeJobsPage from "./pages/college-admin/CollegeJobsPage";
 import PlacementReportsPage from "./pages/college-admin/PlacementReportsPage";
+import CollegeAdminSupport from "./pages/college-admin/CollegeAdminSupport";
+import { readStoredSession, getDefaultRouteForUser, LOGIN_ROUTE } from "./utils/authRouting";
+
+function CatchAllRedirect() {
+  const { token, user } = readStoredSession();
+  if (token && user) {
+    return <Navigate to={getDefaultRouteForUser(user)} replace />;
+  }
+  return <Navigate to={LOGIN_ROUTE} replace />;
+}
 
 export default function App() {
   return (
@@ -267,6 +277,7 @@ export default function App() {
             <Route path="students" element={<StudentVerificationPage />} />
             <Route path="jobs" element={<CollegeJobsPage />} />
             <Route path="reports" element={<PlacementReportsPage />} />
+            <Route path="support" element={<CollegeAdminSupport />} />
           </Route>
 
           {/* SUPER ADMIN */}
@@ -289,8 +300,12 @@ export default function App() {
             <Route path="colleges" element={<CollegesPage />} />
             <Route path="college-admins" element={<CreateCollegeAdminPage />} />
             <Route path="recruiter-approvals" element={<RecruiterApprovalsPage />} />
+            <Route path="support" element={<AdminSupport />} />
             <Route path="settings" element={<SuperAdminSettingsPage />} />
           </Route>
+
+          {/* CATCH-ALL — redirect unmatched URLs */}
+          <Route path="*" element={<CatchAllRedirect />} />
         </Routes>
       </BrowserRouter>
       </SubscriptionProvider>

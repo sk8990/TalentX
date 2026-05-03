@@ -637,7 +637,7 @@ export default function RecruiterApplications() {
       fields: [
         { name: "salary", label: "Salary", placeholder: "e.g. 6 LPA", required: true },
         { name: "joiningDate", type: "date", label: "Joining Date", required: true },
-        { name: "location", type: "location", label: "Location", placeholder: "City / Office", required: true },
+        { name: "location", type: "location", detailsName: "locationDetails", label: "Location", placeholder: "City / Office", required: true },
       ],
     });
 
@@ -652,6 +652,7 @@ export default function RecruiterApplications() {
           salary: values.salary.trim(),
           joiningDate: values.joiningDate.trim(),
           location: values.location.trim(),
+          officeLocation: values.locationDetails || { address: values.location.trim() },
         }),
       "Offer generated"
     );
@@ -1143,10 +1144,11 @@ export default function RecruiterApplications() {
                   field={field}
                   autoFocus={index === 0}
                   value={inputValues[field.name] || ""}
-                  onChange={(val) =>
+                  onChange={(val, details) =>
                     setInputValues((prev) => ({
                       ...prev,
                       [field.name]: val,
+                      [field.detailsName || `${field.name}Details`]: details || { address: val },
                     }))
                   }
                 />
@@ -1618,32 +1620,90 @@ function LocationAutocompleteField({ field, value, onChange, autoFocus }) {
   const [options, setOptions] = useState([]);
   const [inputValue, setInputValue] = useState("");
   const [loading, setLoading] = useState(false);
+  const [helperText, setHelperText] = useState("");
+
+  const buildManualLocation = (address) => ({
+    label: address,
+    address,
+    city: "",
+    state: "",
+    country: "",
+    lat: null,
+    lng: null
+  });
+
+  const normalizeFeature = (feature) => {
+    const properties = feature?.properties || {};
+    const coordinates = feature?.geometry?.coordinates || [];
+    const address = String(properties.formatted || properties.address_line1 || "").trim();
+    const lat = Number.isFinite(Number(properties.lat))
+      ? Number(properties.lat)
+      : Number.isFinite(Number(coordinates[1]))
+        ? Number(coordinates[1])
+        : null;
+    const lng = Number.isFinite(Number(properties.lon))
+      ? Number(properties.lon)
+      : Number.isFinite(Number(coordinates[0]))
+        ? Number(coordinates[0])
+        : null;
+
+    return {
+      label: address,
+      address,
+      city: String(properties.city || properties.county || "").trim(),
+      state: String(properties.state || "").trim(),
+      country: String(properties.country || "").trim(),
+      lat,
+      lng
+    };
+  };
 
   useEffect(() => {
     let active = true;
 
     if (inputValue === "") {
-      setOptions(value ? [value] : []);
+      setOptions(value ? [buildManualLocation(value)] : []);
       return undefined;
     }
 
     const apiKey = import.meta.env.VITE_GEOAPIFY_API_KEY;
     if (!apiKey) {
-      console.warn("VITE_GEOAPIFY_API_KEY is missing. Please add it to the frontend .env file!");
+      setHelperText("Location suggestions unavailable. You can type manually.");
+      setOptions([]);
       return undefined;
     }
 
+    setHelperText("");
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        const res = await fetch(`https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(inputValue)}&apiKey=${apiKey}`);
+        const params = new URLSearchParams({
+          text: inputValue,
+          limit: "6",
+          format: "geojson",
+          apiKey
+        });
+        const res = await fetch(`https://api.geoapify.com/v1/geocode/autocomplete?${params.toString()}`);
+        if (!res.ok) {
+          throw new Error("Geoapify request failed");
+        }
         const data = await res.json();
         if (active && data.features) {
-          const newOptions = data.features.map((feature) => feature.properties.formatted);
-          setOptions([...new Set(newOptions)].filter(Boolean));
+          const seen = new Set();
+          const newOptions = data.features
+            .map(normalizeFeature)
+            .filter((option) => {
+              if (!option.address || seen.has(option.address)) return false;
+              seen.add(option.address);
+              return true;
+            });
+          setOptions(newOptions);
         }
       } catch (err) {
         console.error("Geoapify search failed:", err);
+        if (active) {
+          setHelperText("Location suggestions unavailable. You can type manually.");
+        }
       } finally {
         if (active) setLoading(false);
       }
@@ -1661,12 +1721,28 @@ function LocationAutocompleteField({ field, value, onChange, autoFocus }) {
       options={options}
       loading={loading}
       value={value}
-      onChange={(event, newValue) => {
-        onChange(newValue || "");
+      onChange={(_event, newValue) => {
+        const selected =
+          typeof newValue === "string"
+            ? buildManualLocation(newValue)
+            : newValue || buildManualLocation("");
+        onChange(selected.address || "", selected);
       }}
-      onInputChange={(event, newInputValue) => {
+      onInputChange={(_event, newInputValue, reason) => {
         setInputValue(newInputValue);
-        onChange(newInputValue);
+        if (reason === "input") {
+          onChange(newInputValue, buildManualLocation(newInputValue));
+        }
+      }}
+      getOptionLabel={(option) => (typeof option === "string" ? option : option?.label || "")}
+      isOptionEqualToValue={(option, selected) => (
+        (typeof option === "string" ? option : option?.label) ===
+        (typeof selected === "string" ? selected : selected?.label)
+      )}
+      slotProps={{
+        popper: {
+          sx: { zIndex: 2000 }
+        }
       }}
       renderInput={(params) => (
         <TextField
@@ -1675,6 +1751,7 @@ function LocationAutocompleteField({ field, value, onChange, autoFocus }) {
           label={field.label}
           placeholder={field.placeholder || ""}
           required={Boolean(field.required)}
+          helperText={helperText}
           size="small"
           fullWidth
           sx={{

@@ -19,14 +19,14 @@ export default function ScreenLoader({
 }) {
   return (
     <div
-      className={`relative isolate flex items-center justify-center overflow-hidden bg-white px-4 ${
+      className={`relative isolate flex items-center justify-center overflow-hidden bg-white px-4 dark:bg-slate-950 ${
         fullScreen ? "fixed inset-0 z-[9999] min-h-[100dvh]" : "min-h-[60vh] rounded-2xl"
       } ${className}`}
       role="status"
       aria-live="polite"
     >
       <div className="absolute inset-0 opacity-90" style={patternStyle} aria-hidden="true" />
-      <div className="absolute inset-0 bg-white/80" aria-hidden="true" />
+      <div className="absolute inset-0 bg-white/80 dark:bg-slate-950/80" aria-hidden="true" />
 
       <div className="relative flex flex-col items-center text-center">
         {showBrand && (
@@ -41,10 +41,10 @@ export default function ScreenLoader({
         </div>
 
         {message && (
-          <p className="mt-6 text-sm font-bold text-slate-900 sm:text-base">{message}</p>
+          <p className="mt-6 text-sm font-bold text-slate-900 dark:text-slate-100 sm:text-base">{message}</p>
         )}
         {subtext && (
-          <p className="mt-2 max-w-sm text-xs leading-6 text-slate-500 sm:text-sm">{subtext}</p>
+          <p className="mt-2 max-w-sm text-xs leading-6 text-slate-500 dark:text-slate-400 sm:text-sm">{subtext}</p>
         )}
       </div>
     </div>

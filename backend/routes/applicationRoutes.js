@@ -36,6 +36,7 @@ const {
   endMyAIInterview,
   getMyInterviewSlots,
   getMyAssessments,
+  startMyAssessment,
   assignInterviewerToApplication,
   unassignInterviewerFromApplication
 } = require("../controllers/applicationController");
@@ -125,6 +126,13 @@ router.get(
   auth,
   role("student"),
   getMyAssessments
+);
+
+router.post(
+  "/:applicationId/assessment/start",
+  auth,
+  role("student"),
+  startMyAssessment
 );
 
 

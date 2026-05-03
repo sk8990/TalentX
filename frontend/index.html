@@ -10,6 +10,14 @@
     <title>TalentX - University Recruitment Portal</title>
   </head>
   <body>
+    <script>
+      (function () {
+        var saved = localStorage.getItem("talentx-theme") || "system";
+        var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        var shouldDark = saved === "dark" || (saved === "system" && prefersDark);
+        document.documentElement.classList.toggle("dark", shouldDark);
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

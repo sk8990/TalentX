@@ -4,7 +4,7 @@ import API from "../../api/axios";
 import { ThemeContext } from "../../utils/themeContextObject";
 
 export default function SuperAdminSettingsPage() {
-  const { darkMode, toggleDarkMode } = useContext(ThemeContext);
+  const { theme, setTheme } = useContext(ThemeContext);
   const [emailForm, setEmailForm] = useState({ newEmail: "", password: "" });
   const [emailSubmitting, setEmailSubmitting] = useState(false);
   const [passwordForm, setPasswordForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
@@ -76,66 +76,58 @@ export default function SuperAdminSettingsPage() {
   return (
     <div className="space-y-5 sm:space-y-6">
       <header className="tx-page-header p-5 sm:p-6 md:p-8">
-        <h1 className="text-2xl font-black text-slate-950 sm:text-3xl">Super Admin Settings</h1>
-        <p className="mt-2 text-sm text-slate-500">
+        <h1 className="text-2xl font-black text-slate-950 dark:text-slate-100 sm:text-3xl">Super Admin Settings</h1>
+        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
           Manage your account preferences, security, and theme settings.
         </p>
       </header>
 
       {/* Theme Settings */}
       <section className="tx-card p-5 sm:p-6">
-        <h2 className="text-lg font-bold text-slate-900">Theme Settings</h2>
-        <p className="mt-1 text-sm text-slate-500">Choose your preferred theme for the platform.</p>
-        <div className="mt-4 flex items-center gap-4">
-          <button
-            type="button"
-            onClick={toggleDarkMode}
-            className={`rounded-xl border px-5 py-2.5 text-sm font-semibold transition ${
-              !darkMode
-                ? "border-blue-600 bg-blue-600 text-white"
-                : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
-            }`}
-          >
-            Light Mode
-          </button>
-          <button
-            type="button"
-            onClick={toggleDarkMode}
-            className={`rounded-xl border px-5 py-2.5 text-sm font-semibold transition ${
-              darkMode
-                ? "border-slate-800 bg-slate-800 text-white"
-                : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
-            }`}
-          >
-            Dark Mode
-          </button>
+        <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Theme Settings</h2>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Choose your preferred theme for the platform.</p>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          {[{ value: "light", label: "Light" }, { value: "dark", label: "Dark" }, { value: "system", label: "System" }].map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setTheme(opt.value)}
+              className={`rounded-xl border px-5 py-2.5 text-sm font-semibold transition ${
+                theme === opt.value
+                  ? "border-indigo-500 bg-indigo-600 text-white"
+                  : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
         </div>
       </section>
 
       {/* Change Email */}
       <section className="tx-card p-5 sm:p-6">
-        <h2 className="text-lg font-bold text-slate-900">Change Email</h2>
-        <p className="mt-1 text-sm text-slate-500">Update your email address. You will need to login again after changing.</p>
+        <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Change Email</h2>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Update your email address. You will need to login again after changing.</p>
         <form onSubmit={handleEmailChange} className="mt-4 space-y-4">
-          <label className="block text-sm text-slate-600">
+          <label className="block text-sm text-slate-600 dark:text-slate-400">
             New Email Address
             <input
               type="email"
               required
               value={emailForm.newEmail}
               onChange={(e) => setEmailForm((p) => ({ ...p, newEmail: e.target.value }))}
-              className="mt-1 w-full max-w-md rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm"
+              className="mt-1 w-full max-w-md rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
               placeholder="newemail@example.com"
             />
           </label>
-          <label className="block text-sm text-slate-600">
+          <label className="block text-sm text-slate-600 dark:text-slate-400">
             Confirm Password
             <input
               type="password"
               required
               value={emailForm.password}
               onChange={(e) => setEmailForm((p) => ({ ...p, password: e.target.value }))}
-              className="mt-1 w-full max-w-md rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm"
+              className="mt-1 w-full max-w-md rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
               placeholder="Enter your current password"
             />
           </label>
@@ -151,39 +143,39 @@ export default function SuperAdminSettingsPage() {
 
       {/* Change Password */}
       <section className="tx-card p-5 sm:p-6">
-        <h2 className="text-lg font-bold text-slate-900">Change Password</h2>
-        <p className="mt-1 text-sm text-slate-500">Update your password to keep your account secure.</p>
+        <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Change Password</h2>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Update your password to keep your account secure.</p>
         <form onSubmit={handlePasswordChange} className="mt-4 space-y-4">
-          <label className="block text-sm text-slate-600">
+          <label className="block text-sm text-slate-600 dark:text-slate-400">
             Current Password
             <input
               type="password"
               required
               value={passwordForm.currentPassword}
               onChange={(e) => setPasswordForm((p) => ({ ...p, currentPassword: e.target.value }))}
-              className="mt-1 w-full max-w-md rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm"
+              className="mt-1 w-full max-w-md rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
               placeholder="Enter current password"
             />
           </label>
-          <label className="block text-sm text-slate-600">
+          <label className="block text-sm text-slate-600 dark:text-slate-400">
             New Password
             <input
               type="password"
               required
               value={passwordForm.newPassword}
               onChange={(e) => setPasswordForm((p) => ({ ...p, newPassword: e.target.value }))}
-              className="mt-1 w-full max-w-md rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm"
+              className="mt-1 w-full max-w-md rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
               placeholder="At least 8 characters"
             />
           </label>
-          <label className="block text-sm text-slate-600">
+          <label className="block text-sm text-slate-600 dark:text-slate-400">
             Confirm New Password
             <input
               type="password"
               required
               value={passwordForm.confirmPassword}
               onChange={(e) => setPasswordForm((p) => ({ ...p, confirmPassword: e.target.value }))}
-              className="mt-1 w-full max-w-md rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm"
+              className="mt-1 w-full max-w-md rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
               placeholder="Re-enter new password"
             />
           </label>

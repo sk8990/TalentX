@@ -62,6 +62,54 @@ function normalizeWebLink(value) {
   return /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
 }
 
+function parseOptionalCoordinate(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function normalizeOfferOfficeLocation(value, fallbackAddress = "") {
+  const source = value && typeof value === "object" ? value : {};
+  const address = String(
+    source.address ||
+    source.formatted ||
+    source.label ||
+    fallbackAddress ||
+    ""
+  ).trim();
+
+  return {
+    address,
+    city: String(source.city || "").trim(),
+    state: String(source.state || "").trim(),
+    country: String(source.country || "").trim(),
+    lat: parseOptionalCoordinate(source.lat ?? source.latitude),
+    lng: parseOptionalCoordinate(source.lng ?? source.lon ?? source.longitude)
+  };
+}
+
+function getAssessmentScheduledDate(app) {
+  const scheduledAt = app?.assessment?.scheduledAt || app?.assessment?.sentAt || app?.createdAt || null;
+  if (!scheduledAt) return null;
+
+  const parsed = new Date(scheduledAt);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function getAssessmentAvailability(app, nowTs = Date.now()) {
+  const scheduledAt = getAssessmentScheduledDate(app);
+  const scheduledTs = scheduledAt ? scheduledAt.getTime() : 0;
+  const isCompleted = ["ASSESSMENT_PASSED", "ASSESSMENT_FAILED"].includes(String(app?.status || ""));
+  const hasLink = Boolean(app?.assessment?.link);
+  const isBeforeStart = Boolean(!isCompleted && scheduledAt && scheduledTs > nowTs);
+
+  return {
+    scheduledAt,
+    isCompleted,
+    isBeforeStart,
+    canStart: Boolean(!isCompleted && hasLink && !isBeforeStart)
+  };
+}
+
 function normalizeInterviewMode(mode) {
   const value = String(mode || "").trim().toLowerCase();
   if (value === "online") return "Online";
@@ -1374,6 +1422,11 @@ exports.generateOffer = async (req, res) => {
     const salary = String(req.body?.salary || "").trim();
     const joiningDate = String(req.body?.joiningDate || "").trim();
     const location = String(req.body?.location || "").trim();
+    const officeLocation = normalizeOfferOfficeLocation(
+      req.body?.officeLocation || req.body?.locationDetails,
+      location
+    );
+    const reportingTime = String(req.body?.reportingTime || "9:00 AM").trim() || "9:00 AM";
 
     if (!salary || !joiningDate || !location) {
       return res.status(400).json({ message: "Salary, joining date, and location are required" });
@@ -1414,7 +1467,9 @@ exports.generateOffer = async (req, res) => {
     app.offer = {
       salary,
       joiningDate: parsedJoiningDate,
-      location,
+      location: officeLocation.address || location,
+      reportingTime,
+      officeLocation,
       generatedAt: new Date(),
       status: "PENDING",
       pdfPath: `/offers/${fileName}`
@@ -1441,7 +1496,9 @@ exports.generateOffer = async (req, res) => {
       changes: {
         salary,
         joiningDate: parsedJoiningDate,
-        location
+        location: officeLocation.address || location,
+        officeLocation,
+        reportingTime
       }
     });
 
@@ -2248,29 +2305,34 @@ exports.getMyAssessments = async (req, res) => {
     const nowTs = Date.now();
     const payload = (assessments || [])
       .map((app) => {
-        const scheduledAt = app?.assessment?.scheduledAt || app?.createdAt || null;
-        const scheduledTs = scheduledAt ? new Date(scheduledAt).getTime() : NaN;
-        const completed = ["ASSESSMENT_PASSED", "ASSESSMENT_FAILED"].includes(app.status);
-        const pastByTime = Number.isFinite(scheduledTs) ? scheduledTs < nowTs : false;
+        const availability = getAssessmentAvailability(app, nowTs);
 
         let uiStatus = "UPCOMING";
-        if (completed) {
+        if (availability.isCompleted) {
           uiStatus = "COMPLETED";
-        } else if (pastByTime) {
-          uiStatus = "MISSED";
+        } else if (availability.canStart) {
+          uiStatus = "AVAILABLE";
+        }
+
+        const assessment = app.assessment?.toObject
+          ? app.assessment.toObject()
+          : { ...(app.assessment || {}) };
+        if (!availability.canStart) {
+          assessment.link = "";
         }
 
         return {
           _id: app._id,
           jobId: app.jobId,
-          assessment: app.assessment,
+          assessment,
           status: app.status,
           createdAt: app.createdAt,
-          assessmentDateTime: scheduledAt,
+          assessmentDateTime: availability.scheduledAt,
           uiStatus,
           isUpcoming: uiStatus === "UPCOMING",
-          isPast: uiStatus !== "UPCOMING",
-          canStartAssessment: uiStatus === "UPCOMING" && Boolean(app?.assessment?.link),
+          isAvailable: uiStatus === "AVAILABLE",
+          isPast: uiStatus === "COMPLETED",
+          canStartAssessment: availability.canStart,
           canViewResult: uiStatus === "COMPLETED"
         };
       })
@@ -2281,6 +2343,40 @@ exports.getMyAssessments = async (req, res) => {
       });
 
     res.json(payload);
+  } catch (err) {
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+exports.startMyAssessment = async (req, res) => {
+  try {
+    const { app } = await findStudentApplicationByUser(req.params.applicationId, req.user.id);
+
+    if (!app) {
+      return res.status(404).json({ message: "Application not found" });
+    }
+
+    if (app.status !== "ASSESSMENT_SENT") {
+      return res.status(400).json({ message: "Assessment is not available for this application" });
+    }
+
+    const assessmentLink = normalizeWebLink(app?.assessment?.link);
+    if (!assessmentLink) {
+      return res.status(404).json({ message: "Assessment link unavailable" });
+    }
+
+    const availability = getAssessmentAvailability(app);
+    if (availability.isBeforeStart) {
+      return res.status(403).json({
+        message: "Assessment is not available yet.",
+        availableAt: availability.scheduledAt
+      });
+    }
+
+    return res.json({
+      assessmentLink,
+      availableAt: availability.scheduledAt
+    });
   } catch (err) {
     res.status(500).json({ message: "Internal server error" });
   }

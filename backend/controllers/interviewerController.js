@@ -322,7 +322,8 @@ exports.createRecruiterInterviewer = async (req, res) => {
     res.status(201).json({
       interviewer: toInterviewerPayload(created, new Map()),
       emailSent: Boolean(emailResult?.success),
-      emailWarning: emailWarningFor(emailResult)
+      emailWarning: emailWarningFor(emailResult),
+      temporaryPassword: emailResult?.success ? undefined : temporaryPassword
     });
   } catch (err) {
     console.error("createRecruiterInterviewer error:", err);
@@ -512,7 +513,8 @@ exports.resendRecruiterInterviewerCredentials = async (req, res) => {
         ? "Credentials sent successfully"
         : "Credentials updated but email sending failed",
       emailSent: Boolean(emailResult?.success),
-      emailWarning: emailResult?.success ? undefined : "Credentials updated but email could not be sent."
+      emailWarning: emailResult?.success ? undefined : "Credentials updated but email could not be sent.",
+      temporaryPassword: emailResult?.success ? undefined : temporaryPassword
     });
   } catch (err) {
     console.error("resendRecruiterInterviewerCredentials error:", err);

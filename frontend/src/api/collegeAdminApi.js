@@ -10,6 +10,8 @@ export const getRejectedStudents = () => API.get(`${BASE}/rejected-students`);
 
 export const approveStudent = (id) => API.post(`${BASE}/students/${id}/approve`);
 export const rejectStudent = (id) => API.post(`${BASE}/students/${id}/reject`);
+export const disableStudent = (id) => API.post(`${BASE}/students/${id}/disable`);
+export const enableStudent = (id) => API.post(`${BASE}/students/${id}/enable`);
 
 export const getCollegeJobs = () => API.get(`${BASE}/jobs`);
 

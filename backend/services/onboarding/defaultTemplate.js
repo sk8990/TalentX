@@ -115,12 +115,9 @@ function buildDayOneStep(companyName) {
     content: {
       reportingTime: "9:00 AM",
       location: {
-        name: `${companyName} Headquarters`,
-        addressLines: [
-          "123 Technology Drive, Floor 5",
-          "San Francisco, CA 94105"
-        ],
-        mapLabel: "Interactive Map"
+        name: "Location will be shared by recruiter",
+        addressLines: [],
+        mapLabel: "Office location pending"
       },
       instructions: [
         "Report to the reception desk on the ground floor",

@@ -1,5 +1,17 @@
 const mongoose = require("mongoose");
 
+const offerOfficeLocationSchema = new mongoose.Schema(
+  {
+    address: { type: String, default: "" },
+    city: { type: String, default: "" },
+    state: { type: String, default: "" },
+    country: { type: String, default: "" },
+    lat: { type: Number, default: null },
+    lng: { type: Number, default: null }
+  },
+  { _id: false }
+);
+
 const interviewSlotSchema = new mongoose.Schema(
   {
     start: { type: Date, required: true },
@@ -111,6 +123,11 @@ const applicationSchema = new mongoose.Schema(
       salary: String,
       joiningDate: Date,
       location: String,
+      reportingTime: { type: String, default: "9:00 AM" },
+      officeLocation: {
+        type: offerOfficeLocationSchema,
+        default: () => ({})
+      },
       generatedAt: Date,
       status: {
         type: String,
