@@ -1,0 +1,1222 @@
+{
+  "C:\\TalentX\\backend\\app.js": {
+    "mtime": 1777702945.1246264,
+    "hash": "2b0f7ef8e7458462b17ff10bb39cfc39"
+  },
+  "C:\\TalentX\\backend\\scheduler.js": {
+    "mtime": 1773157011.3061187,
+    "hash": "d07ade9f329ccb767ded5ef96250d9e9"
+  },
+  "C:\\TalentX\\backend\\server.js": {
+    "mtime": 1777703011.3671854,
+    "hash": "2ef619f6ff7355e2fda7e3fecbd891a9"
+  },
+  "C:\\TalentX\\backend\\config\\plans.js": {
+    "mtime": 1777737006.9092426,
+    "hash": "11f7580c22c8f13e99349914c63a017c"
+  },
+  "C:\\TalentX\\backend\\constants\\onboarding.js": {
+    "mtime": 1777180530.8678873,
+    "hash": "dd0fe3e0d1b16f946681fb3366fd0dd2"
+  },
+  "C:\\TalentX\\backend\\controllers\\adminController.js": {
+    "mtime": 1777716831.3650835,
+    "hash": "62d14f1af7c3171c806941ad3d3c11ea"
+  },
+  "C:\\TalentX\\backend\\controllers\\aiController.js": {
+    "mtime": 1775391673.2652838,
+    "hash": "f4b49896e5a71831dc78a88d77f9ff73"
+  },
+  "C:\\TalentX\\backend\\controllers\\applicationController.js": {
+    "mtime": 1777712296.070805,
+    "hash": "747eb5c85d3c3677b3c3881e7245fa8b"
+  },
+  "C:\\TalentX\\backend\\controllers\\authController.js": {
+    "mtime": 1777724259.5541375,
+    "hash": "ecfdfa6ac839c777aebaae59f4cb501d"
+  },
+  "C:\\TalentX\\backend\\controllers\\bulkController.js": {
+    "mtime": 1777692159.967937,
+    "hash": "7ebcd335d43443f8c029ae7180bb6897"
+  },
+  "C:\\TalentX\\backend\\controllers\\collegeAdminController.js": {
+    "mtime": 1777724144.2123249,
+    "hash": "92bedc9ba0057d88bf7232eeed70e08a"
+  },
+  "C:\\TalentX\\backend\\controllers\\collegeAdminJobController.js": {
+    "mtime": 1777697412.6767724,
+    "hash": "3a474ffca12020fb5a2a533a096e9481"
+  },
+  "C:\\TalentX\\backend\\controllers\\collegeAdminProfileController.js": {
+    "mtime": 1777621473.405777,
+    "hash": "19a47ce1ca849dff62e9daca42c24869"
+  },
+  "C:\\TalentX\\backend\\controllers\\collegeAdminStudentController.js": {
+    "mtime": 1777713214.7176127,
+    "hash": "d7d14f3c13ff88d8f89768412e83c12f"
+  },
+  "C:\\TalentX\\backend\\controllers\\collegeController.js": {
+    "mtime": 1777724199.8339558,
+    "hash": "333a3e4dc6f50e57ecd856c0d22c8400"
+  },
+  "C:\\TalentX\\backend\\controllers\\companyController.js": {
+    "mtime": 1777731585.0721354,
+    "hash": "57f5b287c82be359d7a40ec863cced5c"
+  },
+  "C:\\TalentX\\backend\\controllers\\dashboardController.js": {
+    "mtime": 1777692153.0047305,
+    "hash": "15d76d7bac3f4539d403ab410263b9d9"
+  },
+  "C:\\TalentX\\backend\\controllers\\documentController.js": {
+    "mtime": 1777692123.2205062,
+    "hash": "aad000b7b0eb42d0252004a5d0c13e58"
+  },
+  "C:\\TalentX\\backend\\controllers\\exportController.js": {
+    "mtime": 1777716847.3216882,
+    "hash": "5d1226e205cab1cc7809c680982b2a16"
+  },
+  "C:\\TalentX\\backend\\controllers\\fileDownloadController.js": {
+    "mtime": 1777700212.7134945,
+    "hash": "e861be38a2b1220087daa396ab2a7660"
+  },
+  "C:\\TalentX\\backend\\controllers\\interviewerController.js": {
+    "mtime": 1777713266.3062906,
+    "hash": "cf7765dacf5aa15cec182ace0fc6a2ff"
+  },
+  "C:\\TalentX\\backend\\controllers\\jobController.js": {
+    "mtime": 1777692032.21183,
+    "hash": "5e68f8c00a5e2afc7b7753e8ffbd7ff2"
+  },
+  "C:\\TalentX\\backend\\controllers\\notificationController.js": {
+    "mtime": 1777692137.7889862,
+    "hash": "013d2ba12c51fb5990e642c082cfd9c2"
+  },
+  "C:\\TalentX\\backend\\controllers\\offerController.js": {
+    "mtime": 1777180530.8731923,
+    "hash": "6a6f01d006bf9dbd114abbf242fd5b99"
+  },
+  "C:\\TalentX\\backend\\controllers\\onboardingController.js": {
+    "mtime": 1777692093.138399,
+    "hash": "a2c6a8b6cbda922bf2979ec8dcf11054"
+  },
+  "C:\\TalentX\\backend\\controllers\\paymentController.js": {
+    "mtime": 1777723856.4667263,
+    "hash": "281d98ab66649b3e0bcf60ef425ce066"
+  },
+  "C:\\TalentX\\backend\\controllers\\recruiterApprovalController.js": {
+    "mtime": 1777713223.3805153,
+    "hash": "c4f6beee78c894171d39c5686838ff68"
+  },
+  "C:\\TalentX\\backend\\controllers\\studentController.js": {
+    "mtime": 1777692024.5961697,
+    "hash": "63be45a93a239a77ba4252fcd853449a"
+  },
+  "C:\\TalentX\\backend\\controllers\\studentJobController.js": {
+    "mtime": 1777691307.19421,
+    "hash": "0d627d13382bbb1096bbc5452162b6f4"
+  },
+  "C:\\TalentX\\backend\\controllers\\studentSettingsController.js": {
+    "mtime": 1777712282.0771055,
+    "hash": "ab4c1b0f6e73626912f0a94e065ec89c"
+  },
+  "C:\\TalentX\\backend\\controllers\\subscriptionController.js": {
+    "mtime": 1777394207.307588,
+    "hash": "5299cdc23175bfca43ee7f9dcffe902a"
+  },
+  "C:\\TalentX\\backend\\controllers\\superAdminController.js": {
+    "mtime": 1777723856.5262854,
+    "hash": "22d5c0be73b3dd4de61e7b8c7533d9a6"
+  },
+  "C:\\TalentX\\backend\\controllers\\supportController.js": {
+    "mtime": 1777692105.4177997,
+    "hash": "66e65528be356ed0a952fbe24e1700c6"
+  },
+  "C:\\TalentX\\backend\\data\\companies.js": {
+    "mtime": 1772958186.1378932,
+    "hash": "00b071d04f689dad0ec38f6694812208"
+  },
+  "C:\\TalentX\\backend\\data\\onboardingSampleData.js": {
+    "mtime": 1777180530.874207,
+    "hash": "8401f8ea054e2ac4df574bc110229fdc"
+  },
+  "C:\\TalentX\\backend\\helpers\\jobVisibilityHelper.js": {
+    "mtime": 1777697386.545324,
+    "hash": "651b36ea7a05c58370d6be19b54b521b"
+  },
+  "C:\\TalentX\\backend\\helpers\\secureFilePath.js": {
+    "mtime": 1777700114.698324,
+    "hash": "407dcfc7f2d74764da0d3581833ff3c3"
+  },
+  "C:\\TalentX\\backend\\helpers\\studentAccessHelper.js": {
+    "mtime": 1777688749.0499136,
+    "hash": "ca7df1a892b2ff6dfda6625af7dfb5db"
+  },
+  "C:\\TalentX\\backend\\middleware\\authMiddleware.js": {
+    "mtime": 1777621767.8898356,
+    "hash": "d738f0d4299d6b43a8f672ec3a1d3af9"
+  },
+  "C:\\TalentX\\backend\\middleware\\onboardingAuth.js": {
+    "mtime": 1777212825.9099982,
+    "hash": "19ef0646cc1b8835ada8055dcaf53b86"
+  },
+  "C:\\TalentX\\backend\\middleware\\onboardingUpload.js": {
+    "mtime": 1777180530.8759542,
+    "hash": "5cfacfc8ad1a9404db80640ca42a7854"
+  },
+  "C:\\TalentX\\backend\\middleware\\packageLimits.js": {
+    "mtime": 1777394065.4052596,
+    "hash": "dd433207e2b1a350f6f65955526d2f09"
+  },
+  "C:\\TalentX\\backend\\middleware\\profileComplete.js": {
+    "mtime": 1777692013.8492985,
+    "hash": "2e2c62fd51c474ffeb3abc96e8ba9273"
+  },
+  "C:\\TalentX\\backend\\middleware\\requireApprovedRecruiter.js": {
+    "mtime": 1777697502.218954,
+    "hash": "dc9c116f6a4b070d80727e65379343ed"
+  },
+  "C:\\TalentX\\backend\\middleware\\requireCollegeAdmin.js": {
+    "mtime": 1777688401.0048816,
+    "hash": "1b2471fece436e6c121f9b0bc064d500"
+  },
+  "C:\\TalentX\\backend\\middleware\\requireFeature.js": {
+    "mtime": 1777208587.1833138,
+    "hash": "8746cb79e1c3ed603135e228a4eaaf6b"
+  },
+  "C:\\TalentX\\backend\\middleware\\requireJobLimit.js": {
+    "mtime": 1777738801.1319907,
+    "hash": "60eed2f00101bf92ddb157e960205163"
+  },
+  "C:\\TalentX\\backend\\middleware\\requireStudentOnboardingAccess.js": {
+    "mtime": 1777694036.4514308,
+    "hash": "80f6658eb3d48bb5406ea6b175d4b394"
+  },
+  "C:\\TalentX\\backend\\middleware\\requireSuperAdmin.js": {
+    "mtime": 1777688682.3668962,
+    "hash": "f265a3136a38a6d226d8791dd2e7d7ec"
+  },
+  "C:\\TalentX\\backend\\middleware\\roleMiddleware.js": {
+    "mtime": 1777688731.0859978,
+    "hash": "18524ed192bf3da7a48522b1d678c376"
+  },
+  "C:\\TalentX\\backend\\middleware\\supportUpload.js": {
+    "mtime": 1772952125.379938,
+    "hash": "c05045faa9b616e688fc0a7bd0389790"
+  },
+  "C:\\TalentX\\backend\\middleware\\upload.js": {
+    "mtime": 1776446161.172763,
+    "hash": "2e5223eff8a4ff4b8cc5f79b2e781c2a"
+  },
+  "C:\\TalentX\\backend\\middleware\\usageTracker.js": {
+    "mtime": 1777393641.3330922,
+    "hash": "2a74277455adca5ed3d9ab0b8bb931fe"
+  },
+  "C:\\TalentX\\backend\\models\\Application.js": {
+    "mtime": 1777686486.6494372,
+    "hash": "9c722c6cfb909f94bfe2e783327c411c"
+  },
+  "C:\\TalentX\\backend\\models\\AuditLog.js": {
+    "mtime": 1777212825.8905585,
+    "hash": "7f96b276fb0414ddf04045c5316ecf33"
+  },
+  "C:\\TalentX\\backend\\models\\College.js": {
+    "mtime": 1777688666.2607865,
+    "hash": "6c9f40dcbc2594e5fcef90d08d86fa30"
+  },
+  "C:\\TalentX\\backend\\models\\Company.js": {
+    "mtime": 1772958175.5171626,
+    "hash": "d39f8267b8bbf859fe70193fc1c89508"
+  },
+  "C:\\TalentX\\backend\\models\\Document.js": {
+    "mtime": 1777180530.8800116,
+    "hash": "e43c061d61d07cdbe8897103ef340cf6"
+  },
+  "C:\\TalentX\\backend\\models\\EnterprisePackageRequest.js": {
+    "mtime": 1777393770.8563077,
+    "hash": "3de899660d7bf5853573cdc7ad0e619c"
+  },
+  "C:\\TalentX\\backend\\models\\InterviewerProfile.js": {
+    "mtime": 1774697535.7090108,
+    "hash": "c954f7918507c8ef4c3a77aaa46b3941"
+  },
+  "C:\\TalentX\\backend\\models\\Job.js": {
+    "mtime": 1777697373.5924516,
+    "hash": "09c14b5213684d7f62d75fa981add395"
+  },
+  "C:\\TalentX\\backend\\models\\Notification.js": {
+    "mtime": 1776506823.9973433,
+    "hash": "5cee86d1e97c827784ca234d58360c65"
+  },
+  "C:\\TalentX\\backend\\models\\OnboardingInstance.js": {
+    "mtime": 1777180530.8820138,
+    "hash": "b7cb0293557fd3b68ae92eb689dcf740"
+  },
+  "C:\\TalentX\\backend\\models\\OnboardingStepSubmission.js": {
+    "mtime": 1777180530.8838632,
+    "hash": "3079093cb2e51da3bdd518b6cfcac128"
+  },
+  "C:\\TalentX\\backend\\models\\OnboardingTemplate.js": {
+    "mtime": 1777180530.8848722,
+    "hash": "44796d1984f64663d3a6412efcdd9999"
+  },
+  "C:\\TalentX\\backend\\models\\Package.js": {
+    "mtime": 1777723856.463382,
+    "hash": "0a99ba65ba4a899abaaed74a3e0e22ab"
+  },
+  "C:\\TalentX\\backend\\models\\PackageUsage.js": {
+    "mtime": 1777702049.9508815,
+    "hash": "203df31cdef7476da916ba2f052af5a2"
+  },
+  "C:\\TalentX\\backend\\models\\Payment.js": {
+    "mtime": 1777688942.0299048,
+    "hash": "06fbc21d84b75eb3a880f2e541b136b7"
+  },
+  "C:\\TalentX\\backend\\models\\Student.js": {
+    "mtime": 1777688642.3393161,
+    "hash": "6f1984ce8ae2e6be5cb942681723d1be"
+  },
+  "C:\\TalentX\\backend\\models\\StudentUsage.js": {
+    "mtime": 1777688656.8146112,
+    "hash": "cfc7b7edaa091c160992ae1457c1a936"
+  },
+  "C:\\TalentX\\backend\\models\\Subscription.js": {
+    "mtime": 1777394093.446264,
+    "hash": "f01dc2c778d1fa1b1b2c802686702df8"
+  },
+  "C:\\TalentX\\backend\\models\\SupportTicket.js": {
+    "mtime": 1772955805.9186242,
+    "hash": "094e349981afac33f4e3c643457486b8"
+  },
+  "C:\\TalentX\\backend\\models\\User.js": {
+    "mtime": 1777702301.8157706,
+    "hash": "e232d0d4d454b2a86668c9e6bb13a579"
+  },
+  "C:\\TalentX\\backend\\routes\\adminRoutes.js": {
+    "mtime": 1777712304.9702792,
+    "hash": "2e331c305e6b15813f21230fad091c64"
+  },
+  "C:\\TalentX\\backend\\routes\\applicationRoutes.js": {
+    "mtime": 1777700418.7722945,
+    "hash": "bab5e5a10fa88d75b8ffc3f0916de509"
+  },
+  "C:\\TalentX\\backend\\routes\\authRoutes.js": {
+    "mtime": 1777728438.0033767,
+    "hash": "bb019b978ae1ff93c44e410c504f4e4a"
+  },
+  "C:\\TalentX\\backend\\routes\\bulkRoutes.js": {
+    "mtime": 1777624432.5616195,
+    "hash": "59d110ca39165ece06be8124d3bf679b"
+  },
+  "C:\\TalentX\\backend\\routes\\collegeAdminRoutes.js": {
+    "mtime": 1777621500.8152714,
+    "hash": "0d787f268eb27608b803a219d6f6dd11"
+  },
+  "C:\\TalentX\\backend\\routes\\companyRoutes.js": {
+    "mtime": 1777688429.6766305,
+    "hash": "2167efd58f385b673105012f8a2b9e47"
+  },
+  "C:\\TalentX\\backend\\routes\\documentRoutes.js": {
+    "mtime": 1777694057.312242,
+    "hash": "a0c724cd022684238dfdc9ca0261d6e2"
+  },
+  "C:\\TalentX\\backend\\routes\\enterpriseRequestRoutes.js": {
+    "mtime": 1777393780.4307992,
+    "hash": "5ab5b090db8099e9722439a01b8cc26f"
+  },
+  "C:\\TalentX\\backend\\routes\\exportRoutes.js": {
+    "mtime": 1777208640.2131488,
+    "hash": "c2c7db2093c45122e990dfdfd383beec"
+  },
+  "C:\\TalentX\\backend\\routes\\fileRoutes.js": {
+    "mtime": 1777700140.9208932,
+    "hash": "2762ac72d710cea9fd30b832703bcb9f"
+  },
+  "C:\\TalentX\\backend\\routes\\interviewerRoutes.js": {
+    "mtime": 1777712248.2614782,
+    "hash": "1e5570762426efcd65a9c6d574f2c055"
+  },
+  "C:\\TalentX\\backend\\routes\\jobRoutes.js": {
+    "mtime": 1777693987.0431976,
+    "hash": "9c7bac5aa176d31ed6bb5df127560c51"
+  },
+  "C:\\TalentX\\backend\\routes\\notificationRoutes.js": {
+    "mtime": 1773157169.3289714,
+    "hash": "66b5bfc3f357685ed8abd1e0aa70bf43"
+  },
+  "C:\\TalentX\\backend\\routes\\offerRoutes.js": {
+    "mtime": 1777694013.185701,
+    "hash": "31fda3a837f6ddddd72857a588dcb3cd"
+  },
+  "C:\\TalentX\\backend\\routes\\onboardingRoutes.js": {
+    "mtime": 1777694047.4404528,
+    "hash": "95c7043795d006c63723b4fe3e84912e"
+  },
+  "C:\\TalentX\\backend\\routes\\paymentRoutes.js": {
+    "mtime": 1777212825.892991,
+    "hash": "d60c7ebbb188613dafe22347ca6b1b10"
+  },
+  "C:\\TalentX\\backend\\routes\\publicPackagesRoutes.js": {
+    "mtime": 1777393757.5216658,
+    "hash": "79ec51670fa075a510e8cb94649798d3"
+  },
+  "C:\\TalentX\\backend\\routes\\publicRoutes.js": {
+    "mtime": 1777620790.2590313,
+    "hash": "1fd75080a0d1afb40f689efd4f9e879b"
+  },
+  "C:\\TalentX\\backend\\routes\\recruiterRoutes.js": {
+    "mtime": 1777697580.3900764,
+    "hash": "c9b26f1e9fc5fae15dbdf90769b9518e"
+  },
+  "C:\\TalentX\\backend\\routes\\studentRoutes.js": {
+    "mtime": 1777702345.7656734,
+    "hash": "5733f0b49d6d82e8789d3027a6c1d67a"
+  },
+  "C:\\TalentX\\backend\\routes\\subscriptionRoutes.js": {
+    "mtime": 1777393656.6411035,
+    "hash": "ac3dc8c3abd4d3f3cfe6904e51a147e5"
+  },
+  "C:\\TalentX\\backend\\routes\\superAdminRoutes.js": {
+    "mtime": 1777699926.8014665,
+    "hash": "4dd0c39110ab132d9ff2c4d2eb3056d2"
+  },
+  "C:\\TalentX\\backend\\routes\\supportRoutes.js": {
+    "mtime": 1777716887.2757614,
+    "hash": "f3aec04a9679eede976d22a502bc65ca"
+  },
+  "C:\\TalentX\\backend\\scripts\\createMissingStudents.js": {
+    "mtime": 1771151116.977782,
+    "hash": "985137d4c10c2a4cd62d0ae3025d6b47"
+  },
+  "C:\\TalentX\\backend\\scripts\\createSuperAdmin.js": {
+    "mtime": 1777697627.9309871,
+    "hash": "988b462cf320b91bd3496121a77c22a1"
+  },
+  "C:\\TalentX\\backend\\scripts\\migratePhase7.js": {
+    "mtime": 1777687798.7661154,
+    "hash": "e049eca44a03bf8251e87a9ab84c47ee"
+  },
+  "C:\\TalentX\\backend\\scripts\\migratePhase8.js": {
+    "mtime": 1777701737.4354975,
+    "hash": "2dc1d365fb5557822866edb74ebefe24"
+  },
+  "C:\\TalentX\\backend\\scripts\\seedPackages.js": {
+    "mtime": 1777393785.6710007,
+    "hash": "bb32133b17108bed618c3e60c8ef843e"
+  },
+  "C:\\TalentX\\backend\\scripts\\smoke-http.js": {
+    "mtime": 1777701400.9883919,
+    "hash": "ba7105d5bf0fb387e2bbe269d646e2dc"
+  },
+  "C:\\TalentX\\backend\\services\\aiInterviewService.js": {
+    "mtime": 1775374807.0497787,
+    "hash": "474363230e05567076f835a40505bb18"
+  },
+  "C:\\TalentX\\backend\\services\\auditService.js": {
+    "mtime": 1774081634.464864,
+    "hash": "f27fc5ba630e8889a58d0c34d198fb4f"
+  },
+  "C:\\TalentX\\backend\\services\\documentVerificationService.js": {
+    "mtime": 1777180530.9167864,
+    "hash": "f16519ccf857e70bf7c60921c2b6c28c"
+  },
+  "C:\\TalentX\\backend\\services\\emailService.js": {
+    "mtime": 1777713184.362636,
+    "hash": "0db6ec5e702f3473f3e46f22cd8c69d1"
+  },
+  "C:\\TalentX\\backend\\services\\geminiService.js": {
+    "mtime": 1777180530.918806,
+    "hash": "0ea67cc556f05d8dfbe8393c701c4997"
+  },
+  "C:\\TalentX\\backend\\services\\interviewRoomService.js": {
+    "mtime": 1775303263.4196362,
+    "hash": "3057473f0843c7f008c826fe12fa09ae"
+  },
+  "C:\\TalentX\\backend\\services\\notificationService.js": {
+    "mtime": 1777713229.6099672,
+    "hash": "23a7f8aa9e1c173516468d8cc7a8f53a"
+  },
+  "C:\\TalentX\\backend\\services\\packageEntitlementService.js": {
+    "mtime": 1777702068.1395438,
+    "hash": "213b3b66fc3f700a36ec9f67b3d266b3"
+  },
+  "C:\\TalentX\\backend\\services\\realtimeService.js": {
+    "mtime": 1775303263.4216342,
+    "hash": "0553d192932351108e5fbdcb6dea827f"
+  },
+  "C:\\TalentX\\backend\\services\\resumeParserService.js": {
+    "mtime": 1774080468.7229416,
+    "hash": "a1def723aca9b8a19669c2ff84724758"
+  },
+  "C:\\TalentX\\backend\\services\\subscriptionService.js": {
+    "mtime": 1777738801.141132,
+    "hash": "aa912c1239a4de80422217c5b5cfe316"
+  },
+  "C:\\TalentX\\backend\\services\\onboarding\\contentService.js": {
+    "mtime": 1777180530.9208064,
+    "hash": "5a514f6d1faf66c3110c6c5d4aeb5ccd"
+  },
+  "C:\\TalentX\\backend\\services\\onboarding\\defaultTemplate.js": {
+    "mtime": 1777180530.9218075,
+    "hash": "c62c2a6dae0352999ef3fc914b76e7b6"
+  },
+  "C:\\TalentX\\backend\\services\\onboarding\\helpers.js": {
+    "mtime": 1777180530.9228106,
+    "hash": "ebb3af7dfb2b8e377729b3cbd18f0a5c"
+  },
+  "C:\\TalentX\\backend\\services\\onboarding\\instanceService.js": {
+    "mtime": 1777180530.9319122,
+    "hash": "17aa6fd47c7b1e007da6bb0f45663399"
+  },
+  "C:\\TalentX\\backend\\services\\onboarding\\portalService.js": {
+    "mtime": 1777688573.7910063,
+    "hash": "bb9709759afeaf0f7d1c32143c29a69d"
+  },
+  "C:\\TalentX\\backend\\services\\onboarding\\reviewService.js": {
+    "mtime": 1777180530.9345183,
+    "hash": "2430ac0eeb5f615ec49fb46031dd65d5"
+  },
+  "C:\\TalentX\\backend\\services\\onboarding\\service.js": {
+    "mtime": 1777180530.9345183,
+    "hash": "81fe5ee8f88bf047e37366744905404b"
+  },
+  "C:\\TalentX\\backend\\services\\onboarding\\submissionService.js": {
+    "mtime": 1777180530.9355154,
+    "hash": "f17fc4780826086d63aaf081a6171a4e"
+  },
+  "C:\\TalentX\\backend\\tests\\auth.test.js": {
+    "mtime": 1777717282.261359,
+    "hash": "aec7bae2ae03d1c2db33852bc399d1b3"
+  },
+  "C:\\TalentX\\backend\\tests\\emailService.test.js": {
+    "mtime": 1777714831.1342893,
+    "hash": "697ec1eb1e7a0876e965a2210ea2f850"
+  },
+  "C:\\TalentX\\backend\\tests\\fileDownload.test.js": {
+    "mtime": 1777717128.3508153,
+    "hash": "f894814605802e016c23015c12b940be"
+  },
+  "C:\\TalentX\\backend\\tests\\interview.test.js": {
+    "mtime": 1777717109.8358703,
+    "hash": "4a556e135f9da4b3444a926cbf433393"
+  },
+  "C:\\TalentX\\backend\\tests\\jobVisibility.test.js": {
+    "mtime": 1777716595.9683466,
+    "hash": "0a656b1fcad8f4c241a9aa938efd0268"
+  },
+  "C:\\TalentX\\backend\\tests\\offerLetter.test.js": {
+    "mtime": 1777716644.700855,
+    "hash": "313ee67781c5948891d8c31b7383683f"
+  },
+  "C:\\TalentX\\backend\\tests\\packageQuota.test.js": {
+    "mtime": 1777717153.586312,
+    "hash": "13d394e8c66a459b156e7c563648d71f"
+  },
+  "C:\\TalentX\\backend\\tests\\payment.test.js": {
+    "mtime": 1777703219.8898685,
+    "hash": "0397f9faee9e0175c5e89f14d00cd7d3"
+  },
+  "C:\\TalentX\\backend\\tests\\phase1.test.js": {
+    "mtime": 1777709786.9742978,
+    "hash": "8c907ed9435a3ac79d44c0f82eae4943"
+  },
+  "C:\\TalentX\\backend\\tests\\recruiterApproval.test.js": {
+    "mtime": 1777716599.9817052,
+    "hash": "248c2ee7b2f7ad668f8e3dad823616ab"
+  },
+  "C:\\TalentX\\backend\\tests\\setup.js": {
+    "mtime": 1777703022.3859408,
+    "hash": "476e3c4bd6fa09da8125811f6a3fb628"
+  },
+  "C:\\TalentX\\backend\\tests\\helpers\\fixtures.js": {
+    "mtime": 1777703072.9171097,
+    "hash": "11cf8069804cd487e5f1ec156ba33337"
+  },
+  "C:\\TalentX\\backend\\tests\\helpers\\testDb.js": {
+    "mtime": 1777716177.1693296,
+    "hash": "044d7527d42e638ec4cfb8cec8ea3fa4"
+  },
+  "C:\\TalentX\\backend\\tests\\__mocks__\\realtimeService.js": {
+    "mtime": 1777716578.671497,
+    "hash": "404fcd36333a6b90140a77a48164aa91"
+  },
+  "C:\\TalentX\\backend\\utils\\generateOfferPDF.js": {
+    "mtime": 1770802552.9807525,
+    "hash": "3b6ec665512146a6bcc6baf931760d14"
+  },
+  "C:\\TalentX\\backend\\utils\\interviewAccess.js": {
+    "mtime": 1774716116.9253922,
+    "hash": "d3670b7392d99b08e423db248ef4b754"
+  },
+  "C:\\TalentX\\backend\\utils\\interviewLifecycle.js": {
+    "mtime": 1775303263.4236343,
+    "hash": "324f57008e353ec000ee7dce5c1baedb"
+  },
+  "C:\\TalentX\\backend\\utils\\jobExpiry.js": {
+    "mtime": 1773054330.46776,
+    "hash": "db4f77575bdc3708a05a7b46ef3f95ab"
+  },
+  "C:\\TalentX\\backend\\utils\\jobMatch.js": {
+    "mtime": 1774080451.3000343,
+    "hash": "aa21233394d65c2def4a03daaa74ac59"
+  },
+  "C:\\TalentX\\backend\\__mocks__\\nodemailer.js": {
+    "mtime": 1777703085.2659342,
+    "hash": "99cda2882f05666afec7b020e11aa0cc"
+  },
+  "C:\\TalentX\\frontend\\eslint.config.js": {
+    "mtime": 1777717876.2928019,
+    "hash": "3bb2067834e0473084e52c714571ef94"
+  },
+  "C:\\TalentX\\frontend\\vite.config.js": {
+    "mtime": 1775374807.0760057,
+    "hash": "f941eed2278f8210078de9528a9c3733"
+  },
+  "C:\\TalentX\\frontend\\src\\App.jsx": {
+    "mtime": 1777702414.5446417,
+    "hash": "b2b240228fab9b980a010510baec3157"
+  },
+  "C:\\TalentX\\frontend\\src\\main.jsx": {
+    "mtime": 1773157367.6919315,
+    "hash": "e13723e2574429d9a6d849727e3ff695"
+  },
+  "C:\\TalentX\\frontend\\src\\admin\\AdminSupport.jsx": {
+    "mtime": 1777700273.3050802,
+    "hash": "ee345a1fe3c771ae0be699de3a3a17cd"
+  },
+  "C:\\TalentX\\frontend\\src\\api\\axios.js": {
+    "mtime": 1777394037.140629,
+    "hash": "8d75cd79413f2e666bb9b0da7b869afd"
+  },
+  "C:\\TalentX\\frontend\\src\\api\\collegeAdminApi.js": {
+    "mtime": 1777621536.7375329,
+    "hash": "df84f47426438b4b80d1eb67afb35a1e"
+  },
+  "C:\\TalentX\\frontend\\src\\api\\paymentApi.js": {
+    "mtime": 1777184593.333879,
+    "hash": "178fd8580391c64927d1ead1ecb6ab9d"
+  },
+  "C:\\TalentX\\frontend\\src\\api\\subscriptionApi.js": {
+    "mtime": 1777221621.3516498,
+    "hash": "261ca83088d1b5c13dd7f8bcf3de0ede"
+  },
+  "C:\\TalentX\\frontend\\src\\api\\superAdminApi.js": {
+    "mtime": 1777618970.8023121,
+    "hash": "a572f077ffe91771cd9f2c08affc4114"
+  },
+  "C:\\TalentX\\frontend\\src\\auth\\authMotion.js": {
+    "mtime": 1775391673.280156,
+    "hash": "d5cd1c5271c59b2d65b742db84ae05c1"
+  },
+  "C:\\TalentX\\frontend\\src\\auth\\Login.jsx": {
+    "mtime": 1777610072.7821884,
+    "hash": "d0bbcb590e5011bd32248869921e7274"
+  },
+  "C:\\TalentX\\frontend\\src\\auth\\Register.jsx": {
+    "mtime": 1777727544.4796028,
+    "hash": "04f45eddcdae2d96f36e9baa166d09b3"
+  },
+  "C:\\TalentX\\frontend\\src\\components\\Button.jsx": {
+    "mtime": 1777610072.7841878,
+    "hash": "4cfe34b00bdbcbe05a5d300b6ac1b05f"
+  },
+  "C:\\TalentX\\frontend\\src\\components\\Card.jsx": {
+    "mtime": 1777610072.7856688,
+    "hash": "c561844ff514386f1c4ee2b22acba7c0"
+  },
+  "C:\\TalentX\\frontend\\src\\components\\ConfirmDialog.jsx": {
+    "mtime": 1777610072.786675,
+    "hash": "0374c145bdcec25bfaf1b41226a7167a"
+  },
+  "C:\\TalentX\\frontend\\src\\components\\DarkModeToggle.jsx": {
+    "mtime": 1777610072.786675,
+    "hash": "fdf9a225418be22479f4b9461553b7ef"
+  },
+  "C:\\TalentX\\frontend\\src\\components\\FeatureGate.jsx": {
+    "mtime": 1777208979.9537659,
+    "hash": "29b67aeb1c571378b4fbb3e654c8a37e"
+  },
+  "C:\\TalentX\\frontend\\src\\components\\NotificationBell.jsx": {
+    "mtime": 1776506824.0023527,
+    "hash": "3e2d8c945e75aa181f42ef0a85c18031"
+  },
+  "C:\\TalentX\\frontend\\src\\components\\PackageQuotaExceededModal.jsx": {
+    "mtime": 1777610072.787868,
+    "hash": "314560feb5f5232042da9c05fc915b55"
+  },
+  "C:\\TalentX\\frontend\\src\\components\\ProtectedRoute.jsx": {
+    "mtime": 1777688709.3820457,
+    "hash": "ec880d4530775c409eaaffe6c6dda1cd"
+  },
+  "C:\\TalentX\\frontend\\src\\components\\ProtectedUploadLink.jsx": {
+    "mtime": 1777700151.6230855,
+    "hash": "354469031ecd7e5dde3706649fc9a953"
+  },
+  "C:\\TalentX\\frontend\\src\\components\\PublicRoute.jsx": {
+    "mtime": 1777728452.996848,
+    "hash": "bef40e365fe7d8e549479b843eefb877"
+  },
+  "C:\\TalentX\\frontend\\src\\components\\ScreenLoader.jsx": {
+    "mtime": 1777610072.7888823,
+    "hash": "f0e5ab1faaffc93689cf775924c00f42"
+  },
+  "C:\\TalentX\\frontend\\src\\components\\SecureUploadImage.jsx": {
+    "mtime": 1777700238.502667,
+    "hash": "336344215add0992a895d4b6de349a0a"
+  },
+  "C:\\TalentX\\frontend\\src\\components\\TalentXBrand.jsx": {
+    "mtime": 1777610072.789888,
+    "hash": "d75dfc274bcce08a52717bee7f0dea78"
+  },
+  "C:\\TalentX\\frontend\\src\\components\\UpgradeCard.jsx": {
+    "mtime": 1777393665.5738568,
+    "hash": "845470a9bf3001a5bdfbd7fe0755ef00"
+  },
+  "C:\\TalentX\\frontend\\src\\components\\useConfirmDialog.js": {
+    "mtime": 1773935517.007868,
+    "hash": "5729d3546a706bad8ff3f532d0de4e6a"
+  },
+  "C:\\TalentX\\frontend\\src\\components\\interviewer\\InterviewerFeedbackForm.jsx": {
+    "mtime": 1775374807.0557775,
+    "hash": "8c5587caa4b9c753bb2155fba2221438"
+  },
+  "C:\\TalentX\\frontend\\src\\context\\SubscriptionContext.jsx": {
+    "mtime": 1777208705.8545437,
+    "hash": "0501234bbf3f6d91b16d9c16a429557a"
+  },
+  "C:\\TalentX\\frontend\\src\\dashboards\\AdminDashboard.jsx": {
+    "mtime": 1777712425.3009145,
+    "hash": "3375f894c8ca061cfa34807d73fc33b9"
+  },
+  "C:\\TalentX\\frontend\\src\\dashboards\\StudentDashboard.jsx": {
+    "mtime": 1777688817.0458884,
+    "hash": "26ce6afc55c34958a03b3e497e13a9f5"
+  },
+  "C:\\TalentX\\frontend\\src\\layout\\AdminLayout.jsx": {
+    "mtime": 1777729466.9550183,
+    "hash": "f796038ebe317e1756b1d727ac5ad539"
+  },
+  "C:\\TalentX\\frontend\\src\\layout\\CollegeAdminLayout.jsx": {
+    "mtime": 1777729464.452381,
+    "hash": "a6ef9208921c5b4a2fb5555bf2a48a40"
+  },
+  "C:\\TalentX\\frontend\\src\\layout\\Sidebar.jsx": {
+    "mtime": 1770208383.4217987,
+    "hash": "aac942a05fc715d65647fc3437b6fc7c"
+  },
+  "C:\\TalentX\\frontend\\src\\layout\\StudentLayout.jsx": {
+    "mtime": 1777729481.1672635,
+    "hash": "ba2230cdfa56fce5a400f29b984b0dcf"
+  },
+  "C:\\TalentX\\frontend\\src\\layout\\SuperAdminLayout.jsx": {
+    "mtime": 1777729461.8329968,
+    "hash": "648b55fc141cd02fe0cb366a7843a604"
+  },
+  "C:\\TalentX\\frontend\\src\\onboarding\\AcceptOfferWizard.jsx": {
+    "mtime": 1777700244.5624375,
+    "hash": "025f59bb829e24bc08276bfce20e0720"
+  },
+  "C:\\TalentX\\frontend\\src\\onboarding\\api.js": {
+    "mtime": 1777689019.310383,
+    "hash": "b751a6aa78afdffef66f23d1ca80143f"
+  },
+  "C:\\TalentX\\frontend\\src\\onboarding\\constants.js": {
+    "mtime": 1777180531.1771507,
+    "hash": "7fd3aa6c4bfba855aadf200d81ee2e0f"
+  },
+  "C:\\TalentX\\frontend\\src\\onboarding\\DashboardCards.jsx": {
+    "mtime": 1777180531.1500542,
+    "hash": "ef5ad918d32101162deccaf858068071"
+  },
+  "C:\\TalentX\\frontend\\src\\onboarding\\DocumentUploadCard.jsx": {
+    "mtime": 1777700216.3941038,
+    "hash": "ba31723a5e88d126692549f8bee9cfd0"
+  },
+  "C:\\TalentX\\frontend\\src\\onboarding\\FallbackScreen.jsx": {
+    "mtime": 1777180531.1520538,
+    "hash": "fee0d74e8c28fd3146a2a325de793927"
+  },
+  "C:\\TalentX\\frontend\\src\\onboarding\\LearnMoreSectionView.jsx": {
+    "mtime": 1777180531.153562,
+    "hash": "869bf9e3b3f8bf87996fcd1744cad594"
+  },
+  "C:\\TalentX\\frontend\\src\\onboarding\\OnboardingLayout.jsx": {
+    "mtime": 1777610072.7960896,
+    "hash": "a0277210e81e23344f62e867d61facea"
+  },
+  "C:\\TalentX\\frontend\\src\\onboarding\\OnboardingPortal.jsx": {
+    "mtime": 1777689033.631284,
+    "hash": "2394214e4ef71c84ff9e3f6081fc3a4a"
+  },
+  "C:\\TalentX\\frontend\\src\\onboarding\\OnboardingStepper.jsx": {
+    "mtime": 1777180531.1580443,
+    "hash": "d6e02c0f074b14f33b9a37b0f6273691"
+  },
+  "C:\\TalentX\\frontend\\src\\onboarding\\PortalSkeleton.jsx": {
+    "mtime": 1777180531.158561,
+    "hash": "c244ade2bd0e4e43aee086a96505da97"
+  },
+  "C:\\TalentX\\frontend\\src\\onboarding\\SelectorScreen.jsx": {
+    "mtime": 1777700287.3497572,
+    "hash": "9a456ee22bd4c829cf40dc2eec653a4c"
+  },
+  "C:\\TalentX\\frontend\\src\\onboarding\\session.js": {
+    "mtime": 1777180531.1786766,
+    "hash": "d5431237a1826c53b1287e5be8f78c59"
+  },
+  "C:\\TalentX\\frontend\\src\\onboarding\\StatusBanner.jsx": {
+    "mtime": 1777180531.1611001,
+    "hash": "94fd590e305db1a9de1aa579318a1a88"
+  },
+  "C:\\TalentX\\frontend\\src\\onboarding\\StepContentRenderer.jsx": {
+    "mtime": 1777180531.1630974,
+    "hash": "556b22c34fabfe03ab9547c3be52df27"
+  },
+  "C:\\TalentX\\frontend\\src\\onboarding\\StepIndicator.jsx": {
+    "mtime": 1777180531.1661384,
+    "hash": "374a5670c2050e92034f728e9744c420"
+  },
+  "C:\\TalentX\\frontend\\src\\onboarding\\StepperSidebar.jsx": {
+    "mtime": 1777180531.1714628,
+    "hash": "1198e5e990bb0e585f1edd587ae33a94"
+  },
+  "C:\\TalentX\\frontend\\src\\onboarding\\TopHeader.jsx": {
+    "mtime": 1777610072.797099,
+    "hash": "d3cf4e6e008bc09517145fbb333cea9f"
+  },
+  "C:\\TalentX\\frontend\\src\\onboarding\\UploadCard.jsx": {
+    "mtime": 1777700217.6027687,
+    "hash": "ccbcdf453faddf96458554a646c28aee"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\About.jsx": {
+    "mtime": 1775391673.2903464,
+    "hash": "fd3a423449245e5e7a04753857113c52"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\BillingSuccess.jsx": {
+    "mtime": 1777610072.7981076,
+    "hash": "16a3bd0c1239a2393d20f2a3e86c89c5"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\BlogPlaceholder.jsx": {
+    "mtime": 1777610072.7991087,
+    "hash": "1498f195544f857ec9c40938e9d1f010"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\landingContent.js": {
+    "mtime": 1775391673.2968678,
+    "hash": "27955827c815487c5d149748b052d70a"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\LandingPage.jsx": {
+    "mtime": 1775400704.8796823,
+    "hash": "2cdc8276ff41a2f2fc59044c382b3684"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\SubscriptionPage.jsx": {
+    "mtime": 1777736234.492943,
+    "hash": "cb4e0a3351d15c5e6b963b9b638f820a"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\college-admin\\CollegeAdminDashboard.jsx": {
+    "mtime": 1777621598.5531878,
+    "hash": "74e05d9d3756ada178f268fca31f6c27"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\college-admin\\CollegeJobsPage.jsx": {
+    "mtime": 1777621642.3533616,
+    "hash": "76cc020e35d34188f909e1bace0bc8b2"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\college-admin\\PlacementReportsPage.jsx": {
+    "mtime": 1777621665.4492137,
+    "hash": "79e6a21cb3957fa136e34bc0ca91c427"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\college-admin\\StudentVerificationPage.jsx": {
+    "mtime": 1777635904.9448879,
+    "hash": "7af674f6159373f3f97b4f50b52a64df"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\interview\\AIInterviewRoom.jsx": {
+    "mtime": 1776334249.236495,
+    "hash": "45d1405264ab9de6ff37a4d9f4de71d2"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\interview\\StudentInterviewRoom.jsx": {
+    "mtime": 1776334249.2386463,
+    "hash": "e60d8d9baf13ccb4c7b4cfd0f0eb0c94"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\interview\\VirtualInterviewRoom.jsx": {
+    "mtime": 1775374807.0617752,
+    "hash": "176182f5758a026753de5b0ee9f42576"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\interviewer\\InterviewerLayout.jsx": {
+    "mtime": 1777610072.8001122,
+    "hash": "73300c50e6116e521cc6487d93790e22"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\interviewer\\InterviewerPanel.jsx": {
+    "mtime": 1777188921.9098082,
+    "hash": "37f743d6f4f7708cf996ea40ad4c3c07"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\landing\\animations.js": {
+    "mtime": 1775400704.8974173,
+    "hash": "f8c407e0559c593a015d396c5035c7f9"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\landing\\BlogSection.jsx": {
+    "mtime": 1777184765.7901733,
+    "hash": "c794a4a9c6470501e9a901fa796ca869"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\landing\\CtaSection.jsx": {
+    "mtime": 1777184686.2452736,
+    "hash": "01c2781eb3508528dac9aad13d4a25c6"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\landing\\FAQSection.jsx": {
+    "mtime": 1777184781.680452,
+    "hash": "5cfdfe2d83d250db9d20c012ff310289"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\landing\\FeaturesSection.jsx": {
+    "mtime": 1775400704.8871,
+    "hash": "8373a219d20584fb2b7cb883a9f9789f"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\landing\\Footer.jsx": {
+    "mtime": 1775400704.8881009,
+    "hash": "71864b37456d9152beac46bf83de82e1"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\landing\\HeroSection.jsx": {
+    "mtime": 1777610072.8021126,
+    "hash": "df10d58bf33627b65fb81e616ee3a747"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\landing\\HowItWorks.jsx": {
+    "mtime": 1777717956.5836017,
+    "hash": "11fd346c2065d72c50bdbb92687021d0"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\landing\\landingContent.js": {
+    "mtime": 1777184944.9332228,
+    "hash": "2492fd7a55763f1c9cfd93f6b155aabe"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\landing\\LandingPage.jsx": {
+    "mtime": 1777610072.8031132,
+    "hash": "49e6970da231554bcd372b24b0c1a4be"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\landing\\Navbar.jsx": {
+    "mtime": 1777610072.8031132,
+    "hash": "5778b029d522d01550885d771516fb11"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\landing\\PricingSection.jsx": {
+    "mtime": 1777393906.2058349,
+    "hash": "56aed05a36fe2fc5c71849e92a1d68c3"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\landing\\ProductPreviewSection.jsx": {
+    "mtime": 1777184702.8488457,
+    "hash": "3330f2df54280c0b834764dcb51a735e"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\landing\\StatsBar.jsx": {
+    "mtime": 1777610072.804626,
+    "hash": "5223e7cd45f7ab0bc8eff2b6a03e6cd9"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\landing\\TestimonialsSection.jsx": {
+    "mtime": 1775400704.8947115,
+    "hash": "ceda483ed1a22b058ecc4dcbbf0df138"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\landing\\TrustSection.jsx": {
+    "mtime": 1777204508.7640488,
+    "hash": "0daf846b43c3b9164a724eb0025a7f6f"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\recruiter\\RecruiterApplications.jsx": {
+    "mtime": 1777717972.5330331,
+    "hash": "c7270b3176a13ec65b27c29721794696"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\recruiter\\RecruiterDashboard.jsx": {
+    "mtime": 1777736158.3240705,
+    "hash": "39ae3c910102745a3ece8eb1041bec29"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\recruiter\\RecruiterInterviewers.jsx": {
+    "mtime": 1777713301.2610478,
+    "hash": "52946e0378c64e6cddfd8aaf9dc24d40"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\recruiter\\RecruiterJobs.jsx": {
+    "mtime": 1777624636.0880597,
+    "hash": "ad6be8750544e2cf22a7ff322a5b1686"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\recruiter\\RecruiterLayout.jsx": {
+    "mtime": 1777624554.0658352,
+    "hash": "6910f6e3ab833daefcd4f8809edb4845"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\recruiter\\RecruiterOnboardingReviews.jsx": {
+    "mtime": 1777717990.890088,
+    "hash": "25f74a06670f61024a8ebceb5a2cb4c4"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\recruiter\\RecruiterSupport.jsx": {
+    "mtime": 1777700267.21359,
+    "hash": "8bf3af1dc8ceaf04c5fa9f5671467b1e"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\super-admin\\CollegesPage.jsx": {
+    "mtime": 1777724684.4145727,
+    "hash": "fcb0538e31536e95843d36be4f210d60"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\super-admin\\CreateCollegeAdminPage.jsx": {
+    "mtime": 1777724688.4381316,
+    "hash": "e10d939e1df14cc76ae35a11472390c1"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\super-admin\\PackagesPage.jsx": {
+    "mtime": 1777738801.3988845,
+    "hash": "d6dc0047d0afaee5a8ae7fd1968878ba"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\super-admin\\PaymentsPage.jsx": {
+    "mtime": 1777688928.81207,
+    "hash": "1ad572717a863fbd1cdf3730c7f2de49"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\super-admin\\RecruiterApprovalsPage.jsx": {
+    "mtime": 1777713293.5020597,
+    "hash": "63da009cd27daabb84ac800083ef2e09"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\super-admin\\RecruitersPage.jsx": {
+    "mtime": 1777212825.9099982,
+    "hash": "a377da182ba39d2cd08003f89cd3496b"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\super-admin\\RevenuePage.jsx": {
+    "mtime": 1777212825.9099982,
+    "hash": "7669ae9c3207c2d8819d83c895b39697"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\super-admin\\SubscriptionsPage.jsx": {
+    "mtime": 1777688935.2402189,
+    "hash": "300e1b013ea869471a8433d4930d02a5"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\super-admin\\SuperAdminDashboard.jsx": {
+    "mtime": 1777212825.9090016,
+    "hash": "99c9a84b90593f81e6782d2df315a1db"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\super-admin\\SuperAdminSettingsPage.jsx": {
+    "mtime": 1777724235.278696,
+    "hash": "a7f119496dc5c49cacb97a0eb82f6324"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\super-admin\\superAdminUtils.jsx": {
+    "mtime": 1777394171.653699,
+    "hash": "8df5e62cb197b53c5ceafdc1c4c3b831"
+  },
+  "C:\\TalentX\\frontend\\src\\pages\\super-admin\\UniversitiesPage.jsx": {
+    "mtime": 1777212825.9099982,
+    "hash": "6f87df52f128cf09422ff39f7503be9c"
+  },
+  "C:\\TalentX\\frontend\\src\\student\\ApplyJobModal.jsx": {
+    "mtime": 1777180531.2109792,
+    "hash": "a8f1e331df54b5262a908810449a1e7a"
+  },
+  "C:\\TalentX\\frontend\\src\\student\\Assessments.jsx": {
+    "mtime": 1777188842.6364448,
+    "hash": "899a535755e7eb8b4ef199072f37ed4a"
+  },
+  "C:\\TalentX\\frontend\\src\\student\\Interviews.jsx": {
+    "mtime": 1777188852.6546676,
+    "hash": "691a3867172819c277504bfa0cecd6c0"
+  },
+  "C:\\TalentX\\frontend\\src\\student\\JobProfiles.jsx": {
+    "mtime": 1777688857.0551577,
+    "hash": "0543189a95c90fdd3bfb7417c4fbde42"
+  },
+  "C:\\TalentX\\frontend\\src\\student\\MyApplications.jsx": {
+    "mtime": 1777717379.9909735,
+    "hash": "501d5bc50a61826d8e445b01f60b526a"
+  },
+  "C:\\TalentX\\frontend\\src\\student\\MyProfile.jsx": {
+    "mtime": 1777700191.5920658,
+    "hash": "238f20e5cd59f2128ed43168a8561972"
+  },
+  "C:\\TalentX\\frontend\\src\\student\\StudentFAQ.jsx": {
+    "mtime": 1777180531.2269173,
+    "hash": "2e1ec06ade54c5446a0a1fb5f6656eaa"
+  },
+  "C:\\TalentX\\frontend\\src\\student\\StudentSettings.jsx": {
+    "mtime": 1777712318.9934216,
+    "hash": "711d989e14113333d90858337ebf2054"
+  },
+  "C:\\TalentX\\frontend\\src\\student\\StudentSupport.jsx": {
+    "mtime": 1777700254.0739121,
+    "hash": "278118a4969b66e0d5174bfb95ff68a4"
+  },
+  "C:\\TalentX\\frontend\\src\\utils\\authRouting.js": {
+    "mtime": 1777728267.3692455,
+    "hash": "b4c13f2581c83c679094f02aad609f9e"
+  },
+  "C:\\TalentX\\frontend\\src\\utils\\loadRazorpay.js": {
+    "mtime": 1777184588.3545477,
+    "hash": "ad60abf550bcbc41d4805c65de03730c"
+  },
+  "C:\\TalentX\\frontend\\src\\utils\\logout.js": {
+    "mtime": 1775391673.3039255,
+    "hash": "617a35107d2415b89b73570072695464"
+  },
+  "C:\\TalentX\\frontend\\src\\utils\\protectedFiles.js": {
+    "mtime": 1777700231.3831701,
+    "hash": "821598731a305f34d4c690891272c2e6"
+  },
+  "C:\\TalentX\\frontend\\src\\utils\\ThemeContext.jsx": {
+    "mtime": 1777610072.807334,
+    "hash": "72af1c4da9a559bca3966cece88bca90"
+  },
+  "C:\\TalentX\\frontend\\src\\utils\\themeContextObject.js": {
+    "mtime": 1777610072.8082685,
+    "hash": "ac9d4e9f322ceebaf1ad42cdaf0f619a"
+  },
+  "C:\\TalentX\\frontend\\src\\utils\\useTheme.js": {
+    "mtime": 1773935558.8965383,
+    "hash": "9082fb30105a8af0eee09e4f8789d908"
+  },
+  "C:\\TalentX\\README.md": {
+    "mtime": 1777180530.8651915,
+    "hash": "32a73a1f39027541f52825317f9af3c6"
+  },
+  "C:\\TalentX\\TESTING.md": {
+    "mtime": 1775382697.4938524,
+    "hash": "396521d3639f6d1d7e4c559a588c4c7a"
+  },
+  "C:\\TalentX\\docs\\PHASE_7_SUMMARY.md": {
+    "mtime": 1777687963.0404015,
+    "hash": "d22a93016b32de92ad05864bb80cd995"
+  },
+  "C:\\TalentX\\docs\\PHASE_7_TESTING_CHECKLIST.md": {
+    "mtime": 1777687854.242585,
+    "hash": "29ad65bbd36679e2f333baada61803c1"
+  },
+  "C:\\TalentX\\frontend\\index.html": {
+    "mtime": 1777717460.1612773,
+    "hash": "eb134867655147b9763710150d35bebb"
+  },
+  "C:\\TalentX\\frontend\\README.md": {
+    "mtime": 1769755366.7820144,
+    "hash": "3f01850e9fce601d04d6dba39204c1d8"
+  },
+  "C:\\TalentX\\backend\\offers\\offer_698c4b453fa5ad7ae5c10f85.pdf": {
+    "mtime": 1770805513.7163765,
+    "hash": "6d9cf84c6f9cbc3ea4c99278d610e752"
+  },
+  "C:\\TalentX\\backend\\offers\\offer_6992f86597e413a1184553dd.pdf": {
+    "mtime": 1771774004.9390981,
+    "hash": "531e54910e7ba6b18c838b3e6cab7d53"
+  },
+  "C:\\TalentX\\backend\\offers\\offer_699b157f20ac227c4535f266.pdf": {
+    "mtime": 1771771402.009736,
+    "hash": "1e60a3f10e4df91e249a20b372781c13"
+  },
+  "C:\\TalentX\\backend\\offers\\offer_69ac65337db744c5404fb027.pdf": {
+    "mtime": 1772951544.232748,
+    "hash": "ad8d4d9adc24e0ba51d50fba3dd11e43"
+  },
+  "C:\\TalentX\\backend\\offers\\offer_69b0f041bd7917934a19e1dc.pdf": {
+    "mtime": 1773243264.1985364,
+    "hash": "06a64429a1614aec76fb26e93eeeecb5"
+  },
+  "C:\\TalentX\\backend\\offers\\offer_69be5e574d35525201c361f5.pdf": {
+    "mtime": 1774093190.5577886,
+    "hash": "d1c64ec135df37b092e2a73159dc5b75"
+  },
+  "C:\\TalentX\\backend\\offers\\offer_69c8aafcc8a9aaa6a68c7b9d.pdf": {
+    "mtime": 1774759508.3275366,
+    "hash": "244eeb923ac0609870e190ff711c1716"
+  },
+  "C:\\TalentX\\backend\\offers\\offer_69e36992b362d53ebbfd2fc6.pdf": {
+    "mtime": 1777180530.8980052,
+    "hash": "1341ac62c3cd1609a1a79aee6c730e43"
+  },
+  "C:\\TalentX\\backend\\offers\\offer_69ec8409ac44fdb4d047b4fc.pdf": {
+    "mtime": 1777180530.9107718,
+    "hash": "a4ba2c93af24630f6734fafffd28d384"
+  },
+  "C:\\TalentX\\backend\\uploads\\1772899641104-SarthakKothavale.pdf.pdf": {
+    "mtime": 1772899641.1099849,
+    "hash": "0034418a40e145a17f2eea3ac0cb4543"
+  },
+  "C:\\TalentX\\backend\\uploads\\1772905779912-SarthakKothavale.pdf.pdf": {
+    "mtime": 1772905779.9238155,
+    "hash": "0034418a40e145a17f2eea3ac0cb4543"
+  },
+  "C:\\TalentX\\backend\\uploads\\1776511377871-ApplicationForm_2606365675.pdf": {
+    "mtime": 1777180530.950616,
+    "hash": "cba9bc5b4f9106664a1a0de6809450ca"
+  },
+  "C:\\TalentX\\backend\\uploads\\1777105596570-SarthakKothavalepdf.pdf": {
+    "mtime": 1777180530.959865,
+    "hash": "0034418a40e145a17f2eea3ac0cb4543"
+  },
+  "C:\\TalentX\\backend\\uploads\\1777107977210-SarthakKothavalepdf.pdf": {
+    "mtime": 1777180530.961876,
+    "hash": "0034418a40e145a17f2eea3ac0cb4543"
+  },
+  "C:\\TalentX\\backend\\uploads\\1777730345010-SarthakKothavalepdf.pdf": {
+    "mtime": 1777730345.0159037,
+    "hash": "0034418a40e145a17f2eea3ac0cb4543"
+  },
+  "C:\\TalentX\\backend\\uploads\\1777735500735-SarthakKZensarpdf.pdf": {
+    "mtime": 1777735500.7404797,
+    "hash": "498fa7ee4a3db4b13737c3a6dde9c1ef"
+  },
+  "C:\\TalentX\\backend\\uploads\\1777738845568-SarthakKothavalepdf.pdf": {
+    "mtime": 1777738845.5806806,
+    "hash": "0034418a40e145a17f2eea3ac0cb4543"
+  },
+  "C:\\TalentX\\backend\\uploads\\onboarding-documents\\1776510951059-MarriageGazet.pdf": {
+    "mtime": 1777180530.9830115,
+    "hash": "3eea981f1174716fce1832461570144f"
+  },
+  "C:\\TalentX\\backend\\uploads\\onboarding-documents\\1776510954361-BonafiedSIMMC1.pdf": {
+    "mtime": 1777180531.0034726,
+    "hash": "99cb3976f460f0014c8306a27ddc27ef"
+  },
+  "C:\\TalentX\\backend\\uploads\\onboarding-documents\\1776510958607-ApplicationForm_2606365675.pdf": {
+    "mtime": 1777180531.0075095,
+    "hash": "cba9bc5b4f9106664a1a0de6809450ca"
+  },
+  "C:\\TalentX\\backend\\uploads\\onboarding-documents\\1776510963064-365675_YHD42690354232.pdf": {
+    "mtime": 1777180531.0246842,
+    "hash": "015403191fd5bb4ccf17c5faf17e9fce"
+  },
+  "C:\\TalentX\\backend\\uploads\\onboarding-documents\\1776514006552-365675_YHD42690354232.pdf": {
+    "mtime": 1777180531.0416026,
+    "hash": "015403191fd5bb4ccf17c5faf17e9fce"
+  },
+  "C:\\TalentX\\backend\\uploads\\onboarding-documents\\1776514016606-365675_YHD42690354232.pdf": {
+    "mtime": 1777180531.0581157,
+    "hash": "015403191fd5bb4ccf17c5faf17e9fce"
+  },
+  "C:\\TalentX\\backend\\uploads\\onboarding-documents\\1777109260656-Lc.pdf": {
+    "mtime": 1777180531.083274,
+    "hash": "b65b7e176bee4feafe797a5842547d0e"
+  },
+  "C:\\TalentX\\backend\\uploads\\onboarding-documents\\1777109266884-AshuForm.pdf": {
+    "mtime": 1777180531.1080668,
+    "hash": "8ba59b3eb4c6598a5794662bc61a9a66"
+  },
+  "C:\\TalentX\\backend\\uploads\\onboarding-documents\\1777109431457-ApplicationForm_2606365675.pdf": {
+    "mtime": 1777180531.1240337,
+    "hash": "cba9bc5b4f9106664a1a0de6809450ca"
+  },
+  "C:\\TalentX\\backend\\uploads\\onboarding-documents\\1777739687290-SPPUONLINERESULTDISPLAY.pdf": {
+    "mtime": 1777739687.293904,
+    "hash": "e2b8991942c1c9ac99cecd107e20c4a0"
+  },
+  "C:\\TalentX\\backend\\uploads\\onboarding-documents\\1777739693716-SonaliResult.pdf": {
+    "mtime": 1777739693.7177467,
+    "hash": "ce662e0dd99d502d76e7be08d8365ab3"
+  },
+  "C:\\TalentX\\backend\\uploads\\ticket-1777735633684-473060379.jpg": {
+    "mtime": 1777735633.6857464,
+    "hash": "5282e577aa7e2db04d865b58fb9732e5"
+  },
+  "C:\\TalentX\\backend\\uploads\\onboarding-documents\\1776514002287-511eca1f-299f-46b5-b0a8-5e2f3aa9d749_optimized_5.jpg": {
+    "mtime": 1777180531.03763,
+    "hash": "278d506fea79caf34ff70a6831b6d467"
+  },
+  "C:\\TalentX\\backend\\uploads\\onboarding-documents\\1776514011501-4fd0b218-7d0c-4f2d-b762-f185ecd8a077JPG.jpg": {
+    "mtime": 1777180531.0555959,
+    "hash": "4cebc287b7fb7e1d38b8bcb8363aab51"
+  },
+  "C:\\TalentX\\backend\\uploads\\onboarding-documents\\1777109425519-IMG_6956JPG.jpg": {
+    "mtime": 1777180531.1200204,
+    "hash": "5282e577aa7e2db04d865b58fb9732e5"
+  },
+  "C:\\TalentX\\frontend\\public\\default-company-logo.png": {
+    "mtime": 1772956590.4248111,
+    "hash": "51655dec4be4e5b272ee913b22ea5979"
+  },
+  "C:\\TalentX\\frontend\\public\\talentx.svg": {
+    "mtime": 1777717600.9149542,
+    "hash": "efd9a59516292c0dbe790fb9d21cd620"
+  },
+  "C:\\TalentX\\frontend\\public\\vite.svg": {
+    "mtime": 1769755366.8689857,
+    "hash": "8e3a10e157f75ada21ab742c022d5430"
+  },
+  "C:\\TalentX\\frontend\\src\\assets\\react.svg": {
+    "mtime": 1769755366.8340976,
+    "hash": "f0402b67b6ce880f65666bb49e841696"
+  }
+}
