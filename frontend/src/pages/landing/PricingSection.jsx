@@ -115,6 +115,9 @@ export default function PricingSection() {
   const navigate = useNavigate();
   const location = useLocation();
   const autoStartedRef = useRef(false);
+  const carouselRef = useRef(null);
+  const innerRef = useRef(null);
+  const [sliderConstraints, setSliderConstraints] = useState({ left: 0, right: 0 });
   const [loadingPlan, setLoadingPlan] = useState("");
   const [paymentMessage, setPaymentMessage] = useState(null);
   const [pricingPlans, setPricingPlans] = useState([]);
@@ -271,6 +274,24 @@ export default function PricingSection() {
     };
   }, []);
 
+  useEffect(() => {
+    const updateConstraints = () => {
+      if (carouselRef.current && innerRef.current) {
+        const scrollWidth = innerRef.current.scrollWidth;
+        const offsetWidth = carouselRef.current.offsetWidth;
+        setSliderConstraints({ right: 0, left: -Math.max(0, scrollWidth - offsetWidth) });
+      }
+    };
+    
+    // Slight delay to ensure DOM is fully rendered
+    const timeout = setTimeout(updateConstraints, 100);
+    window.addEventListener("resize", updateConstraints);
+    return () => {
+      clearTimeout(timeout);
+      window.removeEventListener("resize", updateConstraints);
+    };
+  }, [pricingPlans, pricingLoading]);
+
   const handleContactSales = (plan) => {
     setContactPlan(plan);
     setContactForm((prev) => ({ ...prev, requestedPackageId: plan?._id || "" }));
@@ -357,69 +378,80 @@ export default function PricingSection() {
           </motion.div>
         )}
 
-        <div className="mt-8 grid gap-5 sm:mt-10 sm:grid-cols-2 lg:mt-14 xl:grid-cols-4">
-          {pricingLoading ? (
-            <div className="col-span-full rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm font-semibold text-slate-500">
-              Loading packages...
-            </div>
-          ) : null}
-          {!pricingLoading && pricingPlans.length === 0 ? (
-            <div className="col-span-full rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm font-semibold text-slate-500">
-              No packages are live right now.
-            </div>
-          ) : null}
-          {pricingPlans.map((plan) => (
-            <motion.article
-              key={plan.key}
-              variants={revealItem}
-              whileHover={reduceMotion ? undefined : { y: -6 }}
-              transition={{ duration: 0.25, ease: "easeOut" }}
-              className={`relative flex min-h-full flex-col rounded-2xl border bg-white p-5 shadow-sm transition-all duration-300 sm:rounded-[1.5rem] sm:p-6 ${
-                plan.highlighted
-                  ? "border-[#243b95] shadow-xl shadow-indigo-100/70"
-                  : "border-slate-200 hover:border-indigo-200 hover:shadow-lg hover:shadow-indigo-100/50"
-              }`}
-            >
-              {plan.highlighted && (
-                <span className="absolute right-4 top-4 rounded-full bg-[#243b95] px-3 py-1 text-xs font-bold text-white">
-                  Most Popular
-                </span>
-              )}
-
-              <span
-                className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-semibold ${
-                  plan.highlighted ? "bg-indigo-50 text-[#243b95]" : "bg-slate-100 text-slate-600"
+        <div ref={carouselRef} className="mt-2 sm:mt-4 lg:mt-8 pt-6 pb-8 overflow-hidden -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+          <motion.div
+            ref={innerRef}
+            drag={pricingPlans.length > 0 ? "x" : false}
+            dragConstraints={sliderConstraints}
+            dragElastic={0.1}
+            whileTap={{ cursor: "grabbing" }}
+            className={`flex gap-5 sm:gap-6 lg:gap-8 ${pricingPlans.length > 0 ? 'w-max cursor-grab' : 'w-full'}`}
+          >
+            {pricingLoading ? (
+              <div className="w-full rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm font-semibold text-slate-500">
+                Loading packages...
+              </div>
+            ) : null}
+            {!pricingLoading && pricingPlans.length === 0 ? (
+              <div className="w-full rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm font-semibold text-slate-500">
+                No packages are live right now.
+              </div>
+            ) : null}
+            {pricingPlans.map((plan) => (
+              <motion.article
+                key={plan.key}
+                variants={revealItem}
+                whileHover={reduceMotion ? undefined : { y: -6 }}
+                transition={{ duration: 0.25, ease: "easeOut" }}
+                className={`relative flex flex-col shrink-0 w-[85vw] sm:w-[320px] lg:w-[384px] rounded-2xl border bg-white p-5 shadow-sm transition-all duration-300 sm:rounded-[1.5rem] sm:p-6 ${
+                  plan.highlighted
+                    ? "border-[#243b95] shadow-xl shadow-indigo-100/70"
+                    : "border-slate-200 hover:border-indigo-200 hover:shadow-lg hover:shadow-indigo-100/50"
                 }`}
               >
-                {plan.badge}
-              </span>
+                {plan.highlighted && (
+                  <span className="absolute right-4 top-4 rounded-full bg-[#243b95] px-3 py-1 text-xs font-bold text-white">
+                    Most Popular
+                  </span>
+                )}
 
-              <h3 className="mt-5 text-xl font-black tracking-tight text-slate-950">{plan.name}</h3>
-              <div className="mt-4 flex items-end gap-2">
-                <p className="text-3xl font-black tracking-tight text-slate-950">{plan.price}</p>
-                <p className="pb-1 text-sm font-semibold text-slate-400">{plan.billingText}</p>
-              </div>
+                <span
+                  className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-semibold ${
+                    plan.highlighted ? "bg-indigo-50 text-[#243b95]" : "bg-slate-100 text-slate-600"
+                  }`}
+                >
+                  {plan.badge}
+                </span>
 
-              <ul className="mt-6 flex-1 space-y-3">
-                {plan.features.map((feature) => (
-                  <li key={feature} className="flex gap-2 text-sm leading-6 text-slate-600">
-                    <CheckCircleRoundedIcon
-                      className="mt-0.5 shrink-0 text-emerald-500"
-                      sx={{ fontSize: 18 }}
-                    />
-                    <span>{feature}</span>
-                  </li>
-                ))}
-              </ul>
+                <h3 className="mt-5 text-xl font-black tracking-tight text-slate-950">{plan.name}</h3>
+                <div className="mt-4 flex items-end gap-2">
+                  <p className="text-3xl font-black tracking-tight text-slate-950">{plan.price}</p>
+                  <p className="pb-1 text-sm font-semibold text-slate-400">{plan.billingText}</p>
+                </div>
 
-              <PlanButton
-                plan={plan}
-                loadingPlan={loadingPlan}
-                onPayment={startPayment}
-                onContact={handleContactSales}
-              />
-            </motion.article>
-          ))}
+                <ul className="mt-6 flex-1 space-y-3 pointer-events-none">
+                  {plan.features.map((feature) => (
+                    <li key={feature} className="flex gap-2 text-sm leading-6 text-slate-600">
+                      <CheckCircleRoundedIcon
+                        className="mt-0.5 shrink-0 text-emerald-500"
+                        sx={{ fontSize: 18 }}
+                      />
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <div className="mt-7">
+                  <PlanButton
+                    plan={plan}
+                    loadingPlan={loadingPlan}
+                    onPayment={startPayment}
+                    onContact={handleContactSales}
+                  />
+                </div>
+              </motion.article>
+            ))}
+          </motion.div>
         </div>
       </div>
 
@@ -438,7 +470,7 @@ export default function PricingSection() {
 }
 
 function PlanButton({ plan, loadingPlan, onPayment, onContact }) {
-  const className = `mt-7 inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-bold transition-all duration-200 ${
+  const className = `w-full inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-bold transition-all duration-200 ${
     plan.highlighted
       ? "bg-[#243b95] text-white hover:bg-[#1d2f80] hover:shadow-lg hover:shadow-[#243b95]/20"
       : "bg-slate-900 text-white hover:bg-slate-700"
