@@ -12,9 +12,6 @@ function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || "").trim());
 }
 
-function emailWarningFor(result) {
-  return result?.success === false ? "Account created but email could not be sent." : undefined;
-}
 
 exports.register = async (req, res) => {
   try {
@@ -159,31 +156,36 @@ exports.register = async (req, res) => {
       });
     }
 
-    let emailResult = null;
     if (normalizedRole === "student" && resolvedStudentType === "open_student") {
-      emailResult = await sendEmail({
+      sendEmail({
         to: user.email,
         ...emailTemplates.openStudentWelcomeEmail({
           name: user.name,
           email: user.email
         })
+      }).catch((error) => {
+        console.error("[EMAIL] Send failed:", error.message);
       });
     } else if (normalizedRole === "student" && resolvedStudentType === "college_student") {
-      emailResult = await sendEmail({
+      sendEmail({
         to: user.email,
         ...emailTemplates.collegeStudentPendingEmail({
           name: user.name,
           email: user.email,
           collegeName: studentData.collegeName
         })
+      }).catch((error) => {
+        console.error("[EMAIL] Send failed:", error.message);
       });
     } else if (normalizedRole === "recruiter") {
-      emailResult = await sendEmail({
+      sendEmail({
         to: user.email,
         ...emailTemplates.recruiterPendingEmail({
           name: user.name,
           email: user.email
         })
+      }).catch((error) => {
+        console.error("[EMAIL] Send failed:", error.message);
       });
     }
 
@@ -197,9 +199,7 @@ exports.register = async (req, res) => {
           : "Registration successful";
 
     res.status(201).json({
-      message: successMessage,
-      emailSent: emailResult ? Boolean(emailResult.success) : undefined,
-      emailWarning: emailWarningFor(emailResult)
+      message: successMessage
     });
 
   } catch (err) {
@@ -309,10 +309,12 @@ exports.forgotPassword = async (req, res) => {
         </div>
       `;
 
-      await sendEmail({
+      sendEmail({
         to: user.email,
         subject: "TalentX Password Reset",
         html
+      }).catch((error) => {
+        console.error("[EMAIL] Send failed:", error.message);
       });
     }
 

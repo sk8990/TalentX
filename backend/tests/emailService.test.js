@@ -1,20 +1,19 @@
 "use strict";
 
 jest.mock("nodemailer");
+jest.mock("axios");
 
 function clearEmailEnv() {
-  delete process.env.EMAIL_HOST;
-  delete process.env.EMAIL_PORT;
-  delete process.env.EMAIL_USER;
-  delete process.env.EMAIL_PASS;
+  delete process.env.EMAIL_DRIVER;
+  delete process.env.EMAIL_FROM_NAME;
+  delete process.env.EMAIL_FROM_EMAIL;
+  delete process.env.EMAIL_TIMEOUT_MS;
+  delete process.env.MAILPIT_HOST;
+  delete process.env.MAILPIT_PORT;
+  delete process.env.BREVO_API_KEY;
   delete process.env.EMAIL_FROM;
-  delete process.env.EMAIL_SECURE;
-  delete process.env.SMTP_HOST;
-  delete process.env.SMTP_PORT;
-  delete process.env.SMTP_USER;
+  delete process.env.EMAIL_PASS;
   delete process.env.SMTP_PASS;
-  delete process.env.SMTP_FROM;
-  delete process.env.SMTP_SECURE;
 }
 
 function loadEmailService(env = {}) {
@@ -26,8 +25,12 @@ function loadEmailService(env = {}) {
   const sendMail = jest.fn().mockResolvedValue({ messageId: "msg-test-123" });
   nodemailer.createTransport.mockReturnValue({ sendMail });
 
+  const axios = require("axios");
+  axios.post = jest.fn().mockResolvedValue({ data: { messageId: "brevo-msg-456" } });
+
   return {
     nodemailer,
+    axios,
     sendMail,
     service: require("../services/emailService")
   };
@@ -39,8 +42,8 @@ afterEach(() => {
 });
 
 describe("emailService", () => {
-  it("skips sending safely when SMTP is not configured", async () => {
-    const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+  it("logs email when no driver is configured", async () => {
+    const infoSpy = jest.spyOn(console, "info").mockImplementation(() => {});
     const { nodemailer, service } = loadEmailService();
 
     const result = await service.sendEmail({
@@ -51,24 +54,21 @@ describe("emailService", () => {
 
     expect(result).toEqual({
       success: false,
-      error: "SMTP not configured",
+      error: "Email driver not configured",
       skipped: true
     });
     expect(nodemailer.createTransport).not.toHaveBeenCalled();
-    expect(warnSpy).toHaveBeenCalledWith("[EMAIL] Email not sent: SMTP not configured");
+    expect(infoSpy).toHaveBeenCalledWith("[EMAIL] Driver not configured — logging email instead");
   });
 
-  it("uses EMAIL_* configuration before SMTP_* fallback", async () => {
+  it("sends via Mailpit using Nodemailer", async () => {
     const infoSpy = jest.spyOn(console, "info").mockImplementation(() => {});
     const { nodemailer, sendMail, service } = loadEmailService({
-      EMAIL_HOST: "smtp.email.example",
-      EMAIL_PORT: "2525",
-      EMAIL_USER: "email-user@example.com",
-      EMAIL_PASS: "email-secret",
-      EMAIL_FROM: "TalentX <email-user@example.com>",
-      SMTP_HOST: "smtp.legacy.example",
-      SMTP_USER: "legacy@example.com",
-      SMTP_PASS: "legacy-secret"
+      EMAIL_DRIVER: "mailpit",
+      MAILPIT_HOST: "127.0.0.1",
+      MAILPIT_PORT: "1025",
+      EMAIL_FROM_NAME: "TalentX",
+      EMAIL_FROM_EMAIL: "no-reply@talentx.com"
     });
 
     const result = await service.sendEmail({
@@ -80,56 +80,77 @@ describe("emailService", () => {
 
     expect(result).toEqual({ success: true, messageId: "msg-test-123" });
     expect(nodemailer.createTransport).toHaveBeenCalledWith({
-      host: "smtp.email.example",
-      port: 2525,
+      host: "127.0.0.1",
+      port: 1025,
       secure: false,
-      auth: {
-        user: "email-user@example.com",
-        pass: "email-secret"
-      }
+      auth: undefined
     });
     expect(sendMail).toHaveBeenCalledWith(expect.objectContaining({
-      from: "TalentX <email-user@example.com>",
+      from: "TalentX <no-reply@talentx.com>",
       to: "college-admin@example.com",
       subject: "TalentX account created - College Admin"
     }));
-    expect(infoSpy).toHaveBeenCalledWith("[EMAIL] Email sent: msg-test-123");
+    expect(infoSpy).toHaveBeenCalledWith("[EMAIL] Using Mailpit");
   });
 
-  it("falls back to SMTP_* configuration", async () => {
-    const { nodemailer, service } = loadEmailService({
-      SMTP_HOST: "smtp.legacy.example",
-      SMTP_PORT: "587",
-      SMTP_USER: "legacy@example.com",
-      SMTP_PASS: "legacy-secret",
-      SMTP_FROM: "TalentX Legacy <legacy@example.com>"
+  it("sends via Brevo REST API", async () => {
+    const infoSpy = jest.spyOn(console, "info").mockImplementation(() => {});
+    const { axios, nodemailer, service } = loadEmailService({
+      EMAIL_DRIVER: "brevo",
+      BREVO_API_KEY: "xkeysib-test-key",
+      EMAIL_FROM_NAME: "TalentX",
+      EMAIL_FROM_EMAIL: "no-reply@talentx.com"
     });
 
     const result = await service.sendEmail({
       to: "student@example.com",
       subject: "Welcome to TalentX",
+      html: "<p>Welcome</p>",
       text: "Welcome"
     });
 
-    expect(result.success).toBe(true);
-    expect(nodemailer.createTransport).toHaveBeenCalledWith(expect.objectContaining({
-      host: "smtp.legacy.example",
-      port: 587,
-      auth: {
-        user: "legacy@example.com",
-        pass: "legacy-secret"
-      }
-    }));
+    expect(result).toEqual({ success: true, messageId: "brevo-msg-456" });
+    expect(nodemailer.createTransport).not.toHaveBeenCalled();
+    expect(axios.post).toHaveBeenCalledWith(
+      "https://api.brevo.com/v3/smtp/email",
+      expect.objectContaining({
+        sender: { name: "TalentX", email: "no-reply@talentx.com" },
+        to: [{ email: "student@example.com" }],
+        subject: "Welcome to TalentX"
+      }),
+      expect.objectContaining({
+        headers: expect.objectContaining({ "api-key": "xkeysib-test-key" }),
+        timeout: 8000
+      })
+    );
+    expect(infoSpy).toHaveBeenCalledWith("[EMAIL] Using Brevo API");
   });
 
-  it("redacts SMTP passwords from logged send failures", async () => {
+  it("warns when Brevo API key is missing", async () => {
+    const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const { service } = loadEmailService({ EMAIL_DRIVER: "brevo" });
+
+    const result = await service.sendEmail({
+      to: "test@example.com",
+      subject: "Test",
+      text: "Test"
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: "Brevo API key not configured",
+      skipped: true
+    });
+    expect(warnSpy).toHaveBeenCalledWith("[EMAIL] Brevo API key is missing");
+  });
+
+  it("redacts API keys from logged send failures", async () => {
     const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
     const { sendMail, service } = loadEmailService({
-      EMAIL_HOST: "smtp.email.example",
-      EMAIL_USER: "email-user@example.com",
-      EMAIL_PASS: "super-secret-password"
+      EMAIL_DRIVER: "mailpit",
+      BREVO_API_KEY: "super-secret-key"
     });
-    sendMail.mockRejectedValueOnce(new Error("Bad password: super-secret-password"));
+    sendMail.mockRejectedValueOnce(new Error("Connection failed: super-secret-key"));
 
     const result = await service.sendEmail({
       to: "recruiter@example.com",
@@ -138,8 +159,8 @@ describe("emailService", () => {
     });
 
     expect(result.success).toBe(false);
-    expect(result.error).not.toContain("super-secret-password");
-    expect(errorSpy.mock.calls.flat().join(" ")).not.toContain("super-secret-password");
+    expect(result.error).not.toContain("super-secret-key");
+    expect(errorSpy.mock.calls.flat().join(" ")).not.toContain("super-secret-key");
   });
 
   it("builds requested TalentX templates with text and html bodies", () => {

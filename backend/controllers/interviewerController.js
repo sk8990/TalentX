@@ -66,9 +66,6 @@ function getBackendOrigin(req) {
   return `${req.protocol}://${req.get("host")}`;
 }
 
-function emailWarningFor(result) {
-  return result?.success === false ? "Account created but email could not be sent." : undefined;
-}
 
 async function generateUniqueInterviewerCode() {
   for (let attempt = 0; attempt < 15; attempt += 1) {
@@ -277,13 +274,15 @@ exports.createRecruiterInterviewer = async (req, res) => {
       isActive: true
     });
 
-    const emailResult = await sendEmail({
+    sendEmail({
       to: email,
       ...emailTemplates.interviewerCreatedEmail({
         name,
         email,
         temporaryPassword
       })
+    }).catch((error) => {
+      console.error("[EMAIL] Send failed:", error.message);
     });
 
     await writeAuditLog({
@@ -302,12 +301,11 @@ exports.createRecruiterInterviewer = async (req, res) => {
       userId: req.user.id,
       type: "INTERVIEWER_CREATED",
       title: `Interviewer Added: ${name}`,
-      message: `Credentials have ${emailResult?.success ? "been sent" : "not been sent"} to ${email}.`,
+      message: `Credentials email is being sent to ${email}.`,
       link: "/recruiter/interviewers",
       metadata: {
         interviewerCode,
-        interviewerProfileId: profile._id,
-        emailSent: Boolean(emailResult?.success)
+        interviewerProfileId: profile._id
       },
       sendMail: false
     }).catch((notifyErr) => {
@@ -321,9 +319,7 @@ exports.createRecruiterInterviewer = async (req, res) => {
 
     res.status(201).json({
       interviewer: toInterviewerPayload(created, new Map()),
-      emailSent: Boolean(emailResult?.success),
-      emailWarning: emailWarningFor(emailResult),
-      temporaryPassword: emailResult?.success ? undefined : temporaryPassword
+      temporaryPassword
     });
   } catch (err) {
     console.error("createRecruiterInterviewer error:", err);
@@ -487,13 +483,15 @@ exports.resendRecruiterInterviewerCredentials = async (req, res) => {
     profile.userId.mustChangePassword = true;
     await profile.userId.save();
 
-    const emailResult = await sendEmail({
+    sendEmail({
       to: profile.userId.email,
       ...emailTemplates.interviewerCreatedEmail({
         name: profile.userId.name,
         email: profile.userId.email,
         temporaryPassword
       })
+    }).catch((error) => {
+      console.error("[EMAIL] Send failed:", error.message);
     });
 
     await writeAuditLog({
@@ -503,18 +501,13 @@ exports.resendRecruiterInterviewerCredentials = async (req, res) => {
       entityType: "INTERVIEWER",
       entityId: profile._id,
       metadata: {
-        interviewerUserId: profile.userId._id,
-        emailSent: Boolean(emailResult?.success)
+        interviewerUserId: profile.userId._id
       }
     });
 
     res.json({
-      message: emailResult?.success
-        ? "Credentials sent successfully"
-        : "Credentials updated but email sending failed",
-      emailSent: Boolean(emailResult?.success),
-      emailWarning: emailResult?.success ? undefined : "Credentials updated but email could not be sent.",
-      temporaryPassword: emailResult?.success ? undefined : temporaryPassword
+      message: "Credentials resent successfully",
+      temporaryPassword
     });
   } catch (err) {
     console.error("resendRecruiterInterviewerCredentials error:", err);

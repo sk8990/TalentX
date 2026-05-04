@@ -22,9 +22,6 @@ function buildStudentQuery(collegeId, verificationStatus) {
 const SAFE_STUDENT_SELECT =
   "userId studentType collegeId collegeName collegeVerificationStatus isCollegeVerified accessLevel isDisabled createdAt";
 
-function emailWarningFor(result) {
-  return result?.success === false ? "Student approved but email could not be sent." : undefined;
-}
 
 // ─── GET /api/college-admin/pending-students ───
 exports.getPendingStudents = async (req, res) => {
@@ -138,21 +135,21 @@ exports.approveStudent = async (req, res) => {
       // Non-critical: do not fail the approval if notification fails
     }
 
-    const emailResult = student.userId?.email
-      ? await sendEmail({
-          to: student.userId.email,
-          ...emailTemplates.collegeStudentApprovedEmail({
-            name: student.userId.name,
-            email: student.userId.email,
-            collegeName: student.collegeName || college?.name
-          })
+    if (student.userId?.email) {
+      sendEmail({
+        to: student.userId.email,
+        ...emailTemplates.collegeStudentApprovedEmail({
+          name: student.userId.name,
+          email: student.userId.email,
+          collegeName: student.collegeName || college?.name
         })
-      : { success: false, error: "Student email unavailable", skipped: true };
+      }).catch((error) => {
+        console.error("[EMAIL] Send failed:", error.message);
+      });
+    }
 
     return res.json({
-      message: "Student approved successfully.",
-      emailSent: Boolean(emailResult.success),
-      emailWarning: emailWarningFor(emailResult)
+      message: "Student approved successfully."
     });
   } catch (err) {
     console.error("approveStudent error:", err);

@@ -84,7 +84,7 @@ describe("POST /api/auth/login", () => {
 });
 
 describe("POST /api/auth/register", () => {
-  it("creates an open student even when SMTP is not configured", async () => {
+  it("creates an open student even when email driver is not configured", async () => {
     const res = await request(app)
       .post("/api/auth/register")
       .send({
@@ -97,8 +97,6 @@ describe("POST /api/auth/register", () => {
 
     expect(res.status).toBe(201);
     expect(res.body.message).toMatch(/Open Student/i);
-    expect(res.body.emailSent).toBe(false);
-    expect(res.body.emailWarning).toMatch(/email could not be sent/i);
   });
 });
 

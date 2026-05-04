@@ -15,9 +15,6 @@ function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || "").trim());
 }
 
-function emailWarningFor(result) {
-  return result?.success === false ? "Account created but email could not be sent." : undefined;
-}
 
 exports.createCollegeAdmin = async (req, res) => {
   try {
@@ -99,19 +96,19 @@ exports.createCollegeAdmin = async (req, res) => {
 
     await college.save();
 
-    const emailResult = await sendEmail({
+    sendEmail({
       to: adminUser.email,
       ...emailTemplates.collegeAdminCreatedEmail({
         name: adminUser.name,
         email: adminUser.email,
         password
       })
+    }).catch((error) => {
+      console.error("[EMAIL] Send failed:", error.message);
     });
 
     return res.status(201).json({
       message: "College Admin created successfully",
-      emailSent: Boolean(emailResult.success),
-      emailWarning: emailWarningFor(emailResult),
       collegeAdmin: {
         _id: adminUser._id,
         name: adminUser.name,

@@ -1,65 +1,153 @@
 const nodemailer = require("nodemailer");
+const axios = require("axios");
 
-let transporter = null;
+// ── Driver configuration ────────────────────────────────────────────────────
+
+function getDriver() {
+  return String(process.env.EMAIL_DRIVER || "").trim().toLowerCase();
+}
+
+function getFromAddress() {
+  const name = String(process.env.EMAIL_FROM_NAME || "TalentX").trim();
+  const email = String(
+    process.env.EMAIL_FROM_EMAIL || process.env.EMAIL_FROM || "no-reply@talentx.com"
+  ).trim();
+  return { name, email, formatted: `${name} <${email}>` };
+}
+
+function getTimeoutMs() {
+  const val = Number(process.env.EMAIL_TIMEOUT_MS);
+  return Number.isFinite(val) && val > 0 ? val : 8000;
+}
 
 function readEmailConfig() {
-  const host = String(process.env.EMAIL_HOST || process.env.SMTP_HOST || "").trim();
-  const port = Number(process.env.EMAIL_PORT || process.env.SMTP_PORT || 587);
-  const user = String(process.env.EMAIL_USER || process.env.SMTP_USER || "").trim();
-  const pass = String(process.env.EMAIL_PASS || process.env.SMTP_PASS || "");
-  const from = String(
-    process.env.EMAIL_FROM ||
-    process.env.SMTP_FROM ||
-    (user ? `TalentX <${user}>` : "TalentX <noreply@talentx.com>")
-  ).trim();
-  const secure = String(process.env.EMAIL_SECURE || process.env.SMTP_SECURE || "false")
-    .trim()
-    .toLowerCase() === "true";
+  const driver = getDriver();
+  const from = getFromAddress();
+  const timeoutMs = getTimeoutMs();
 
-  return { host, port: Number.isFinite(port) ? port : 587, user, pass, from, secure };
+  if (driver === "mailpit") {
+    return {
+      driver: "mailpit",
+      host: String(process.env.MAILPIT_HOST || "127.0.0.1").trim(),
+      port: Number(process.env.MAILPIT_PORT) || 1025,
+      from,
+      timeoutMs
+    };
+  }
+
+  if (driver === "brevo") {
+    return {
+      driver: "brevo",
+      apiKey: String(process.env.BREVO_API_KEY || "").trim(),
+      from,
+      timeoutMs
+    };
+  }
+
+  return { driver: driver || "none", from, timeoutMs };
 }
 
 function isEmailConfigured(config = readEmailConfig()) {
-  return Boolean(config.host && config.user && config.pass);
+  if (config.driver === "mailpit") return true;
+  if (config.driver === "brevo") return Boolean(config.apiKey);
+  return false;
 }
+
+// ── Mailpit driver (Nodemailer) ─────────────────────────────────────────────
+
+let mailpitTransporter = null;
+
+function getMailpitTransporter(config) {
+  if (!mailpitTransporter) {
+    mailpitTransporter = nodemailer.createTransport({
+      host: config.host,
+      port: config.port,
+      secure: false,
+      auth: undefined
+    });
+  }
+  return mailpitTransporter;
+}
+
+async function sendViaMailpit(config, { to, subject, html, text }) {
+  console.info("[EMAIL] Using Mailpit");
+  const transport = getMailpitTransporter(config);
+
+  const info = await transport.sendMail({
+    from: config.from.formatted,
+    to,
+    subject,
+    html,
+    text
+  });
+
+  const messageId = String(info?.messageId || "");
+  console.info(`[EMAIL] Email sent successfully: ${messageId || "message accepted"}`);
+  return { success: true, messageId };
+}
+
+// ── Brevo driver (REST API) ─────────────────────────────────────────────────
+
+async function sendViaBrevo(config, { to, subject, html, text }) {
+  console.info("[EMAIL] Using Brevo API");
+
+  if (!config.apiKey) {
+    console.warn("[EMAIL] Brevo API key is missing");
+    return { success: false, error: "Brevo API key not configured", skipped: true };
+  }
+
+  const payload = {
+    sender: { name: config.from.name, email: config.from.email },
+    to: [{ email: to }],
+    subject,
+    htmlContent: html || undefined,
+    textContent: text || undefined
+  };
+
+  const response = await axios.post(
+    "https://api.brevo.com/v3/smtp/email",
+    payload,
+    {
+      headers: {
+        "api-key": config.apiKey,
+        "Content-Type": "application/json",
+        Accept: "application/json"
+      },
+      timeout: config.timeoutMs
+    }
+  );
+
+  const messageId = String(response.data?.messageId || "");
+  console.info(`[EMAIL] Email sent successfully: ${messageId || "message accepted"}`);
+  return { success: true, messageId };
+}
+
+// ── Log-only fallback ───────────────────────────────────────────────────────
+
+function sendViaLog({ to, subject }) {
+  console.info(`[EMAIL] Driver not configured — logging email instead`);
+  console.info(`[EMAIL]   To: ${to}`);
+  console.info(`[EMAIL]   Subject: ${subject}`);
+  return { success: false, error: "Email driver not configured", skipped: true };
+}
+
+// ── Safe error redaction ────────────────────────────────────────────────────
 
 function safeEmailError(err) {
   const message = String(err?.message || err || "Email send failed");
   return message
+    .replaceAll(process.env.BREVO_API_KEY || "__NO_BREVO_KEY__", "[redacted]")
     .replaceAll(process.env.EMAIL_PASS || "__NO_EMAIL_PASS__", "[redacted]")
     .replaceAll(process.env.SMTP_PASS || "__NO_SMTP_PASS__", "[redacted]");
 }
+
+// ── Public sendEmail function ───────────────────────────────────────────────
 
 function getLoginUrl(path = "/login") {
   const base = String(process.env.FRONTEND_URL || "http://localhost:3000")
     .trim()
     .replace(/\/+$/, "");
   return `${base}${path.startsWith("/") ? path : `/${path}`}`;
-}
-
-function buildTransporter(config) {
-  return nodemailer.createTransport({
-    host: config.host,
-    port: config.port,
-    secure: config.secure,
-    auth: {
-      user: config.user,
-      pass: config.pass
-    }
-  });
-}
-
-async function getTransporter() {
-  const config = readEmailConfig();
-  if (!isEmailConfigured(config)) {
-    return { transporter: null, config };
-  }
-
-  if (!transporter) {
-    transporter = buildTransporter(config);
-  }
-
-  return { transporter, config };
 }
 
 async function sendEmail({ to, subject, html, text }) {
@@ -70,26 +158,20 @@ async function sendEmail({ to, subject, html, text }) {
       return { success: false, error: "Email recipient and subject are required" };
     }
 
-    const { transporter: activeTransporter, config } = await getTransporter();
-    if (!activeTransporter) {
-      console.warn("[EMAIL] Email not sent: SMTP not configured");
-      return { success: false, error: "SMTP not configured", skipped: true };
+    const config = readEmailConfig();
+
+    if (config.driver === "mailpit") {
+      return await sendViaMailpit(config, { to: normalizedTo, subject: normalizedSubject, html, text });
     }
 
-    const info = await activeTransporter.sendMail({
-      from: config.from,
-      to: normalizedTo,
-      subject: normalizedSubject,
-      html,
-      text
-    });
+    if (config.driver === "brevo") {
+      return await sendViaBrevo(config, { to: normalizedTo, subject: normalizedSubject, html, text });
+    }
 
-    const messageId = String(info?.messageId || "");
-    console.info(`[EMAIL] Email sent: ${messageId || "message accepted"}`);
-    return { success: true, messageId };
+    return sendViaLog({ to: normalizedTo, subject: normalizedSubject });
   } catch (err) {
     const error = safeEmailError(err);
-    console.error(`[EMAIL] Email send failed: ${error}`);
+    console.error(`[EMAIL] Send failed: ${error}`);
     return { success: false, error };
   }
 }

@@ -28,16 +28,21 @@ async function notify({ userId, type, title, message, link, metadata, sendMail, 
       createdAt: notification.createdAt,
     });
 
-    // Send email if requested
+    // Send email if requested (fire-and-forget)
     if (sendMail && emailData) {
-      const user = await User.findById(userId).select("email");
-      if (user?.email) {
-        await sendEmail({
-          to: user.email,
-          subject: emailData.subject,
-          html: emailData.html,
-        });
-      }
+      User.findById(userId).select("email").then((user) => {
+        if (user?.email) {
+          sendEmail({
+            to: user.email,
+            subject: emailData.subject,
+            html: emailData.html,
+          }).catch((error) => {
+            console.error("[EMAIL] Send failed:", error.message);
+          });
+        }
+      }).catch((err) => {
+        console.error("[EMAIL] Could not look up user email:", err.message);
+      });
     }
 
     return notification;

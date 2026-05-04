@@ -4,9 +4,6 @@ const { writeAuditLog } = require("../services/auditService");
 const { notifyRecruiterApproved } = require("../services/notificationService");
 const { sendEmail, emailTemplates } = require("../services/emailService");
 
-function emailWarningFor(result) {
-  return result?.success === false ? "Recruiter approved but email could not be sent." : undefined;
-}
 
 function buildRecruiterQuery(status) {
   const query = { role: "recruiter" };
@@ -112,18 +109,18 @@ exports.approveRecruiter = async (req, res) => {
       console.error("[NOTIFY] recruiter approval notification failed:", err.message);
     });
 
-    const emailResult = await sendEmail({
+    sendEmail({
       to: user.email,
       ...emailTemplates.recruiterApprovedEmail({
         name: user.name,
         email: user.email
       })
+    }).catch((error) => {
+      console.error("[EMAIL] Send failed:", error.message);
     });
 
     return res.json({
-      message: "Recruiter approved successfully",
-      emailSent: Boolean(emailResult.success),
-      emailWarning: emailWarningFor(emailResult)
+      message: "Recruiter approved successfully"
     });
   } catch (err) {
     console.error("approveRecruiter error:", err);
