@@ -79,6 +79,12 @@ function isAllowedOrigin(origin) {
 function buildApp() {
   const app = express();
 
+  // Trust first proxy (Render, Heroku, etc.) so express-rate-limit
+  // can read the real client IP from the X-Forwarded-For header.
+  if (isProduction) {
+    app.set("trust proxy", 1);
+  }
+
   // Helmet
   const cspFrameAncestors = ["'self'", ...allowedOrigins];
   app.use(helmet({

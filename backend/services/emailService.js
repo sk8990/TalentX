@@ -104,22 +104,31 @@ async function sendViaBrevo(config, { to, subject, html, text }) {
     textContent: text || undefined
   };
 
-  const response = await axios.post(
-    "https://api.brevo.com/v3/smtp/email",
-    payload,
-    {
-      headers: {
-        "api-key": config.apiKey,
-        "Content-Type": "application/json",
-        Accept: "application/json"
-      },
-      timeout: config.timeoutMs
-    }
-  );
+  try {
+    const response = await axios.post(
+      "https://api.brevo.com/v3/smtp/email",
+      payload,
+      {
+        headers: {
+          "api-key": config.apiKey,
+          "Content-Type": "application/json",
+          Accept: "application/json"
+        },
+        timeout: config.timeoutMs
+      }
+    );
 
-  const messageId = String(response.data?.messageId || "");
-  console.info(`[EMAIL] Email sent successfully: ${messageId || "message accepted"}`);
-  return { success: true, messageId };
+    const messageId = String(response.data?.messageId || "");
+    console.info(`[EMAIL] Email sent successfully: ${messageId || "message accepted"}`);
+    return { success: true, messageId };
+  } catch (err) {
+    const status = err.response?.status;
+    const body = err.response?.data;
+    console.error(`[EMAIL] Brevo API error: status=${status}, body=${JSON.stringify(body)}`);
+    console.error(`[EMAIL] Brevo API key starts with: ${config.apiKey.substring(0, 12)}...`);
+    console.error(`[EMAIL] Sender used: ${JSON.stringify(payload.sender)}`);
+    throw err;
+  }
 }
 
 // ── Log-only fallback ───────────────────────────────────────────────────────
