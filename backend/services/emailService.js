@@ -1,5 +1,6 @@
 const nodemailer = require("nodemailer");
 const axios = require("axios");
+const emailDesignSystem = require("../templates/emailDesignSystem");
 
 // ── Driver configuration ────────────────────────────────────────────────────
 
@@ -466,4 +467,4 @@ const emailTemplates = {
   }
 };
 
-module.exports = { sendEmail, emailTemplates, readEmailConfig, isEmailConfigured };
+module.exports = { sendEmail, emailTemplates, emailDesignSystem, readEmailConfig, isEmailConfigured };
